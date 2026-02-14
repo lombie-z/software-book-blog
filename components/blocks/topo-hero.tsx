@@ -160,17 +160,6 @@ export const TopoHero = ({ data }: { data: PageBlocksTopoHero }) => {
           100% { scale: 1; border-color: rgba(255,255,255,0.05); }
         }
 
-        .topo-bottom-fade {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: 30%;
-          background: linear-gradient(to bottom, transparent, var(--topo-bg));
-          z-index: 6;
-          pointer-events: none;
-        }
-
         .topo-interface {
           position: absolute;
           inset: 0;
@@ -217,20 +206,6 @@ export const TopoHero = ({ data }: { data: PageBlocksTopoHero }) => {
           transform: translateY(-5px);
         }
 
-        .topo-scroll-hint {
-          position: absolute;
-          bottom: 2rem; left: 50%;
-          width: 1px; height: 60px;
-          background: linear-gradient(to bottom, var(--topo-silver), transparent);
-          animation: topo-flow 2s infinite ease-in-out;
-          z-index: 10;
-        }
-
-        @keyframes topo-flow {
-          0%, 100% { transform: scaleY(0); transform-origin: top; }
-          50% { transform: scaleY(1); transform-origin: top; }
-          51% { transform: scaleY(1); transform-origin: bottom; }
-        }
       `}</style>
 
       <div className="topo-hero">
@@ -243,7 +218,6 @@ export const TopoHero = ({ data }: { data: PageBlocksTopoHero }) => {
         </svg>
 
         <div className="topo-grain" style={{ filter: 'url(#topo-grain)' }} />
-        <div className="topo-bottom-fade" />
 
         {/* Content overlay grid */}
         <div className="topo-interface">
@@ -300,7 +274,6 @@ export const TopoHero = ({ data }: { data: PageBlocksTopoHero }) => {
           </div>
         </div>
 
-        <div className="topo-scroll-hint" />
       </div>
     </>
   );

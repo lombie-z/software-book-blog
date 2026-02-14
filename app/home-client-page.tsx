@@ -1,8 +1,6 @@
 'use client';
 import { useTina } from 'tinacms/dist/react';
-import { Blocks } from '@/components/blocks';
-import { RecentPostsSlider } from '@/components/blocks/recent-posts-slider';
-import { BlogArchive } from '@/components/blocks/blog-archive';
+import { HomeScrollStage } from '@/components/blocks/home-scroll-stage';
 import type { PageQuery, PostConnectionQuery, TagConnectionQuery } from '@/tina/__generated__/types';
 
 type PostEdges = NonNullable<PostConnectionQuery['postConnection']['edges']>;
@@ -25,10 +23,11 @@ export default function HomeClientPage({ pageProps, posts, tags }: HomeClientPag
   const archivePosts = posts.slice(5);
 
   return (
-    <>
-      <Blocks {...data?.page} />
-      <RecentPostsSlider posts={recentPosts} />
-      {archivePosts.length > 0 && <BlogArchive posts={archivePosts} tags={tags} />}
-    </>
+    <HomeScrollStage
+      pageData={data?.page}
+      recentPosts={recentPosts}
+      archivePosts={archivePosts.length > 0 ? archivePosts : posts}
+      tags={tags}
+    />
   );
 }
