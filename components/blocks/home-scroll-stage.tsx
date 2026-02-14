@@ -44,6 +44,8 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
   const archiveRef = useRef<HTMLDivElement>(null);
 
   const [postIndex, setPostIndex] = useState(0);
+  const lenisRef = useRef<Lenis | null>(null);
+  const snapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Lenis smooth scroll
   useLayoutEffect(() => {
@@ -53,6 +55,7 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
       lerp: 0.08,
       smoothWheel: true,
     });
+    lenisRef.current = lenis;
 
     // Connect Lenis to GSAP ScrollTrigger
     lenis.on('scroll', ScrollTrigger.update);
@@ -62,6 +65,7 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
     return () => {
       gsap.ticker.remove(lenis.raf as any);
       lenis.destroy();
+      lenisRef.current = null;
     };
   }, []);
 
@@ -78,6 +82,28 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
     gsap.set(hero, { opacity: 1 });
     gsap.set(posts, { opacity: 0 });
     gsap.set(archive, { opacity: 0, pointerEvents: 'none' });
+
+    // Crossfade zones — snap to whichever end is closest
+    const FADE_ZONES = [
+      { start: 0.10, end: 0.20 }, // Hero → Posts
+      { start: 0.65, end: 0.75 }, // Posts → Archive
+    ];
+
+    const scheduleSnap = (progress: number, scrollStart: number, scrollEnd: number) => {
+      if (snapTimerRef.current) clearTimeout(snapTimerRef.current);
+
+      const zone = FADE_ZONES.find((z) => progress > z.start && progress < z.end);
+      if (!zone) return;
+
+      snapTimerRef.current = setTimeout(() => {
+        const lenis = lenisRef.current;
+        if (!lenis) return;
+        const mid = (zone.start + zone.end) / 2;
+        const snapTo = progress >= mid ? zone.end : zone.start;
+        const targetScroll = scrollStart + snapTo * (scrollEnd - scrollStart);
+        lenis.scrollTo(targetScroll, { duration: 0.6 });
+      }, 150);
+    };
 
     const st = ScrollTrigger.create({
       trigger: wrapper,
@@ -126,10 +152,14 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
           const idx = Math.min(postCount - 1, Math.floor(postProgress * postCount));
           setPostIndex((prev) => (prev !== idx ? idx : prev));
         }
+
+        // Snap out of crossfade zones when scrolling settles
+        scheduleSnap(p, self.start, self.end);
       },
     });
 
     return () => {
+      if (snapTimerRef.current) clearTimeout(snapTimerRef.current);
       st.kill();
     };
   }, [postCount]);
