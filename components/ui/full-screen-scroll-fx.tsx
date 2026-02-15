@@ -88,7 +88,7 @@ export const FullScreenScrollFX = forwardRef<HTMLDivElement, FullScreenFXProps>(
       className,
       style,
 
-      fontFamily = '"Rubik Wide", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      fontFamily = 'var(--font-heading)',
       header,
       footer,
       gap = 1,

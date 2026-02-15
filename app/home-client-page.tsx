@@ -20,13 +20,12 @@ export default function HomeClientPage({ pageProps, posts, tags }: HomeClientPag
   const { data } = useTina({ ...pageProps });
 
   const recentPosts = posts.slice(0, 5);
-  const archivePosts = posts.slice(5);
 
   return (
     <HomeScrollStage
       pageData={data?.page}
       recentPosts={recentPosts}
-      archivePosts={archivePosts.length > 0 ? archivePosts : posts}
+      archivePosts={posts}
       tags={tags}
     />
   );

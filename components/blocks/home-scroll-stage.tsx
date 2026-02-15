@@ -35,7 +35,7 @@ interface HomeScrollStageProps {
  */
 export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: HomeScrollStageProps) {
   const postCount = recentPosts.filter((p) => p?.node).length;
-  const totalScrollVh = 200 + postCount * 80;
+  const totalScrollVh = 350 + postCount * 80;
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const pinnedRef = useRef<HTMLDivElement>(null);
@@ -44,8 +44,10 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
   const archiveRef = useRef<HTMLDivElement>(null);
 
   const [postIndex, setPostIndex] = useState(0);
+  const [heroProgress, setHeroProgress] = useState(0);
   const lenisRef = useRef<Lenis | null>(null);
   const snapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isSnappingRef = useRef(false);
 
   // Lenis smooth scroll
   useLayoutEffect(() => {
@@ -57,12 +59,21 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
     });
     lenisRef.current = lenis;
 
+    // Reset snap lock if user scrolls manually (wheel/touch interrupts the snap)
+    const onWheel = () => {
+      isSnappingRef.current = false;
+    };
+    window.addEventListener('wheel', onWheel, { passive: true });
+    window.addEventListener('touchstart', onWheel, { passive: true });
+
     // Connect Lenis to GSAP ScrollTrigger
     lenis.on('scroll', ScrollTrigger.update);
     gsap.ticker.add((time) => lenis.raf(time * 1000));
     gsap.ticker.lagSmoothing(0);
 
     return () => {
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('touchstart', onWheel);
       gsap.ticker.remove(lenis.raf as any);
       lenis.destroy();
       lenisRef.current = null;
@@ -85,11 +96,13 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
 
     // Crossfade zones — snap to whichever end is closest
     const FADE_ZONES = [
-      { start: 0.10, end: 0.20 }, // Hero → Posts
-      { start: 0.65, end: 0.75 }, // Posts → Archive
+      { start: 0.30, end: 0.40 }, // Hero → Posts
+      { start: 0.75, end: 0.85 }, // Posts → Archive
     ];
 
     const scheduleSnap = (progress: number, scrollStart: number, scrollEnd: number) => {
+      // Don't schedule new snaps while one is animating
+      if (isSnappingRef.current) return;
       if (snapTimerRef.current) clearTimeout(snapTimerRef.current);
 
       const zone = FADE_ZONES.find((z) => progress > z.start && progress < z.end);
@@ -98,10 +111,22 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
       snapTimerRef.current = setTimeout(() => {
         const lenis = lenisRef.current;
         if (!lenis) return;
+        isSnappingRef.current = true;
         const mid = (zone.start + zone.end) / 2;
         const snapTo = progress >= mid ? zone.end : zone.start;
         const targetScroll = scrollStart + snapTo * (scrollEnd - scrollStart);
-        lenis.scrollTo(targetScroll, { duration: 0.6 });
+        const snapDuration = 1.2;
+        lenis.scrollTo(targetScroll, {
+          duration: snapDuration,
+          easing: (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2),
+          onComplete: () => {
+            isSnappingRef.current = false;
+          },
+        });
+        // Fallback: always unlock after duration + buffer
+        setTimeout(() => {
+          isSnappingRef.current = false;
+        }, snapDuration * 1000 + 200);
       }, 150);
     };
 
@@ -114,41 +139,45 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
       onUpdate: (self) => {
         const p = self.progress;
 
-        // Hero: full until 10%, fades out 10%–20%
-        if (p <= 0.10) {
+        // Hero 3D animation: normalize 0–35% stage progress to 0–1
+        const hp = Math.min(1, p / 0.35);
+        setHeroProgress((prev) => (Math.abs(prev - hp) > 0.005 ? hp : prev));
+
+        // Hero: full until 30%, fades out 30%–40%
+        if (p <= 0.30) {
           gsap.set(hero, { opacity: 1 });
-        } else if (p <= 0.20) {
-          gsap.set(hero, { opacity: 1 - (p - 0.10) / 0.10 });
+        } else if (p <= 0.40) {
+          gsap.set(hero, { opacity: 1 - (p - 0.30) / 0.10 });
         } else {
           gsap.set(hero, { opacity: 0 });
         }
 
-        // Posts: fades in 10%–20%, full 20%–65%, fades out 65%–75%
-        if (p < 0.10) {
+        // Posts: fades in 30%–40%, full 40%–75%, fades out 75%–85%
+        if (p < 0.30) {
           gsap.set(posts, { opacity: 0 });
-        } else if (p <= 0.20) {
-          gsap.set(posts, { opacity: (p - 0.10) / 0.10 });
-        } else if (p <= 0.65) {
-          gsap.set(posts, { opacity: 1 });
+        } else if (p <= 0.40) {
+          gsap.set(posts, { opacity: (p - 0.30) / 0.10 });
         } else if (p <= 0.75) {
-          gsap.set(posts, { opacity: 1 - (p - 0.65) / 0.10 });
+          gsap.set(posts, { opacity: 1 });
+        } else if (p <= 0.85) {
+          gsap.set(posts, { opacity: 1 - (p - 0.75) / 0.10 });
         } else {
           gsap.set(posts, { opacity: 0 });
         }
 
-        // Archive: fades in 65%–75%, full 75%–100%
-        if (p < 0.65) {
+        // Archive: fades in 75%–85%, full 85%–100%
+        if (p < 0.75) {
           gsap.set(archive, { opacity: 0, pointerEvents: 'none' });
-        } else if (p <= 0.75) {
-          const fade = (p - 0.65) / 0.10;
+        } else if (p <= 0.85) {
+          const fade = (p - 0.75) / 0.10;
           gsap.set(archive, { opacity: fade, pointerEvents: fade > 0.5 ? 'auto' : 'none' });
         } else {
           gsap.set(archive, { opacity: 1, pointerEvents: 'auto' });
         }
 
-        // Post index: map 20%–65% to post indices
-        if (postCount > 0 && p >= 0.20 && p <= 0.65) {
-          const postProgress = (p - 0.20) / 0.45;
+        // Post index: map 40%–75% to post indices
+        if (postCount > 0 && p >= 0.40 && p <= 0.75) {
+          const postProgress = (p - 0.40) / 0.35;
           const idx = Math.min(postCount - 1, Math.floor(postProgress * postCount));
           setPostIndex((prev) => (prev !== idx ? idx : prev));
         }
@@ -178,7 +207,7 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
       >
         {/* Layer 1: Hero */}
         <div ref={heroRef} style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
-          <Blocks {...pageData} />
+          <Blocks {...pageData} scrollProgress={heroProgress} />
         </div>
 
         {/* Layer 2: Posts slider */}

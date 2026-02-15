@@ -22,16 +22,16 @@ export function BlogArchive({ posts, tags }: { posts: PostEdges; tags: TagEdges 
   return (
     <section className="min-h-screen bg-[#0a0a0a] py-20">
       <div className="mx-auto max-w-6xl px-6">
-        <h2 className="mb-4 text-2xl font-bold uppercase tracking-tight text-[#e0e0e0] sm:text-3xl">Archive</h2>
-        <p className="mb-10 font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/40">All posts</p>
+        <h2 className="mb-4 text-center font-heading text-2xl font-bold uppercase tracking-tight text-[#e0e0e0] sm:text-3xl">Archive</h2>
+        <p className="mb-10 text-center font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/40">All posts</p>
 
         {/* Tag filter bar */}
         {tags.length > 0 && (
-          <div className="mb-12 flex flex-wrap gap-2">
+          <div className="mb-12 flex flex-wrap justify-center gap-2">
             <button
               type="button"
               onClick={() => setSelectedTag(null)}
-              className={`rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
+              className={`rounded-full border px-4 py-1.5 font-body text-xs font-bold uppercase tracking-wider transition-colors ${
                 selectedTag === null
                   ? 'border-[#e0e0e0] bg-[#e0e0e0] text-[#0a0a0a]'
                   : 'border-[#e0e0e0]/20 text-[#e0e0e0]/50 hover:border-[#e0e0e0]/40 hover:text-[#e0e0e0]/80'
@@ -48,7 +48,7 @@ export function BlogArchive({ posts, tags }: { posts: PostEdges; tags: TagEdges 
                   key={filename}
                   type="button"
                   onClick={() => setSelectedTag(selectedTag === filename ? null : filename)}
-                  className={`rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
+                  className={`rounded-full border px-4 py-1.5 font-body text-xs font-bold uppercase tracking-wider transition-colors ${
                     selectedTag === filename
                       ? 'border-[#e0e0e0] bg-[#e0e0e0] text-[#0a0a0a]'
                       : 'border-[#e0e0e0]/20 text-[#e0e0e0]/50 hover:border-[#e0e0e0]/40 hover:text-[#e0e0e0]/80'
@@ -63,7 +63,7 @@ export function BlogArchive({ posts, tags }: { posts: PostEdges; tags: TagEdges 
 
         {/* Post cards grid */}
         {filteredPosts.length === 0 ? (
-          <p className="py-20 text-center font-mono text-sm text-[#e0e0e0]/30">No posts found.</p>
+          <p className="py-20 text-center font-body text-sm text-[#e0e0e0]/30">No posts found.</p>
         ) : (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {filteredPosts.map((post) => {
@@ -73,10 +73,18 @@ export function BlogArchive({ posts, tags }: { posts: PostEdges; tags: TagEdges 
               const date = node.date ? new Date(node.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
               const postTags = node.tags?.map((t) => t?.tag?.name).filter(Boolean) || [];
 
+              const cardClip = 'polygon(0 0, 100% 0, 100% calc(100% - 24px), calc(100% - 32px) 100%, 0 100%)';
               return (
                 <Link key={node._sys.filename} href={`/posts/${slug}`} className="block">
                   <Tilt rotationFactor={8} isRevese>
-                    <div className="flex flex-col overflow-hidden rounded-xl border border-[#e0e0e0]/10 bg-[#111]">
+                    <div
+                      className="p-px"
+                      style={{ clipPath: cardClip, background: 'rgba(224,224,224,0.1)' }}
+                    >
+                    <div
+                      className="flex flex-col overflow-hidden bg-[#111]"
+                      style={{ clipPath: cardClip }}
+                    >
                       {node.heroImg ? (
                         <div className="relative aspect-[16/10]">
                           <Image
@@ -89,15 +97,16 @@ export function BlogArchive({ posts, tags }: { posts: PostEdges; tags: TagEdges 
                         </div>
                       ) : (
                         <div className="flex aspect-[16/10] items-center justify-center bg-[#1a1a1a]">
-                          <span className="font-mono text-xs text-[#e0e0e0]/20">No image</span>
+                          <span className="font-body text-xs text-[#e0e0e0]/20">No image</span>
                         </div>
                       )}
                       <div className="p-3">
-                        <h3 className="font-mono leading-snug text-[#e0e0e0]">{node.title}</h3>
-                        <p className="text-sm text-[#e0e0e0]/50">
+                        <h3 className="font-body leading-snug text-[#e0e0e0]">{node.title}</h3>
+                        <p className="font-mono text-sm text-[#e0e0e0]/50">
                           {postTags[0] || ''}{postTags.length > 0 && date ? ' · ' : ''}{date}
                         </p>
                       </div>
+                    </div>
                     </div>
                   </Tilt>
                 </Link>

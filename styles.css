@@ -5,6 +5,9 @@
 @plugin "@tailwindcss/typography";
 
 @theme inline {
+  --font-heading: var(--font-lucida-bl), serif;
+  --font-body: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-lato), ui-monospace, monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
