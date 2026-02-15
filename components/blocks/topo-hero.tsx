@@ -3,37 +3,166 @@ import { useEffect, useRef } from 'react';
 import type { Template } from 'tinacms';
 import { tinaField } from 'tinacms/dist/react';
 import type { PageBlocksTopoHero } from '@/tina/__generated__/types';
+import type { ProgressRef } from './home-scroll-stage';
 import Link from 'next/link';
 
-export const TopoHero = ({ data, scrollProgress = 0 }: { data: PageBlocksTopoHero; scrollProgress?: number }) => {
+export type CardPost = {
+  heroImg: string;
+  title: string;
+  slug: string;
+};
+
+export const TopoHero = ({
+  data,
+  cardPosts,
+  progressRef,
+}: {
+  data: PageBlocksTopoHero;
+  cardPosts?: CardPost[];
+  progressRef?: ProgressRef;
+}) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const layersRef = useRef<HTMLDivElement[]>([]);
+  const cardLayersRef = useRef<HTMLDivElement[]>([]);
+  const interfaceRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef({ w: 1920, h: 1080 });
 
-  // Scroll-driven 3D animation
+  // Track viewport dimensions for card expand scaling
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const update = () => {
+      viewportRef.current = { w: window.innerWidth, h: window.innerHeight };
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
-    // Both rotation and separation run the full scroll duration
-    const rotateProgress = scrollProgress;
-    const separateLinear = Math.max(0, (scrollProgress - 0.05) / 0.95);
-    const separateProgress = separateLinear * separateLinear;
+  // Animation loop — reads directly from progressRef, no React re-renders
+  useEffect(() => {
+    if (!progressRef) return;
 
-    const rotX = rotateProgress * 55;
-    const rotZ = rotateProgress * -25;
-    const scale = 1 - rotateProgress * 0.05;
+    let raf: number;
+    let lastScroll = -1;
+    let lastTransition = -1;
 
-    canvas.style.transform = `rotateX(${rotX}deg) rotateZ(${rotZ}deg) scale(${scale})`;
+    const animate = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        raf = requestAnimationFrame(animate);
+        return;
+      }
 
-    // Layer 0 = portrait (bottom), Layer 1 = frame (middle), Layer 2 = text (top)
-    // Spread evenly: -400, 0, +400 — so the whole stack shifts down as it expands
-    const offsets = [-400, 0, 400];
-    layersRef.current.forEach((layer, index) => {
-      if (!layer) return;
-      const zOffset = separateProgress * offsets[index];
-      layer.style.transform = `translateZ(${zOffset}px)`;
-    });
-  }, [scrollProgress]);
+      const scrollProgress = progressRef.current?.scroll ?? 0;
+      const transitionProgress = progressRef.current?.transition ?? 0;
+
+      // Skip work if nothing changed
+      if (scrollProgress === lastScroll && transitionProgress === lastTransition) {
+        raf = requestAnimationFrame(animate);
+        return;
+      }
+      lastScroll = scrollProgress;
+      lastTransition = transitionProgress;
+
+      const rotateProgress = scrollProgress;
+      const separateLinear = Math.max(0, (scrollProgress - 0.05) / 0.95);
+      const separateProgress = separateLinear * separateLinear;
+      const tp = transitionProgress;
+
+      // Canvas rotation unwind — completes by tp=0.55 so scene is flat before card expands
+      const unwind = Math.pow(Math.max(0, 1 - tp / 0.55), 3);
+      const rotX = rotateProgress * 55 * unwind;
+      const rotZ = rotateProgress * -25 * unwind;
+      const scale = 1 - rotateProgress * 0.05 * unwind;
+
+      canvas.style.transform = `rotateX(${rotX}deg) rotateZ(${rotZ}deg) scale(${scale})`;
+
+      // Hero layers: Z separation only
+      const offsets = [-400, 0, 400];
+      layersRef.current.forEach((layer, index) => {
+        if (!layer) return;
+        layer.style.transform = `translateZ(${separateProgress * offsets[index]}px)`;
+      });
+
+      // Interface opacity
+      if (interfaceRef.current) {
+        interfaceRef.current.style.opacity = String(1 - tp);
+      }
+
+      // Card layers
+      const cardOffsets = [-600, -800, -1000, -1200, -1400];
+      const cardVerticalOffsets = [0, 5, 10, 15, 20];
+      cardLayersRef.current.forEach((card, index) => {
+        if (!card) return;
+
+        const restZ = -index * 2;
+
+        if (index === 0) {
+          const baseZ = restZ + separateProgress * cardOffsets[0];
+
+          if (tp > 0) {
+            // Bracket '[' motion: slide out → forward → slide back
+            const outEase = 1 - Math.pow(1 - Math.min(1, tp / 0.2), 2);
+            const fwdEase = 1 - Math.pow(1 - Math.min(1, Math.max(0, (tp - 0.15) / 0.3)), 2);
+            const backEase = 1 - Math.pow(1 - Math.min(1, Math.max(0, (tp - 0.4) / 0.15)), 2);
+
+            const cardZ = baseZ + (500 - baseZ) * fwdEase;
+            const slideY = 450 * outEase * (1 - backEase);
+
+            // Phase 2: card scales to fill viewport
+            let cardScale = 1;
+            let borderR = 4;
+            let bright = 1;
+            let overlayA = 0.55;
+            let titleOp = 1;
+
+            if (tp > 0.55) {
+              const p2e = 1 - Math.pow(1 - (tp - 0.55) / 0.45, 2.5);
+              const perspFactor = 2000 / (2000 - 500);
+              const vp = viewportRef.current;
+              const fillScale = Math.max(vp.w / (800 * perspFactor), vp.h / (418 * perspFactor)) * 1.05;
+              cardScale = 1 + (fillScale - 1) * p2e;
+              borderR = 4 * (1 - p2e);
+              bright = 1 - 0.2 * p2e;
+              overlayA = 0.55 - 0.1 * p2e;
+              titleOp = Math.max(0, 1 - p2e * 3);
+            }
+
+            card.style.transform = `translateZ(${cardZ}px) translateY(${slideY}px) scale(${cardScale})`;
+            card.style.borderRadius = `${borderR}px`;
+            card.style.filter = bright < 1 ? `brightness(${bright.toFixed(3)})` : '';
+
+            const overlay = card.querySelector('.topo-card-overlay') as HTMLElement;
+            if (overlay) {
+              overlay.style.background = `rgba(0,0,0,${overlayA.toFixed(3)})`;
+              const title = overlay.querySelector('.topo-card-title') as HTMLElement;
+              if (title) title.style.opacity = String(titleOp);
+            }
+          } else {
+            card.style.transform = `translateZ(${baseZ}px)`;
+            card.style.borderRadius = '';
+            card.style.filter = '';
+            const overlay = card.querySelector('.topo-card-overlay') as HTMLElement;
+            if (overlay) {
+              overlay.style.background = '';
+              const title = overlay.querySelector('.topo-card-title') as HTMLElement;
+              if (title) title.style.opacity = '';
+            }
+          }
+        } else {
+          const zOffset = restZ + separateProgress * cardOffsets[index];
+          const yFan = cardVerticalOffsets[index] * (1 - separateProgress);
+          card.style.transform = `translateZ(${zOffset}px) translateY(${yFan}px)`;
+        }
+      });
+
+      raf = requestAnimationFrame(animate);
+    };
+
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [progressRef]);
+
+  const cards = cardPosts?.slice(0, 5) ?? [];
 
   return (
     <>
@@ -83,12 +212,14 @@ export const TopoHero = ({ data, scrollProgress = 0 }: { data: PageBlocksTopoHer
           inset: 0;
           background-size: cover;
           background-position: center;
+          will-change: transform;
+          backface-visibility: hidden;
         }
 
         .topo-layer-portrait {
           background-image: url('/images/hero-portrait.png');
           border: 1px solid rgba(224, 224, 224, 0.15);
-          opacity: 0.3;
+          opacity: 0.5;
           filter: brightness(0.6);
         }
 
@@ -166,6 +297,36 @@ export const TopoHero = ({ data, scrollProgress = 0 }: { data: PageBlocksTopoHer
           transform: translateY(-5px);
         }
 
+        .topo-card-layer {
+          position: absolute;
+          inset: 0;
+          background-size: cover;
+          background-position: center;
+          will-change: transform;
+          backface-visibility: hidden;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+
+        .topo-card-overlay {
+          position: absolute;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.55);
+          display: flex;
+          align-items: flex-end;
+          padding: 1.5rem;
+        }
+
+        .topo-card-title {
+          font-family: var(--font-heading);
+          font-size: clamp(0.9rem, 2vw, 1.4rem);
+          font-weight: 700;
+          color: rgba(245, 245, 245, 0.92);
+          text-transform: uppercase;
+          letter-spacing: -0.01em;
+          line-height: 1.1;
+          margin: 0;
+        }
       `}</style>
 
       <div className="topo-hero">
@@ -178,8 +339,7 @@ export const TopoHero = ({ data, scrollProgress = 0 }: { data: PageBlocksTopoHer
 
         <div className="topo-grain" style={{ filter: 'url(#topo-grain)' }} />
 
-        {/* Bottom UI: tagline + CTA */}
-        <div className="topo-interface">
+        <div className="topo-interface" ref={interfaceRef}>
           {data.tagline && (
             <p
               data-tina-field={tinaField(data, 'tagline')}
@@ -195,16 +355,23 @@ export const TopoHero = ({ data, scrollProgress = 0 }: { data: PageBlocksTopoHer
           )}
         </div>
 
-        {/* 3D perspective canvas */}
         <div className="topo-viewport">
           <div className="topo-canvas-3d" ref={canvasRef}>
-            {/* Layer 1: Portrait photo (bottom) */}
+            {cards.map((card, i) => (
+              <div
+                key={card.slug}
+                className="topo-card-layer"
+                ref={(el) => { cardLayersRef.current[i] = el!; }}
+                style={{ backgroundImage: `url(${card.heroImg})` }}
+              >
+                <div className="topo-card-overlay">
+                  <p className="topo-card-title">{card.title}</p>
+                </div>
+              </div>
+            )).reverse()}
+
             <div className="topo-layer topo-layer-portrait" ref={(el) => { layersRef.current[0] = el!; }} />
-
-            {/* Layer 2: Ornamental frame (middle) */}
             <div className="topo-layer topo-layer-frame" ref={(el) => { layersRef.current[1] = el!; }} />
-
-            {/* Layer 3: Text (top) */}
             <div className="topo-layer topo-layer-text" ref={(el) => { layersRef.current[2] = el!; }}>
               <div className="topo-frame-text">
                 {data.headline && (
@@ -220,6 +387,10 @@ export const TopoHero = ({ data, scrollProgress = 0 }: { data: PageBlocksTopoHer
           </div>
         </div>
       </div>
+
+      {cards.length > 0 && (
+        <link rel="preload" as="image" href={cards[0].heroImg} />
+      )}
     </>
   );
 };

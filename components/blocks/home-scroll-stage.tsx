@@ -7,6 +7,7 @@ import { Blocks } from '@/components/blocks';
 import { RecentPostsSlider } from '@/components/blocks/recent-posts-slider';
 import { BlogArchive } from '@/components/blocks/blog-archive';
 import type { Page, PostConnectionQuery, TagConnectionQuery } from '@/tina/__generated__/types';
+import type { CardPost } from './topo-hero';
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
@@ -14,6 +15,8 @@ if (typeof window !== 'undefined') {
 
 type PostEdges = NonNullable<PostConnectionQuery['postConnection']['edges']>;
 type TagEdges = NonNullable<TagConnectionQuery['tagConnection']['edges']>;
+
+export type ProgressRef = React.RefObject<{ scroll: number; transition: number }>;
 
 interface HomeScrollStageProps {
   pageData: Omit<Page, 'id' | '_sys' | '_values'>;
@@ -27,11 +30,13 @@ interface HomeScrollStageProps {
  * Pins one viewport-sized container and fades three layers based on scroll progress.
  * Uses Lenis for smooth scrolling.
  *
- *   0%–10%    Hero visible
- *   10%–20%   Hero → Posts crossfade
- *   20%–65%   Posts visible, cycling through individual posts
- *   65%–75%   Posts → Archive crossfade
- *   75%–100%  Archive visible
+ *   0%–25%     Hero visible, 3D tilt + layer separation
+ *   25%–50%    Card transition: bracket slide, untilt, expand to fullscreen
+ *   50%        Hard swap: hero opacity→0, posts opacity→1
+ *   50%–55%    Buffer zone (posts fully visible)
+ *   55%–80%    Posts cycling through individual posts
+ *   80%–90%    Posts → Archive crossfade
+ *   90%–100%   Archive visible
  */
 export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: HomeScrollStageProps) {
   const postCount = recentPosts.filter((p) => p?.node).length;
@@ -44,10 +49,18 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
   const archiveRef = useRef<HTMLDivElement>(null);
 
   const [postIndex, setPostIndex] = useState(0);
-  const [heroProgress, setHeroProgress] = useState(0);
+  const progressRef = useRef({ scroll: 0, transition: 0 });
   const lenisRef = useRef<Lenis | null>(null);
-  const snapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isSnappingRef = useRef(false);
+
+  // Derive card posts from recent posts (first 5 with hero images)
+  const cardPosts: CardPost[] = recentPosts
+    .filter((p) => p?.node?.heroImg)
+    .slice(0, 5)
+    .map((p) => ({
+      heroImg: p!.node!.heroImg!,
+      title: p!.node!.title ?? '',
+      slug: p!.node!._sys.breadcrumbs.join('/'),
+    }));
 
   // Lenis smooth scroll
   useLayoutEffect(() => {
@@ -59,21 +72,11 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
     });
     lenisRef.current = lenis;
 
-    // Reset snap lock if user scrolls manually (wheel/touch interrupts the snap)
-    const onWheel = () => {
-      isSnappingRef.current = false;
-    };
-    window.addEventListener('wheel', onWheel, { passive: true });
-    window.addEventListener('touchstart', onWheel, { passive: true });
-
-    // Connect Lenis to GSAP ScrollTrigger
     lenis.on('scroll', ScrollTrigger.update);
     gsap.ticker.add((time) => lenis.raf(time * 1000));
     gsap.ticker.lagSmoothing(0);
 
     return () => {
-      window.removeEventListener('wheel', onWheel);
-      window.removeEventListener('touchstart', onWheel);
       gsap.ticker.remove(lenis.raf as any);
       lenis.destroy();
       lenisRef.current = null;
@@ -94,42 +97,6 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
     gsap.set(posts, { opacity: 0 });
     gsap.set(archive, { opacity: 0, pointerEvents: 'none' });
 
-    // Crossfade zones — snap to whichever end is closest
-    const FADE_ZONES = [
-      { start: 0.30, end: 0.40 }, // Hero → Posts
-      { start: 0.75, end: 0.85 }, // Posts → Archive
-    ];
-
-    const scheduleSnap = (progress: number, scrollStart: number, scrollEnd: number) => {
-      // Don't schedule new snaps while one is animating
-      if (isSnappingRef.current) return;
-      if (snapTimerRef.current) clearTimeout(snapTimerRef.current);
-
-      const zone = FADE_ZONES.find((z) => progress > z.start && progress < z.end);
-      if (!zone) return;
-
-      snapTimerRef.current = setTimeout(() => {
-        const lenis = lenisRef.current;
-        if (!lenis) return;
-        isSnappingRef.current = true;
-        const mid = (zone.start + zone.end) / 2;
-        const snapTo = progress >= mid ? zone.end : zone.start;
-        const targetScroll = scrollStart + snapTo * (scrollEnd - scrollStart);
-        const snapDuration = 1.2;
-        lenis.scrollTo(targetScroll, {
-          duration: snapDuration,
-          easing: (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2),
-          onComplete: () => {
-            isSnappingRef.current = false;
-          },
-        });
-        // Fallback: always unlock after duration + buffer
-        setTimeout(() => {
-          isSnappingRef.current = false;
-        }, snapDuration * 1000 + 200);
-      }, 150);
-    };
-
     const st = ScrollTrigger.create({
       trigger: wrapper,
       start: 'top top',
@@ -139,56 +106,44 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
       onUpdate: (self) => {
         const p = self.progress;
 
-        // Hero 3D animation: normalize 0–35% stage progress to 0–1
-        const hp = Math.min(1, p / 0.35);
-        setHeroProgress((prev) => (Math.abs(prev - hp) > 0.005 ? hp : prev));
+        // Write progress directly to ref — no React re-renders
+        progressRef.current.scroll = Math.min(1, p / 0.35);
+        progressRef.current.transition = p <= 0.25 ? 0 : p >= 0.50 ? 1 : (p - 0.25) / 0.25;
 
-        // Hero: full until 30%, fades out 30%–40%
-        if (p <= 0.30) {
-          gsap.set(hero, { opacity: 1 });
-        } else if (p <= 0.40) {
-          gsap.set(hero, { opacity: 1 - (p - 0.30) / 0.10 });
-        } else {
-          gsap.set(hero, { opacity: 0 });
-        }
+        // Hero: hard swap at 50%
+        gsap.set(hero, { opacity: p < 0.50 ? 1 : 0 });
 
-        // Posts: fades in 30%–40%, full 40%–75%, fades out 75%–85%
-        if (p < 0.30) {
+        // Posts: instant on at 50%, full 50%–80%, fades out 80%–90%
+        if (p < 0.50) {
           gsap.set(posts, { opacity: 0 });
-        } else if (p <= 0.40) {
-          gsap.set(posts, { opacity: (p - 0.30) / 0.10 });
-        } else if (p <= 0.75) {
+        } else if (p <= 0.80) {
           gsap.set(posts, { opacity: 1 });
-        } else if (p <= 0.85) {
-          gsap.set(posts, { opacity: 1 - (p - 0.75) / 0.10 });
+        } else if (p <= 0.90) {
+          gsap.set(posts, { opacity: 1 - (p - 0.80) / 0.10 });
         } else {
           gsap.set(posts, { opacity: 0 });
         }
 
-        // Archive: fades in 75%–85%, full 85%–100%
-        if (p < 0.75) {
+        // Archive: fades in 80%–90%, full 90%–100%
+        if (p < 0.80) {
           gsap.set(archive, { opacity: 0, pointerEvents: 'none' });
-        } else if (p <= 0.85) {
-          const fade = (p - 0.75) / 0.10;
+        } else if (p <= 0.90) {
+          const fade = (p - 0.80) / 0.10;
           gsap.set(archive, { opacity: fade, pointerEvents: fade > 0.5 ? 'auto' : 'none' });
         } else {
           gsap.set(archive, { opacity: 1, pointerEvents: 'auto' });
         }
 
-        // Post index: map 40%–75% to post indices
-        if (postCount > 0 && p >= 0.40 && p <= 0.75) {
-          const postProgress = (p - 0.40) / 0.35;
+        // Post index: map 55%–80% to post indices
+        if (postCount > 0 && p >= 0.55 && p <= 0.80) {
+          const postProgress = (p - 0.55) / 0.25;
           const idx = Math.min(postCount - 1, Math.floor(postProgress * postCount));
           setPostIndex((prev) => (prev !== idx ? idx : prev));
         }
-
-        // Snap out of crossfade zones when scrolling settles
-        scheduleSnap(p, self.start, self.end);
       },
     });
 
     return () => {
-      if (snapTimerRef.current) clearTimeout(snapTimerRef.current);
       st.kill();
     };
   }, [postCount]);
@@ -207,7 +162,7 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
       >
         {/* Layer 1: Hero */}
         <div ref={heroRef} style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
-          <Blocks {...pageData} scrollProgress={heroProgress} />
+          <Blocks {...pageData} cardPosts={cardPosts} progressRef={progressRef} />
         </div>
 
         {/* Layer 2: Posts slider */}
