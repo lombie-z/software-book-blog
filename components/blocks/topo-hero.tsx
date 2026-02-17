@@ -76,8 +76,8 @@ export const TopoHero = ({
 
       canvas.style.transform = `rotateX(${rotX}deg) rotateZ(${rotZ}deg) scale(${scale})`;
 
-      // Hero layers: Z separation only
-      const offsets = [-400, 0, 400];
+      // Hero layers: Z separation only (5 layers, all above card stack at Z=-600)
+      const offsets = [-500, -250, 0, 250, 500];
       layersRef.current.forEach((layer, index) => {
         if (!layer) return;
         layer.style.transform = `translateZ(${separateProgress * offsets[index]}px)`;
@@ -216,11 +216,24 @@ export const TopoHero = ({
           backface-visibility: hidden;
         }
 
+        .topo-layer-silhouette-warm {
+          background-image: url('/images/hero-silhouette-warm.png');
+          background-position: left top;
+          opacity: 0.6;
+        }
+
         .topo-layer-portrait {
-          background-image: url('/images/hero-portrait.png');
+          background-image: url('/images/hero-portrait-photo.png');
+          background-position: center top;
           border: 1px solid rgba(224, 224, 224, 0.15);
-          opacity: 0.5;
-          filter: brightness(0.6);
+          opacity: 0.45;
+          filter: brightness(0.7);
+        }
+
+        .topo-layer-silhouette-green {
+          background-image: url('/images/hero-silhouette-green.png');
+          background-position: left top;
+          opacity: 0.7;
         }
 
         .topo-layer-frame {
@@ -370,9 +383,11 @@ export const TopoHero = ({
               </div>
             )).reverse()}
 
-            <div className="topo-layer topo-layer-portrait" ref={(el) => { layersRef.current[0] = el!; }} />
-            <div className="topo-layer topo-layer-frame" ref={(el) => { layersRef.current[1] = el!; }} />
-            <div className="topo-layer topo-layer-text" ref={(el) => { layersRef.current[2] = el!; }}>
+            <div className="topo-layer topo-layer-silhouette-warm" ref={(el) => { layersRef.current[0] = el!; }} />
+            <div className="topo-layer topo-layer-portrait" ref={(el) => { layersRef.current[1] = el!; }} />
+            <div className="topo-layer topo-layer-silhouette-green" ref={(el) => { layersRef.current[2] = el!; }} />
+            <div className="topo-layer topo-layer-frame" ref={(el) => { layersRef.current[3] = el!; }} />
+            <div className="topo-layer topo-layer-text" ref={(el) => { layersRef.current[4] = el!; }}>
               <div className="topo-frame-text">
                 {data.headline && (
                   <h1 className="topo-frame-title" data-tina-field={tinaField(data, 'headline')}>
