@@ -16,9 +16,9 @@ No test framework is configured.
 
 ## Local URLs
 
-- `http://localhost:3000` — Website
-- `http://localhost:3000/admin` — TinaCMS visual editor
-- `http://localhost:4001/altair/` — GraphQL playground
+- `http://localhost:3002` — Website
+- `http://localhost:3002/admin` — TinaCMS visual editor
+- `http://localhost:4002/altair/` — GraphQL playground
 
 ## Architecture
 
