@@ -65,6 +65,25 @@ import { PostQuery, PostQueryVariables } from '@/tina/__generated__/types';
 - `content/` — All CMS-managed content files
 - `tina/config.tsx` — Main TinaCMS configuration
 
+### Home Page Scroll System
+
+The home page uses a pinned scroll orchestrator (`components/blocks/home-scroll-stage.tsx`) with three stacked layers driven by scroll progress:
+
+**Scroll phases** (% of total scroll height = `450 + postCount * 80` vh):
+- **0%–28%**: Hero 3D tilt + layer separation (`progressRef.scroll` 0→1)
+- **20%–40%**: Card transition — bracket slide, untilt, expand to fullscreen (`progressRef.transition` 0→1)
+- **40%–55%**: Hold phase — card fullscreen, matrix text effect dissolves "WILLIAM" from title (`progressRef.hold` 0→1)
+- **55%**: Hard swap — hero hidden, posts visible
+- **60%–80%**: Posts cycling through individual posts
+- **80%–90%**: Posts → Archive crossfade
+- **90%–100%**: Archive visible
+
+**Hero component** (`components/blocks/topo-hero.tsx`):
+- Uses `progressRef` (a shared mutable ref, no React re-renders) driven by GSAP ScrollTrigger
+- Title "I. WILLIAM. R. L" is hardcoded (not from TinaCMS)
+- Hold phase: matrix-style scramble effect (green 0/1 characters) dissolves "WILLIAM", then the gap collapses leaving "I. R. L"
+- All animation runs in a `requestAnimationFrame` loop reading directly from progressRef — avoids React re-renders for performance
+
 ### Content Rendering
 
 Use `TinaMarkdown` for rich-text fields, passing the centralized `components` from `@/components/mdx-components`. Code blocks with `lang: 'mermaid'` render as Mermaid diagrams; all others use Shiki syntax highlighting.

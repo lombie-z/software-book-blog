@@ -16,7 +16,7 @@ if (typeof window !== 'undefined') {
 type PostEdges = NonNullable<PostConnectionQuery['postConnection']['edges']>;
 type TagEdges = NonNullable<TagConnectionQuery['tagConnection']['edges']>;
 
-export type ProgressRef = React.RefObject<{ scroll: number; transition: number }>;
+export type ProgressRef = React.RefObject<{ scroll: number; transition: number; hold: number }>;
 
 interface HomeScrollStageProps {
   pageData: Omit<Page, 'id' | '_sys' | '_values'>;
@@ -27,20 +27,20 @@ interface HomeScrollStageProps {
 
 /**
  * Master scroll orchestrator for the home page.
- * Pins one viewport-sized container and fades three layers based on scroll progress.
+ * Pins one viewport-sized container and crossfades three layers based on scroll progress.
  * Uses Lenis for smooth scrolling.
  *
- *   0%–25%     Hero visible, 3D tilt + layer separation
- *   25%–50%    Card transition: bracket slide, untilt, expand to fullscreen
- *   50%        Hard swap: hero opacity→0, posts opacity→1
- *   50%–55%    Buffer zone (posts fully visible)
- *   55%–80%    Posts cycling through individual posts
- *   80%–90%    Posts → Archive crossfade
+ *   0%–28%     Hero visible, 3D tilt + layer separation
+ *   20%–40%    Card transition: bracket slide, untilt, expand to fullscreen
+ *   40%–65%    Hold phase: fleur effect on title
+ *   62%–70%    Hero → Posts crossfade
+ *   70%–82%    Posts cycling through individual posts
+ *   82%–90%    Posts → Archive crossfade
  *   90%–100%   Archive visible
  */
 export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: HomeScrollStageProps) {
   const postCount = recentPosts.filter((p) => p?.node).length;
-  const totalScrollVh = 350 + postCount * 80;
+  const totalScrollVh = 450 + postCount * 80;
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const pinnedRef = useRef<HTMLDivElement>(null);
@@ -49,7 +49,7 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
   const archiveRef = useRef<HTMLDivElement>(null);
 
   const [postIndex, setPostIndex] = useState(0);
-  const progressRef = useRef({ scroll: 0, transition: 0 });
+  const progressRef = useRef({ scroll: 0, transition: 0, hold: 0 });
   const lenisRef = useRef<Lenis | null>(null);
 
   // Derive card posts from recent posts (first 5 with hero images)
@@ -107,36 +107,25 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
         const p = self.progress;
 
         // Write progress directly to ref — no React re-renders
-        progressRef.current.scroll = Math.min(1, p / 0.35);
-        progressRef.current.transition = p <= 0.25 ? 0 : p >= 0.50 ? 1 : (p - 0.25) / 0.25;
+        progressRef.current.scroll = Math.min(1, p / 0.28);
+        progressRef.current.transition = p <= 0.20 ? 0 : p >= 0.40 ? 1 : (p - 0.20) / 0.20;
+        progressRef.current.hold = p <= 0.40 ? 0 : p >= 0.65 ? 1 : (p - 0.40) / 0.25;
 
-        // Hero: hard swap at 50%
-        gsap.set(hero, { opacity: p < 0.50 ? 1 : 0 });
+        // Hero → Posts crossfade (62%–70%)
+        const heroOut = p <= 0.62 ? 1 : p >= 0.70 ? 0 : 1 - (p - 0.62) / 0.08;
+        const postsIn = p <= 0.62 ? 0 : p >= 0.70 ? 1 : (p - 0.62) / 0.08;
+        gsap.set(hero, { opacity: heroOut });
 
-        // Posts: instant on at 50%, full 50%–80%, fades out 80%–90%
-        if (p < 0.50) {
-          gsap.set(posts, { opacity: 0 });
-        } else if (p <= 0.80) {
-          gsap.set(posts, { opacity: 1 });
-        } else if (p <= 0.90) {
-          gsap.set(posts, { opacity: 1 - (p - 0.80) / 0.10 });
-        } else {
-          gsap.set(posts, { opacity: 0 });
-        }
+        // Posts → Archive crossfade (82%–90%)
+        const postsOut = p <= 0.82 ? 1 : p >= 0.90 ? 0 : 1 - (p - 0.82) / 0.08;
+        const archiveIn = p <= 0.82 ? 0 : p >= 0.90 ? 1 : (p - 0.82) / 0.08;
 
-        // Archive: fades in 80%–90%, full 90%–100%
-        if (p < 0.80) {
-          gsap.set(archive, { opacity: 0, pointerEvents: 'none' });
-        } else if (p <= 0.90) {
-          const fade = (p - 0.80) / 0.10;
-          gsap.set(archive, { opacity: fade, pointerEvents: fade > 0.5 ? 'auto' : 'none' });
-        } else {
-          gsap.set(archive, { opacity: 1, pointerEvents: 'auto' });
-        }
+        gsap.set(posts, { opacity: postsIn * postsOut });
+        gsap.set(archive, { opacity: archiveIn, pointerEvents: archiveIn > 0.5 ? 'auto' : 'none' });
 
-        // Post index: map 55%–80% to post indices
-        if (postCount > 0 && p >= 0.55 && p <= 0.80) {
-          const postProgress = (p - 0.55) / 0.25;
+        // Post index: map 70%–82% to post indices
+        if (postCount > 0 && p >= 0.70 && p <= 0.82) {
+          const postProgress = (p - 0.70) / 0.12;
           const idx = Math.min(postCount - 1, Math.floor(postProgress * postCount));
           setPostIndex((prev) => (prev !== idx ? idx : prev));
         }

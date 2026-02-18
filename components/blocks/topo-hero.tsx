@@ -12,6 +12,8 @@ export type CardPost = {
   slug: string;
 };
 
+const FLEUR_COUNT = 7;
+
 export const TopoHero = ({
   data,
   cardPosts,
@@ -26,6 +28,16 @@ export const TopoHero = ({
   const cardLayersRef = useRef<HTMLDivElement[]>([]);
   const interfaceRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef({ w: 1920, h: 1080 });
+  const williamGroupRef = useRef<HTMLDivElement>(null);
+  const williamCharsRef = useRef<(HTMLSpanElement | null)[]>([]);
+  const williamWidthRef = useRef(0);
+
+  // Fleur-de-lis refs
+  const fleurRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // Cached screen positions + scale of WILLIAM chars, evenly-spaced rest positions, and circle targets
+  const charScreenPosRef = useRef<{ x: number; y: number; scale: number }[]>([]);
+  const fleurRestPosRef = useRef<{ x: number; y: number }[]>([]);
+  const fleurTargetsRef = useRef<{ x: number; y: number; angle: number }[]>([]);
 
   // Track viewport dimensions for card expand scaling
   useEffect(() => {
@@ -44,6 +56,7 @@ export const TopoHero = ({
     let raf: number;
     let lastScroll = -1;
     let lastTransition = -1;
+    let lastHold = -1;
 
     const animate = () => {
       const canvas = canvasRef.current;
@@ -54,14 +67,17 @@ export const TopoHero = ({
 
       const scrollProgress = progressRef.current?.scroll ?? 0;
       const transitionProgress = progressRef.current?.transition ?? 0;
+      const holdProgress = progressRef.current?.hold ?? 0;
 
-      // Skip work if nothing changed
-      if (scrollProgress === lastScroll && transitionProgress === lastTransition) {
+      // Keep animating during active hold phase (flicker + fly + vine growth)
+      const inActiveHold = holdProgress > 0.01 && holdProgress < 0.88;
+      if (scrollProgress === lastScroll && transitionProgress === lastTransition && holdProgress === lastHold && !inActiveHold) {
         raf = requestAnimationFrame(animate);
         return;
       }
       lastScroll = scrollProgress;
       lastTransition = transitionProgress;
+      lastHold = holdProgress;
 
       const rotateProgress = scrollProgress;
       const separateLinear = Math.max(0, (scrollProgress - 0.05) / 0.95);
@@ -100,7 +116,6 @@ export const TopoHero = ({
           const baseZ = restZ + separateProgress * cardOffsets[0];
 
           if (tp > 0) {
-            // Bracket '[' motion: slide out → forward → slide back
             const outEase = 1 - Math.pow(1 - Math.min(1, tp / 0.2), 2);
             const fwdEase = 1 - Math.pow(1 - Math.min(1, Math.max(0, (tp - 0.15) / 0.3)), 2);
             const backEase = 1 - Math.pow(1 - Math.min(1, Math.max(0, (tp - 0.4) / 0.15)), 2);
@@ -108,7 +123,6 @@ export const TopoHero = ({
             const cardZ = baseZ + (500 - baseZ) * fwdEase;
             const slideY = 450 * outEase * (1 - backEase);
 
-            // Phase 2: card scales to fill viewport
             let cardScale = 1;
             let borderR = 4;
             let bright = 1;
@@ -154,6 +168,149 @@ export const TopoHero = ({
           card.style.transform = `translateZ(${zOffset}px) translateY(${yFan}px)`;
         }
       });
+
+      // ── Hold phase: fleur flicker → settle → fly into circle around "I. R. L" ──
+      // Single set of absolute fleur divs the whole way:
+      //   0.00–0.18  Flicker: positioned over WILLIAM chars, randomly toggled with letters
+      //   0.18–0.28  Settle: all fleurs visible over chars, letters hidden, brief pause
+      //   0.28–0.55  Fly: fleurs animate from char positions into circular formation; "I. R. L" collapses
+      const hold = holdProgress;
+      if (hold > 0 || tp > 0) {
+        const now = Date.now();
+
+        // ── Measure char positions + compute circle targets once at hold start ──
+        if (hold > 0.005 && charScreenPosRef.current.length === 0) {
+          const vp = viewportRef.current;
+          const fleurEl = fleurRefs.current[0];
+          const fleurH = fleurEl?.querySelector('img')?.offsetHeight || 44;
+
+          charScreenPosRef.current = williamCharsRef.current.map((el) => {
+            if (!el) return { x: 50, y: 50, scale: 0.5 };
+            const rect = el.getBoundingClientRect();
+            return {
+              x: ((rect.left + rect.width / 2) / vp.w) * 100,
+              y: ((rect.top + rect.height / 2) / vp.h) * 100,
+              scale: rect.height / fleurH,
+            };
+          });
+
+          // Compute evenly-spaced rest positions across the WILLIAM group width
+          const wgEl = williamGroupRef.current;
+          const wgRect = wgEl?.getBoundingClientRect();
+          if (wgRect && wgRect.width > 0) {
+            const groupLeft = wgRect.left;
+            const groupWidth = wgRect.width;
+            const groupCenterY = (wgRect.top + wgRect.height / 2) / vp.h * 100;
+            fleurRestPosRef.current = Array.from({ length: FLEUR_COUNT }, (_, i) => ({
+              x: ((groupLeft + (i + 0.5) / FLEUR_COUNT * groupWidth) / vp.w) * 100,
+              y: groupCenterY,
+            }));
+          }
+
+          // Compute circular formation centered on the title
+          const titleEl = williamGroupRef.current?.closest('.topo-frame-title') as HTMLElement;
+          const titleRect = titleEl?.getBoundingClientRect();
+          const centerX = titleRect ? ((titleRect.left + titleRect.width / 2) / vp.w) * 100 : 50;
+          const centerY = titleRect ? ((titleRect.top + titleRect.height / 2) / vp.h) * 100 : 48;
+
+          // Use min dimension so it's a true circle on any aspect ratio
+          const radiusPx = Math.min(vp.w, vp.h) * 0.2;
+          const radiusXPct = (radiusPx / vp.w) * 100;
+          const radiusYPct = (radiusPx / vp.h) * 100;
+
+          fleurTargetsRef.current = Array.from({ length: FLEUR_COUNT }, (_, i) => {
+            const angleRad = (i / FLEUR_COUNT) * Math.PI * 2 - Math.PI / 2; // start from top
+            return {
+              x: centerX + Math.cos(angleRad) * radiusXPct,
+              y: centerY + Math.sin(angleRad) * radiusYPct,
+              angle: (i / FLEUR_COUNT) * 360, // point outward (0° = up at 12 o'clock, CW)
+            };
+          });
+        }
+
+        // Slide distance (% of viewport height) for the swap
+        const slideDist = 4;
+
+        // ── Phase 1: Slide up WILLIAM letters, slide in fleurs from below (staggered) ──
+        // ── Phase 2: Settle, then fly to circle ──
+        for (let i = 0; i < fleurRefs.current.length; i++) {
+          const el = fleurRefs.current[i];
+          if (!el) continue;
+
+          const charEl = williamCharsRef.current[i];
+          const measured = charScreenPosRef.current[i];
+          const restPos = fleurRestPosRef.current[i];
+          const restX = restPos?.x ?? measured?.x ?? 50;
+          const restY = restPos?.y ?? measured?.y ?? 50;
+          const textScale = measured?.scale ?? 0.5;
+          const target = fleurTargetsRef.current[i];
+          if (!target) continue;
+
+          // Slide timing per character (staggered)
+          const slideStart = 0.02 + i * 0.03;
+          const slideEnd = slideStart + 0.12;
+          const slideP = hold <= slideStart ? 0 : hold >= slideEnd ? 1 : (hold - slideStart) / (slideEnd - slideStart);
+          // Smooth ease-out for the slide
+          const slideE = 1 - Math.pow(1 - slideP, 3);
+
+          // Fly timing — starts after settle pause, gentle ease
+          const flyStart = 0.38;
+          const flyEnd = 0.72;
+          const flyP = hold <= flyStart ? 0 : Math.min(1, (hold - flyStart) / (flyEnd - flyStart));
+          const flyE = 1 - Math.pow(1 - flyP, 2.5);
+
+          // Fleur position: slides up from below → evenly-spaced rest position → circle target
+          const slideY = restY - slideDist * slideE + slideDist; // starts below, arrives at restY
+          const cx = (flyP > 0) ? restX + (target.x - restX) * flyE : restX;
+          const cy = (flyP > 0) ? restY + (target.y - restY) * flyE : slideY;
+
+          // Scale: text-size → full fleur size (only during fly)
+          const fleurScale = textScale + (1 - textScale) * flyE;
+
+          // Rotation: smoothly from 0° to outward-facing target angle, shortest path
+          let angleDiff = target.angle % 360;
+          if (angleDiff > 180) angleDiff -= 360;
+          if (angleDiff < -180) angleDiff += 360;
+          const currentRot = angleDiff * flyE;
+
+          // Fleur opacity: fades in during slide
+          const fleurOpacity = slideP;
+
+          el.style.opacity = String(fleurOpacity);
+          el.style.left = `${cx}%`;
+          el.style.top = `${cy}%`;
+          el.style.transform = `translate(-50%, -50%) rotate(${currentRot}deg) scale(${fleurScale})`;
+
+          // Letter: slides up and fades out (inverse timing)
+          if (charEl) {
+            const letterOffset = -slideE * 30; // slides up in px
+            charEl.style.opacity = String(1 - slideP);
+            charEl.style.transform = `translateY(${letterOffset}px)`;
+          }
+        }
+
+        // Tail (". ") fade — matches slide timing
+        const wg = williamGroupRef.current;
+        const tail = wg?.querySelector('.topo-william-tail') as HTMLElement;
+        if (tail) {
+          const tailP = hold <= 0.04 ? 0 : hold >= 0.18 ? 1 : (hold - 0.04) / 0.14;
+          tail.style.opacity = String(1 - tailP);
+        }
+
+        // Width collapse: "I. R. L" slides together — synced with fly
+        if (wg) {
+          if (williamWidthRef.current === 0 && wg.scrollWidth > 0) {
+            williamWidthRef.current = wg.scrollWidth;
+          }
+          const collapseStart = 0.38;
+          const collapseEnd = 0.72;
+          const collapseP = hold <= collapseStart ? 0 : hold >= collapseEnd ? 1 : (hold - collapseStart) / (collapseEnd - collapseStart);
+          const eased = collapseP < 0.5 ? 4 * collapseP * collapseP * collapseP : 1 - Math.pow(-2 * collapseP + 2, 3) / 2;
+          if (williamWidthRef.current > 0) {
+            wg.style.width = `${williamWidthRef.current * (1 - eased)}px`;
+          }
+        }
+      }
 
       raf = requestAnimationFrame(animate);
     };
@@ -255,6 +412,9 @@ export const TopoHero = ({
         }
 
         .topo-frame-title {
+          display: flex;
+          align-items: baseline;
+          justify-content: center;
           font-family: var(--font-heading);
           font-size: clamp(1.8rem, 5vw, 4rem);
           line-height: 0.9;
@@ -340,6 +500,37 @@ export const TopoHero = ({
           line-height: 1.1;
           margin: 0;
         }
+
+        .topo-william-group {
+          display: inline-flex;
+          overflow: hidden;
+          white-space: nowrap;
+        }
+
+        .topo-william-group > span {
+          display: inline-block;
+          text-align: center;
+          position: relative;
+        }
+
+        .topo-william-tail {
+          white-space: pre;
+        }
+
+        .topo-fleur {
+          position: absolute;
+          z-index: 15;
+          pointer-events: none;
+          opacity: 0;
+          transform: translate(-50%, -50%);
+        }
+
+        .topo-fleur img {
+          width: clamp(28px, 4vw, 44px);
+          height: auto;
+          filter: brightness(0) invert(0.7);
+        }
+
       `}</style>
 
       <div className="topo-hero">
@@ -389,11 +580,16 @@ export const TopoHero = ({
             <div className="topo-layer topo-layer-frame" ref={(el) => { layersRef.current[3] = el!; }} />
             <div className="topo-layer topo-layer-text" ref={(el) => { layersRef.current[4] = el!; }}>
               <div className="topo-frame-text">
-                {data.headline && (
-                  <h1 className="topo-frame-title" data-tina-field={tinaField(data, 'headline')}>
-                    {data.headline}
-                  </h1>
-                )}
+                <h1 className="topo-frame-title">
+                  <span style={{ whiteSpace: 'pre' }}>{'I. '}</span>
+                  <span className="topo-william-group" ref={williamGroupRef}>
+                    {['W', 'I', 'L', 'L', 'I', 'A', 'M'].map((c, i) => (
+                      <span key={i} ref={(el) => { williamCharsRef.current[i] = el; }}>{c}</span>
+                    ))}
+                    <span className="topo-william-tail">{'. '}</span>
+                  </span>
+                  <span style={{ whiteSpace: 'pre' }}>{'R. L'}</span>
+                </h1>
                 {data.tagline && (
                   <p className="topo-frame-tagline">{data.tagline}</p>
                 )}
@@ -401,6 +597,17 @@ export const TopoHero = ({
             </div>
           </div>
         </div>
+
+        {/* Fleur-de-lis icons — flicker over WILLIAM chars, then fly into circle */}
+        {Array.from({ length: FLEUR_COUNT }, (_, i) => (
+          <div
+            key={`fleur-${i}`}
+            className="topo-fleur"
+            ref={(el) => { fleurRefs.current[i] = el; }}
+          >
+            <img src="/images/fleur-de-lis.svg" alt="" draggable={false} />
+          </div>
+        ))}
       </div>
 
       {cards.length > 0 && (
