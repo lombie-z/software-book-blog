@@ -62,6 +62,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
   const heroBorderRef = useRef<HTMLDivElement>(null);
   const postCardRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const glassPanelRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const glassShineRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const progressRef = useRef({ scroll: 0, transition: 0, hold: 0 });
   const lastCsRef = useRef(0);
@@ -264,6 +265,13 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           panel.style.height = `${panelH}px`;
           panel.style.filter = absVel > 2 ? `blur(${Math.min(3, absVel * 0.08)}px)` : 'none';
           panel.style.boxShadow = shadows;
+
+          // Subtle shine drift — slide the gloss based on viewport position
+          const shine = glassShineRefs.current[i];
+          if (shine) {
+            const viewportNorm = panelY / viewH;
+            shine.style.transform = `translateY(${viewportNorm * 30 * cfg.depth}%)`;
+          }
         });
       },
     });
@@ -363,13 +371,17 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
               overflow: 'hidden',
             }}
           >
-            {/* Shine — diagonal gloss streak */}
+            {/* Shine — diagonal gloss streak, uniform light direction */}
             <div
+              ref={(el) => {
+                glassShineRefs.current[i] = el;
+              }}
               style={{
                 position: 'absolute',
-                inset: 0,
-                background: `linear-gradient(${cfg.shine + 90}deg, transparent 25%, rgba(255,255,255,0.02) 45%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 55%, transparent 75%)`,
+                inset: '-20% 0',
+                background: 'linear-gradient(125deg, transparent 25%, rgba(255,255,255,0.02) 45%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 55%, transparent 75%)',
                 pointerEvents: 'none',
+                willChange: 'transform',
               }}
             />
             {/* Edge highlight */}
