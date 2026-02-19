@@ -5,8 +5,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import Link from 'next/link';
 import { Blocks } from '@/components/blocks';
-import { BlogArchive } from '@/components/blocks/blog-archive';
-import type { Page, PostConnectionQuery, TagConnectionQuery } from '@/tina/__generated__/types';
+import type { Page, PostConnectionQuery } from '@/tina/__generated__/types';
 import type { CardPost } from './topo-hero';
 
 if (typeof window !== 'undefined') {
@@ -14,15 +13,12 @@ if (typeof window !== 'undefined') {
 }
 
 type PostEdges = NonNullable<PostConnectionQuery['postConnection']['edges']>;
-type TagEdges = NonNullable<TagConnectionQuery['tagConnection']['edges']>;
 
 export type ProgressRef = React.RefObject<{ scroll: number; transition: number; hold: number }>;
 
 interface HomeScrollStageProps {
   pageData: Omit<Page, 'id' | '_sys' | '_values'>;
   recentPosts: PostEdges;
-  archivePosts: PostEdges;
-  tags: TagEdges;
 }
 
 const CARD_H = 380;
@@ -54,10 +50,9 @@ const GLASS_PANELS = [
  *   20%–40%    Card transition: bracket slide, untilt, expand to fullscreen
  *   40%–76%    Hold phase: WILLIAM→IRL collapse, frame sequence, IRL slide-up
  *   76%–82%    Reveal: hero clip-paths from fullscreen to card dimensions
- *   82%–95%    Card scroll: hero card slides down, post cards enter from above
- *   95%–100%   Archive crossfade
+ *   82%–97%    Card scroll: hero card slides down, all post cards enter from above
  */
-export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: HomeScrollStageProps) {
+export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps) {
   const postCount = recentPosts.filter((p) => p?.node).length;
   const totalScrollVh = 650 + postCount * 100;
 
@@ -65,7 +60,6 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
   const pinnedRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const heroBorderRef = useRef<HTMLDivElement>(null);
-  const archiveRef = useRef<HTMLDivElement>(null);
   const postCardRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const glassPanelRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -83,10 +77,9 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
       slug: p!.node!._sys.breadcrumbs.join('/'),
     }));
 
-  // Extended post data for card display
+  // Extended post data for card display — ALL posts with hero images
   const postCards = recentPosts
     .filter((p) => p?.node?.heroImg)
-    .slice(0, 5)
     .map((p) => ({
       heroImg: p!.node!.heroImg!,
       title: p!.node!.title ?? '',
@@ -124,11 +117,9 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
     const pinned = pinnedRef.current;
     const hero = heroRef.current;
     const heroBorder = heroBorderRef.current;
-    const archive = archiveRef.current;
-    if (!wrapper || !pinned || !hero || !archive) return;
+    if (!wrapper || !pinned || !hero) return;
 
     gsap.set(hero, { opacity: 1 });
-    gsap.set(archive, { opacity: 0, pointerEvents: 'none' });
     postCardRefs.current.forEach((card) => {
       if (card) gsap.set(card, { opacity: 0 });
     });
@@ -162,15 +153,15 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
         const clipR = clipL;
         const clipB = clipT;
 
-        // ── Card scroll (82%–95%) ──
-        const cs = p <= 0.82 ? 0 : p >= 0.95 ? 1 : (p - 0.82) / 0.13;
+        // ── Card scroll (82%–97%) ──
+        const cs = p <= 0.82 ? 0 : p >= 0.97 ? 1 : (p - 0.82) / 0.15;
 
         // Unified scroll: eases in during reveal, then continues at regular pace
         // earlyCs adds a gentle cubic ease-in worth ~8% of the total scroll range
         const earlyCs = reveal > 0 ? Math.pow(reveal, 3) * 0.08 : 0;
         const totalCs = earlyCs + cs;
 
-        const heroTranslateY = 5 * totalCs * CARD_STEP;
+        const heroTranslateY = postCount * totalCs * CARD_STEP;
 
         // Hero opacity: subtle fade during reveal, stronger fade as it exits
         let heroOpacity = 1;
@@ -208,9 +199,9 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
             return;
           }
 
-          // Virtual list: posts are i=0..4, hero is i=5
+          // Virtual list: posts are i=0..N-1, hero is i=N
           // Uses totalCs so cards start easing in during reveal
-          const screenTop = (i - 5 * (1 - totalCs)) * CARD_STEP + (viewH - CARD_H) / 2;
+          const screenTop = (i - postCount * (1 - totalCs)) * CARD_STEP + (viewH - CARD_H) / 2;
 
           card.style.opacity = String(cardFade);
           card.style.width = `${cardW}px`;
@@ -235,8 +226,8 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
 
           // Fade in during reveal
           const glassFade = p <= 0.80 ? (p - 0.78) / 0.02 : 1;
-          // Fade out with archive
-          const glassOut = p >= 0.93 ? Math.max(0, 1 - (p - 0.93) / 0.04) : 1;
+          // Fade out near the end
+          const glassOut = p >= 0.95 ? Math.max(0, 1 - (p - 0.95) / 0.04) : 1;
 
           // Depth-based scale: closer panels are larger, further panels are smaller
           const depthScale = 0.5 + cfg.depth * 0.5;
@@ -245,7 +236,7 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
 
           // Parallax Y: each panel scrolls at its own speed relative to card scroll
           const baseY = cfg.yOffset * viewH;
-          const parallaxOffset = totalCs * 5 * CARD_STEP * cfg.depth;
+          const parallaxOffset = totalCs * postCount * CARD_STEP * cfg.depth;
           const panelY = baseY - parallaxOffset + viewH * 0.3;
           const panelX = viewW / 2 + cfg.x * viewW - panelW / 2;
 
@@ -274,10 +265,6 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
           panel.style.filter = absVel > 2 ? `blur(${Math.min(3, absVel * 0.08)}px)` : 'none';
           panel.style.boxShadow = shadows;
         });
-
-        // ── Archive crossfade (95%–100%) ──
-        const archiveIn = p <= 0.95 ? 0 : p >= 1.0 ? 1 : (p - 0.95) / 0.05;
-        gsap.set(archive, { opacity: archiveIn, pointerEvents: archiveIn > 0.5 ? 'auto' : 'none' });
       },
     });
 
@@ -500,19 +487,6 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
             </Link>
           );
         })}
-
-        {/* Archive */}
-        <div
-          ref={archiveRef}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 4,
-            overflow: 'auto',
-          }}
-        >
-          <BlogArchive posts={archivePosts} tags={tags} />
-        </div>
       </div>
     </div>
   );
