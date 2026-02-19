@@ -32,15 +32,15 @@ interface HomeScrollStageProps {
  *
  *   0%–28%     Hero visible, 3D tilt + layer separation
  *   20%–40%    Card transition: bracket slide, untilt, expand to fullscreen
- *   40%–65%    Hold phase: fleur effect on title
- *   62%–70%    Hero → Posts crossfade
- *   70%–82%    Posts cycling through individual posts
- *   82%–90%    Posts → Archive crossfade
- *   90%–100%   Archive visible
+ *   40%–70%    Hold phase: WILLIAM→IRL collapse, frame sequence, IRL slide-up
+ *   68%–75%    Hero → Posts crossfade
+ *   75%–87%    Posts cycling through individual posts
+ *   87%–94%    Posts → Archive crossfade
+ *   94%–100%   Archive visible
  */
 export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: HomeScrollStageProps) {
   const postCount = recentPosts.filter((p) => p?.node).length;
-  const totalScrollVh = 450 + postCount * 80;
+  const totalScrollVh = 550 + postCount * 80;
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const pinnedRef = useRef<HTMLDivElement>(null);
@@ -109,23 +109,23 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
         // Write progress directly to ref — no React re-renders
         progressRef.current.scroll = Math.min(1, p / 0.28);
         progressRef.current.transition = p <= 0.20 ? 0 : p >= 0.40 ? 1 : (p - 0.20) / 0.20;
-        progressRef.current.hold = p <= 0.40 ? 0 : p >= 0.65 ? 1 : (p - 0.40) / 0.25;
+        progressRef.current.hold = p <= 0.40 ? 0 : p >= 0.70 ? 1 : (p - 0.40) / 0.30;
 
-        // Hero → Posts crossfade (62%–70%)
-        const heroOut = p <= 0.62 ? 1 : p >= 0.70 ? 0 : 1 - (p - 0.62) / 0.08;
-        const postsIn = p <= 0.62 ? 0 : p >= 0.70 ? 1 : (p - 0.62) / 0.08;
+        // Hero → Posts crossfade (68%–75%)
+        const heroOut = p <= 0.68 ? 1 : p >= 0.75 ? 0 : 1 - (p - 0.68) / 0.07;
+        const postsIn = p <= 0.68 ? 0 : p >= 0.75 ? 1 : (p - 0.68) / 0.07;
         gsap.set(hero, { opacity: heroOut });
 
-        // Posts → Archive crossfade (82%–90%)
-        const postsOut = p <= 0.82 ? 1 : p >= 0.90 ? 0 : 1 - (p - 0.82) / 0.08;
-        const archiveIn = p <= 0.82 ? 0 : p >= 0.90 ? 1 : (p - 0.82) / 0.08;
+        // Posts → Archive crossfade (87%–94%)
+        const postsOut = p <= 0.87 ? 1 : p >= 0.94 ? 0 : 1 - (p - 0.87) / 0.07;
+        const archiveIn = p <= 0.87 ? 0 : p >= 0.94 ? 1 : (p - 0.87) / 0.07;
 
         gsap.set(posts, { opacity: postsIn * postsOut });
         gsap.set(archive, { opacity: archiveIn, pointerEvents: archiveIn > 0.5 ? 'auto' : 'none' });
 
-        // Post index: map 70%–82% to post indices
-        if (postCount > 0 && p >= 0.70 && p <= 0.82) {
-          const postProgress = (p - 0.70) / 0.12;
+        // Post index: map 75%–87% to post indices
+        if (postCount > 0 && p >= 0.75 && p <= 0.87) {
+          const postProgress = (p - 0.75) / 0.12;
           const idx = Math.min(postCount - 1, Math.floor(postProgress * postCount));
           setPostIndex((prev) => (prev !== idx ? idx : prev));
         }

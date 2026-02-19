@@ -69,19 +69,20 @@ import { PostQuery, PostQueryVariables } from '@/tina/__generated__/types';
 
 The home page uses a pinned scroll orchestrator (`components/blocks/home-scroll-stage.tsx`) with three stacked layers driven by scroll progress:
 
-**Scroll phases** (% of total scroll height = `450 + postCount * 80` vh):
+**Scroll phases** (% of total scroll height = `550 + postCount * 80` vh):
 - **0%–28%**: Hero 3D tilt + layer separation (`progressRef.scroll` 0→1)
 - **20%–40%**: Card transition — bracket slide, untilt, expand to fullscreen (`progressRef.transition` 0→1)
-- **40%–55%**: Hold phase — card fullscreen, matrix text effect dissolves "WILLIAM" from title (`progressRef.hold` 0→1)
-- **55%**: Hard swap — hero hidden, posts visible
-- **60%–80%**: Posts cycling through individual posts
-- **80%–90%**: Posts → Archive crossfade
-- **90%–100%**: Archive visible
+- **40%–70%**: Hold phase — WILLIAM→IRL collapse, frame sequence, IRL slide-up (`progressRef.hold` 0→1)
+- **68%–75%**: Hero → Posts crossfade
+- **75%–87%**: Posts cycling through individual posts
+- **87%–94%**: Posts → Archive crossfade
+- **94%–100%**: Archive visible
 
 **Hero component** (`components/blocks/topo-hero.tsx`):
 - Uses `progressRef` (a shared mutable ref, no React re-renders) driven by GSAP ScrollTrigger
 - Title "I. WILLIAM. R. L" is hardcoded (not from TinaCMS)
-- Hold phase: matrix-style scramble effect (green 0/1 characters) dissolves "WILLIAM", then the gap collapses leaving "I. R. L"
+- Hold phase: WILLIAM letters slide up (staggered), width collapses to "I. R. L", then a 96-frame sequence (ornate circle zoom-out) plays via `<canvas>`, with "I. R. L" floating inside the circle before sliding up
+- Frame images in `public/images/irl-frames/` (ezgif-frame-001.jpg through 096.jpg)
 - All animation runs in a `requestAnimationFrame` loop reading directly from progressRef — avoids React re-renders for performance
 
 ### Content Rendering

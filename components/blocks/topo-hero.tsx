@@ -12,6 +12,9 @@ export type CardPost = {
   slug: string;
 };
 
+const FRAME_COUNT = 192;
+const FRAME_PATH = '/images/irl-frames/ezgif-frame-';
+
 export const TopoHero = ({
   data,
   cardPosts,
@@ -30,10 +33,32 @@ export const TopoHero = ({
   const williamCharsRef = useRef<(HTMLSpanElement | null)[]>([]);
   const williamWidthRef = useRef(0);
 
-  // Track viewport dimensions for card expand scaling
+  // Frame sequence refs
+  const frameCanvasRef = useRef<HTMLCanvasElement>(null);
+  const frameVignetteRef = useRef<HTMLDivElement>(null);
+  const framesRef = useRef<HTMLImageElement[]>([]);
+  const lastFrameIdxRef = useRef(-1);
+
+  // Preload all frame images
+  useEffect(() => {
+    const frames: HTMLImageElement[] = [];
+    for (let i = 1; i <= FRAME_COUNT; i++) {
+      const img = new Image();
+      img.src = `${FRAME_PATH}${String(i).padStart(3, '0')}.jpg`;
+      frames.push(img);
+    }
+    framesRef.current = frames;
+  }, []);
+
+  // Track viewport dimensions + size frame canvas
   useEffect(() => {
     const update = () => {
       viewportRef.current = { w: window.innerWidth, h: window.innerHeight };
+      const fc = frameCanvasRef.current;
+      if (fc) {
+        fc.width = window.innerWidth;
+        fc.height = window.innerHeight;
+      }
     };
     update();
     window.addEventListener('resize', update);
@@ -60,8 +85,8 @@ export const TopoHero = ({
       const transitionProgress = progressRef.current?.transition ?? 0;
       const holdProgress = progressRef.current?.hold ?? 0;
 
-      // Keep animating during active hold phase (letter slide-up + width collapse)
-      const inActiveHold = holdProgress > 0.01 && holdProgress < 0.88;
+      // Keep animating during active hold phase (letter slide-up + frame sequence)
+      const inActiveHold = holdProgress > 0.01 && holdProgress < 0.99;
       if (scrollProgress === lastScroll && transitionProgress === lastTransition && holdProgress === lastHold && !inActiveHold) {
         raf = requestAnimationFrame(animate);
         return;
@@ -95,15 +120,16 @@ export const TopoHero = ({
         interfaceRef.current.style.opacity = String(1 - tp);
       }
 
-      // Card layers
-      const cardOffsets = [-600, -800, -1000, -1200, -1400];
-      const cardVerticalOffsets = [0, 5, 10, 15, 20];
+      // Card layers — index 0 is the dark panel, 1+ are blog post cards
+      const cardOffsets = [-600, -800, -1000, -1200, -1400, -1600];
+      const cardVerticalOffsets = [0, 5, 10, 15, 20, 25];
       cardLayersRef.current.forEach((card, index) => {
         if (!card) return;
 
         const restZ = -index * 2;
 
         if (index === 0) {
+          // Dark panel: slides out, comes forward, expands to fullscreen
           const baseZ = restZ + separateProgress * cardOffsets[0];
 
           if (tp > 0) {
@@ -116,9 +142,6 @@ export const TopoHero = ({
 
             let cardScale = 1;
             let borderR = 4;
-            let bright = 1;
-            let overlayA = 0.55;
-            let titleOp = 1;
 
             if (tp > 0.55) {
               const p2e = 1 - Math.pow(1 - (tp - 0.55) / 0.45, 2.5);
@@ -127,40 +150,30 @@ export const TopoHero = ({
               const fillScale = Math.max(vp.w / (800 * perspFactor), vp.h / (418 * perspFactor)) * 1.05;
               cardScale = 1 + (fillScale - 1) * p2e;
               borderR = 4 * (1 - p2e);
-              bright = 1 - 0.2 * p2e;
-              overlayA = 0.55 - 0.1 * p2e;
-              titleOp = Math.max(0, 1 - p2e * 3);
             }
 
             card.style.transform = `translateZ(${cardZ}px) translateY(${slideY}px) scale(${cardScale})`;
             card.style.borderRadius = `${borderR}px`;
-            card.style.filter = bright < 1 ? `brightness(${bright.toFixed(3)})` : '';
-
-            const overlay = card.querySelector('.topo-card-overlay') as HTMLElement;
-            if (overlay) {
-              overlay.style.background = `rgba(0,0,0,${overlayA.toFixed(3)})`;
-              const title = overlay.querySelector('.topo-card-title') as HTMLElement;
-              if (title) title.style.opacity = String(titleOp);
-            }
           } else {
             card.style.transform = `translateZ(${baseZ}px)`;
             card.style.borderRadius = '';
-            card.style.filter = '';
-            const overlay = card.querySelector('.topo-card-overlay') as HTMLElement;
-            if (overlay) {
-              overlay.style.background = '';
-              const title = overlay.querySelector('.topo-card-title') as HTMLElement;
-              if (title) title.style.opacity = '';
-            }
           }
         } else {
+          // Blog post cards: parallax fan only
           const zOffset = restZ + separateProgress * cardOffsets[index];
           const yFan = cardVerticalOffsets[index] * (1 - separateProgress);
           card.style.transform = `translateZ(${zOffset}px) translateY(${yFan}px)`;
         }
       });
 
-      // ── Hold phase: WILLIAM letters slide up + fade, width collapses to "I. R. L" ──
+      // ── Hold phase: WILLIAM→IRL collapse, frame sequence, IRL slide-up ──
+      //   0.00–0.22  WILLIAM letters slide up + fade (staggered)
+      //   0.04–0.20  Tail ". " fades
+      //   0.12–0.30  Width collapse: "I. R. L" slides together
+      //   0.24–0.32  Frame canvas fades in (starts nearly black)
+      //   0.30–0.88  Frame sequence plays forward/backward (192 frames)
+      //   0.62–0.74  Title slides up + fades (the SAME element, not an overlay)
+      //   0.88–1.00  Final frame holds (full ornate pattern)
       const hold = holdProgress;
       if (hold > 0 || tp > 0) {
         // Slide up each WILLIAM letter (staggered)
@@ -168,8 +181,8 @@ export const TopoHero = ({
           const charEl = williamCharsRef.current[i];
           if (!charEl) continue;
 
-          const slideStart = 0.02 + i * 0.025;
-          const slideEnd = slideStart + 0.18;
+          const slideStart = 0.02 + i * 0.02;
+          const slideEnd = slideStart + 0.14;
           const slideP = hold <= slideStart ? 0 : hold >= slideEnd ? 1 : (hold - slideStart) / (slideEnd - slideStart);
           const slideE = 1 - Math.pow(1 - slideP, 3);
 
@@ -181,7 +194,7 @@ export const TopoHero = ({
         const wg = williamGroupRef.current;
         const tail = wg?.querySelector('.topo-william-tail') as HTMLElement;
         if (tail) {
-          const tailP = hold <= 0.04 ? 0 : hold >= 0.22 ? 1 : (hold - 0.04) / 0.18;
+          const tailP = hold <= 0.04 ? 0 : hold >= 0.20 ? 1 : (hold - 0.04) / 0.16;
           tail.style.opacity = String(1 - tailP);
         }
 
@@ -190,13 +203,87 @@ export const TopoHero = ({
           if (williamWidthRef.current === 0 && wg.scrollWidth > 0) {
             williamWidthRef.current = wg.scrollWidth;
           }
-          const collapseStart = 0.25;
-          const collapseEnd = 0.65;
+          const collapseStart = 0.12;
+          const collapseEnd = 0.30;
           const collapseP = hold <= collapseStart ? 0 : hold >= collapseEnd ? 1 : (hold - collapseStart) / (collapseEnd - collapseStart);
           const eased = collapseP < 0.5 ? 4 * collapseP * collapseP * collapseP : 1 - Math.pow(-2 * collapseP + 2, 3) / 2;
           if (williamWidthRef.current > 0) {
             wg.style.width = `${williamWidthRef.current * (1 - eased)}px`;
           }
+        }
+
+        // ── Frame sequence canvas (lives inside 3D scene, behind text layer via Z-sorting) ──
+        const fc = frameCanvasRef.current;
+        if (fc && framesRef.current.length > 0) {
+          const vp = viewportRef.current;
+
+          // Position the canvas to fill viewport from within the 800x418 3D canvas
+          const offsetX = -(vp.w - 800) / 2;
+          const offsetY = -(vp.h - 418) / 2;
+          fc.style.left = `${offsetX}px`;
+          fc.style.top = `${offsetY}px`;
+          fc.style.width = `${vp.w}px`;
+          fc.style.height = `${vp.h}px`;
+
+          // Fade in (starts nearly black so crossfade is subtle)
+          const fadeP = hold <= 0.24 ? 0 : hold >= 0.32 ? 1 : (hold - 0.24) / 0.08;
+          fc.style.opacity = String(fadeP);
+
+          // Z=501 — in front of dark panel (Z≈500) but behind text layer (Z=500, later in DOM)
+          fc.style.transform = `translateZ(501px)`;
+
+          // Vignette matches the frame canvas position
+          const vig = frameVignetteRef.current;
+          if (vig) {
+            vig.style.left = `${offsetX}px`;
+            vig.style.top = `${offsetY}px`;
+            vig.style.width = `${vp.w}px`;
+            vig.style.height = `${vp.h}px`;
+            vig.style.opacity = String(fadeP);
+            vig.style.transform = `translateZ(502px)`;
+          }
+
+          // Map hold to frame index
+          const frameStart = 0.30;
+          const frameEnd = 0.88;
+          const frameP = hold <= frameStart ? 0 : hold >= frameEnd ? 1 : (hold - frameStart) / (frameEnd - frameStart);
+          const frameIdx = Math.min(FRAME_COUNT - 1, Math.floor(frameP * FRAME_COUNT));
+
+          // Only redraw when frame changes
+          if (frameIdx !== lastFrameIdxRef.current) {
+            lastFrameIdxRef.current = frameIdx;
+            const frame = framesRef.current[frameIdx];
+            if (frame?.complete) {
+              const ctx = fc.getContext('2d');
+              if (ctx) {
+                const cw = fc.width;
+                const ch = fc.height;
+                const iw = frame.naturalWidth;
+                const ih = frame.naturalHeight;
+                const coverScale = Math.max(cw / iw, ch / ih);
+                const sw = iw * coverScale;
+                const sh = ih * coverScale;
+                ctx.drawImage(frame, (cw - sw) / 2, (ch - sh) / 2, sw, sh);
+              }
+            }
+          }
+        }
+
+        // ── IRL exit: the original title slides up + fades before circle zooms out ──
+        const titleEl = wg?.closest('.topo-frame-title') as HTMLElement;
+        if (titleEl) {
+          const irlOutP = hold <= 0.62 ? 0 : hold >= 0.74 ? 1 : (hold - 0.62) / 0.12;
+          const irlOutE = 1 - Math.pow(1 - irlOutP, 3);
+
+          titleEl.style.opacity = String(1 - irlOutP);
+          titleEl.style.transform = `translateY(${-irlOutE * 40}px)`;
+        }
+
+        // Also fade the tagline
+        const taglineEl = wg?.closest('.topo-frame-text')?.querySelector('.topo-frame-tagline') as HTMLElement;
+        if (taglineEl) {
+          const tagP = hold <= 0.04 ? 0 : hold >= 0.20 ? 1 : (hold - 0.04) / 0.16;
+          taglineEl.style.opacity = String(1 - tagP);
         }
       }
 
@@ -369,6 +456,32 @@ export const TopoHero = ({
           overflow: hidden;
         }
 
+        .topo-dark-panel {
+          border: 1px solid rgba(224, 224, 224, 0.12);
+          box-shadow:
+            0 0 20px rgba(224, 224, 224, 0.06),
+            0 0 60px rgba(224, 224, 224, 0.04),
+            inset 0 0 40px rgba(224, 224, 224, 0.02);
+          animation: topo-panel-pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes topo-panel-pulse {
+          0%, 100% {
+            border-color: rgba(224, 224, 224, 0.10);
+            box-shadow:
+              0 0 20px rgba(224, 224, 224, 0.05),
+              0 0 60px rgba(224, 224, 224, 0.03),
+              inset 0 0 40px rgba(224, 224, 224, 0.01);
+          }
+          50% {
+            border-color: rgba(224, 224, 224, 0.22);
+            box-shadow:
+              0 0 30px rgba(224, 224, 224, 0.10),
+              0 0 80px rgba(224, 224, 224, 0.06),
+              inset 0 0 60px rgba(224, 224, 224, 0.03);
+          }
+        }
+
         .topo-card-overlay {
           position: absolute;
           inset: 0;
@@ -405,6 +518,24 @@ export const TopoHero = ({
           white-space: pre;
         }
 
+        .topo-frame-canvas {
+          position: absolute;
+          pointer-events: none;
+          opacity: 0;
+        }
+
+        .topo-frame-vignette {
+          position: absolute;
+          pointer-events: none;
+          opacity: 0;
+          background: radial-gradient(
+            ellipse 70% 70% at center,
+            transparent 40%,
+            rgba(0, 0, 0, 0.4) 70%,
+            rgba(0, 0, 0, 0.95) 100%
+          );
+        }
+
       `}</style>
 
       <div className="topo-hero">
@@ -435,11 +566,19 @@ export const TopoHero = ({
 
         <div className="topo-viewport">
           <div className="topo-canvas-3d" ref={canvasRef}>
+            {/* Dark panel — expands to fullscreen as seamless bridge to frame sequence */}
+            <div
+              className="topo-card-layer topo-dark-panel"
+              ref={(el) => { cardLayersRef.current[0] = el!; }}
+              style={{ background: '#050505' }}
+            />
+
+            {/* Background blog post cards (parallax only, no expansion) */}
             {cards.map((card, i) => (
               <div
                 key={card.slug}
                 className="topo-card-layer"
-                ref={(el) => { cardLayersRef.current[i] = el!; }}
+                ref={(el) => { cardLayersRef.current[i + 1] = el!; }}
                 style={{ backgroundImage: `url(${card.heroImg})` }}
               >
                 <div className="topo-card-overlay">
@@ -452,6 +591,11 @@ export const TopoHero = ({
             <div className="topo-layer topo-layer-portrait" ref={(el) => { layersRef.current[1] = el!; }} />
             <div className="topo-layer topo-layer-silhouette-green" ref={(el) => { layersRef.current[2] = el!; }} />
             <div className="topo-layer topo-layer-frame" ref={(el) => { layersRef.current[3] = el!; }} />
+
+            {/* Frame canvas — inside the 3D scene so text layer naturally renders in front via Z-sorting */}
+            <canvas ref={frameCanvasRef} className="topo-frame-canvas" />
+            <div ref={frameVignetteRef} className="topo-frame-vignette" />
+
             <div className="topo-layer topo-layer-text" ref={(el) => { layersRef.current[4] = el!; }}>
               <div className="topo-frame-text">
                 <h1 className="topo-frame-title">
