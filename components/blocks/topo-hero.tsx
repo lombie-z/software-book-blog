@@ -253,7 +253,6 @@ export const TopoHero = ({
           const frameStart = 0.30;
           const frameEnd = 0.88;
           const frameP = hold <= frameStart ? 0 : hold >= frameEnd ? 1 : (hold - frameStart) / (frameEnd - frameStart);
-          let frameIdx = Math.min(FRAME_COUNT - 1, Math.floor(frameP * FRAME_COUNT));
 
           // Breathing: eases in automatically as frame sequence nears end
           // Amplitude is scroll-driven (frameP 0.7→1.0 = amplitude 0→1), oscillation is time-driven
@@ -304,33 +303,66 @@ export const TopoHero = ({
             breatheScaleRef.current = 1;
           }
 
-          // Only redraw when frame changes (scroll-driven, no breathing active)
-          if (amplitude === 0 && frameIdx !== lastFrameIdxRef.current) {
-            lastFrameIdxRef.current = frameIdx;
-            const frame = framesRef.current[frameIdx];
-            if (frame?.complete) {
+          // Cross-fade between adjacent frames for smooth scroll stops/starts
+          if (amplitude === 0) {
+            const exactFrame = frameP * (FRAME_COUNT - 1);
+            const frameA = Math.floor(exactFrame);
+            const frameB = Math.min(FRAME_COUNT - 1, frameA + 1);
+            const mix = exactFrame - frameA;
+
+            // Skip redraw if nothing changed (use a precision threshold for the mix)
+            const mixKey = frameA + mix;
+            if (Math.abs(mixKey - lastFrameIdxRef.current) > 0.001) {
+              lastFrameIdxRef.current = mixKey;
               const ctx = fc.getContext('2d');
               if (ctx) {
                 const cw = fc.width;
                 const ch = fc.height;
-                const iw = frame.naturalWidth;
-                const ih = frame.naturalHeight;
-                const coverScale = Math.max(cw / iw, ch / ih);
-                const sw = iw * coverScale;
-                const sh = ih * coverScale;
-                ctx.globalAlpha = 1;
-                ctx.drawImage(frame, (cw - sw) / 2, (ch - sh) / 2, sw, sh);
+                const fA = framesRef.current[frameA];
+                const fB = framesRef.current[frameB];
+                if (fA?.complete) {
+                  const coverScale = Math.max(cw / fA.naturalWidth, ch / fA.naturalHeight);
+                  const sw = fA.naturalWidth * coverScale;
+                  const sh = fA.naturalHeight * coverScale;
+                  ctx.globalAlpha = 1;
+                  ctx.drawImage(fA, (cw - sw) / 2, (ch - sh) / 2, sw, sh);
+                }
+                if (fB?.complete && frameA !== frameB && mix > 0.01) {
+                  const coverScale = Math.max(cw / fB.naturalWidth, ch / fB.naturalHeight);
+                  const sw = fB.naturalWidth * coverScale;
+                  const sh = fB.naturalHeight * coverScale;
+                  ctx.globalAlpha = mix;
+                  ctx.drawImage(fB, (cw - sw) / 2, (ch - sh) / 2, sw, sh);
+                  ctx.globalAlpha = 1;
+                }
               }
             }
           }
         }
 
-        // ── IRL exit: fade out shortly after video fades in (no slide) ──
+        // ── IRL exit: glow bloom then fade out ──
         const titleEl = wg?.closest('.topo-frame-title') as HTMLElement;
         if (titleEl) {
-          const irlOutP = hold <= 0.34 ? 0 : hold >= 0.52 ? 1 : (hold - 0.34) / 0.18;
+          const irlOutP = hold <= 0.44 ? 0 : hold >= 0.58 ? 1 : (hold - 0.44) / 0.14;
           titleEl.style.opacity = String(1 - irlOutP);
           titleEl.style.transform = 'none';
+
+          // Glow ramps up after collapse settles (0.30→0.44), then fades with the text
+          const glowIn = hold <= 0.30 ? 0 : hold >= 0.44 ? 1 : (hold - 0.30) / 0.14;
+          const glowEase = 1 - Math.pow(1 - glowIn, 2);
+          const glowIntensity = glowEase * (1 - irlOutP);
+
+          if (glowIntensity > 0.01) {
+            const g = glowIntensity;
+            titleEl.style.textShadow = [
+              `0 0 ${8 * g}px rgba(224, 224, 224, ${0.6 * g})`,
+              `0 0 ${20 * g}px rgba(224, 224, 224, ${0.4 * g})`,
+              `0 0 ${40 * g}px rgba(200, 210, 220, ${0.25 * g})`,
+              `0 0 ${80 * g}px rgba(180, 190, 200, ${0.12 * g})`,
+            ].join(', ');
+          } else {
+            titleEl.style.textShadow = 'none';
+          }
         }
 
         // Also fade the tagline
