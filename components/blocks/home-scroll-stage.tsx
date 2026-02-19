@@ -70,6 +70,7 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
   const glassPanelRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const progressRef = useRef({ scroll: 0, transition: 0, hold: 0 });
+  const lastCsRef = useRef(0);
   const lenisRef = useRef<Lenis | null>(null);
 
   // Derive card posts from recent posts (first 5 with hero images)
@@ -114,6 +115,7 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
       lenisRef.current = null;
     };
   }, []);
+
 
   // ScrollTrigger stage
   useLayoutEffect(() => {
@@ -163,16 +165,20 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
         // ── Card scroll (82%–95%) ──
         const cs = p <= 0.82 ? 0 : p >= 0.95 ? 1 : (p - 0.82) / 0.13;
 
-        // Hero translates downward during card scroll (exits viewport bottom)
-        const heroTranslateY = 5 * cs * CARD_STEP;
+        // Unified scroll: eases in during reveal, then continues at regular pace
+        // earlyCs adds a gentle cubic ease-in worth ~8% of the total scroll range
+        const earlyCs = reveal > 0 ? Math.pow(reveal, 3) * 0.08 : 0;
+        const totalCs = earlyCs + cs;
+
+        const heroTranslateY = 5 * totalCs * CARD_STEP;
 
         // Hero opacity: subtle fade during reveal, stronger fade as it exits
         let heroOpacity = 1;
         if (reveal > 0) {
           heroOpacity = 1 - revealE * 0.12; // 1.0 → 0.88
         }
-        if (cs > 0) {
-          heroOpacity = 0.88 * Math.max(0, 1 - cs * 2.5);
+        if (totalCs > 0.08) {
+          heroOpacity = 0.88 * Math.max(0, 1 - (totalCs - 0.08) / 0.92 * 2.5);
         }
 
         gsap.set(hero, {
@@ -184,7 +190,7 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
         // Hero card border overlay — follows the hero clip area
         if (heroBorder) {
           gsap.set(heroBorder, {
-            opacity: revealE * (cs > 0 ? Math.max(0, 1 - cs * 2.5) : 1),
+            opacity: revealE * (totalCs > 0.08 ? Math.max(0, 1 - (totalCs - 0.08) / 0.92 * 2.5) : 1),
             width: cardW,
             height: CARD_H,
             left: (viewW - cardW) / 2,
@@ -192,30 +198,32 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
           });
         }
 
-        // ── Post cards: absolutely positioned, enter from above ──
-        const cardsVisible = p >= 0.80;
+        // ── Post cards: absolutely positioned, scroll in from above like parallax panels ──
+        // Fade in during reveal, then always visible — natural scroll position handles entry
+        const cardFade = p <= 0.78 ? 0 : p <= 0.82 ? (p - 0.78) / 0.04 : 1;
         postCardRefs.current.forEach((card, i) => {
           if (!card) return;
-          if (!cardsVisible) {
+          if (cardFade <= 0) {
             card.style.opacity = '0';
             return;
           }
 
           // Virtual list: posts are i=0..4, hero is i=5
-          // At cs=0, hero centered → posts above viewport
-          // At cs=1, post 0 centered → hero below viewport
-          const screenTop = (i - 5 * (1 - cs)) * CARD_STEP + (viewH - CARD_H) / 2;
+          // Uses totalCs so cards start easing in during reveal
+          const screenTop = (i - 5 * (1 - totalCs)) * CARD_STEP + (viewH - CARD_H) / 2;
 
-          // Only show if on screen (with buffer)
-          const onScreen = screenTop > -CARD_H - 50 && screenTop < viewH + 50;
-          card.style.opacity = onScreen ? '1' : '0';
-          card.style.transform = `translateY(${screenTop}px)`;
+          card.style.opacity = String(cardFade);
           card.style.width = `${cardW}px`;
           card.style.left = `${(viewW - cardW) / 2}px`;
+          card.style.transform = `translateY(${screenTop}px)`;
         });
 
         // ── Stained glass parallax panels ──
         const glassVisible = p >= 0.78;
+        // Scroll velocity for motion shadows (based on totalCs for unified movement)
+        const csVelocity = totalCs - lastCsRef.current;
+        lastCsRef.current = totalCs;
+
         glassPanelRefs.current.forEach((panel, i) => {
           if (!panel) return;
           const cfg = GLASS_PANELS[i];
@@ -231,26 +239,40 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
           const glassOut = p >= 0.93 ? Math.max(0, 1 - (p - 0.93) / 0.04) : 1;
 
           // Depth-based scale: closer panels are larger, further panels are smaller
-          const depthScale = 0.5 + cfg.depth * 0.5; // 0.35→0.675, 1.0→1.0, 1.7→1.35
+          const depthScale = 0.5 + cfg.depth * 0.5;
           const panelW = cardW * depthScale;
           const panelH = CARD_H * depthScale;
 
           // Parallax Y: each panel scrolls at its own speed relative to card scroll
           const baseY = cfg.yOffset * viewH;
-          const parallaxOffset = cs * 5 * CARD_STEP * cfg.depth;
+          const parallaxOffset = totalCs * 5 * CARD_STEP * cfg.depth;
           const panelY = baseY - parallaxOffset + viewH * 0.3;
           const panelX = viewW / 2 + cfg.x * viewW - panelW / 2;
 
-          // Motion blur: proportional to depth deviation from 1.0 and scroll velocity
-          // Panels far from camera (very small or very large) get more blur
-          const depthDeviation = Math.abs(cfg.depth - 1.0);
-          const motionBlur = depthDeviation * 8 + 2; // 2–8px
+          // Motion shadows: trailing copies offset by velocity × depth
+          // Velocity is signed: positive = scrolling forward, shadows trail behind (upward)
+          const vel = csVelocity * 8000 * cfg.depth; // scale to pixel-like offset
+          const absVel = Math.min(60, Math.abs(vel));
+          const dir = vel > 0 ? 1 : -1; // shadow direction (opposite to movement)
+
+          let shadows = '0 0 0 transparent';
+          if (absVel > 1) {
+            const layers: string[] = [];
+            const steps = 5;
+            for (let s = 1; s <= steps; s++) {
+              const offset = dir * s * (absVel / steps) * 0.8;
+              const alpha = 0.06 * (1 - s / (steps + 1));
+              layers.push(`0 ${offset}px ${absVel * 0.3}px rgba(${cfg.color.includes('70') ? '70, 90, 70' : '90, 90, 90'}, ${alpha})`);
+            }
+            shadows = layers.join(', ');
+          }
 
           panel.style.opacity = String(glassFade * glassOut * (0.4 + cfg.depth * 0.2));
           panel.style.transform = `translate(${panelX}px, ${panelY}px)`;
           panel.style.width = `${panelW}px`;
           panel.style.height = `${panelH}px`;
-          panel.style.filter = `blur(${motionBlur}px)`;
+          panel.style.filter = absVel > 2 ? `blur(${Math.min(3, absVel * 0.08)}px)` : 'none';
+          panel.style.boxShadow = shadows;
         });
 
         // ── Archive crossfade (95%–100%) ──
@@ -294,13 +316,13 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
           }}
         />
 
-        {/* Hero layer — clips to card, then slides down */}
+        {/* Hero layer — clips to card, then slides down (above post cards) */}
         <div
           ref={heroRef}
           style={{
             position: 'absolute',
             inset: 0,
-            zIndex: 1,
+            zIndex: 6,
             willChange: 'clip-path, transform, opacity',
           }}
         >
@@ -311,14 +333,12 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
         <style>{`
           @keyframes stage-panel-pulse {
             0%, 100% {
-              border-color: rgba(224, 224, 224, 0.10);
               box-shadow:
                 0 0 20px rgba(224, 224, 224, 0.05),
                 0 0 60px rgba(224, 224, 224, 0.03),
                 inset 0 0 40px rgba(224, 224, 224, 0.01);
             }
             50% {
-              border-color: rgba(224, 224, 224, 0.22);
               box-shadow:
                 0 0 30px rgba(224, 224, 224, 0.10),
                 0 0 80px rgba(224, 224, 224, 0.06),
@@ -330,8 +350,7 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
           ref={heroBorderRef}
           style={{
             position: 'absolute',
-            zIndex: 2,
-            border: '1px solid rgba(224, 224, 224, 0.12)',
+            zIndex: 7,
             pointerEvents: 'none',
             opacity: 0,
             animation: 'stage-panel-pulse 3s ease-in-out infinite',
@@ -352,7 +371,6 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
               opacity: 0,
               zIndex: cfg.depth > 1 ? 5 : 0,
               background: cfg.color,
-              border: `1px solid ${cfg.border}`,
               pointerEvents: 'none',
               willChange: 'transform, opacity, filter',
               overflow: 'hidden',
@@ -372,8 +390,6 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
               style={{
                 position: 'absolute',
                 inset: 0,
-                borderTop: '1px solid rgba(255, 255, 255, 0.03)',
-                borderLeft: '1px solid rgba(255, 255, 255, 0.02)',
                 pointerEvents: 'none',
               }}
             />
@@ -405,7 +421,6 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
                 textDecoration: 'none',
                 zIndex: 3,
                 opacity: 0,
-                border: '1px solid rgba(224, 224, 224, 0.10)',
                 boxShadow: '0 0 20px rgba(224, 224, 224, 0.04), 0 0 60px rgba(224, 224, 224, 0.02)',
                 willChange: 'transform, opacity',
               }}

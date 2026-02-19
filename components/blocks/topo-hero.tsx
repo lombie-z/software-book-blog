@@ -233,10 +233,10 @@ export const TopoHero = ({
           const fadeP = hold <= 0.24 ? 0 : hold >= 0.32 ? 1 : (hold - 0.24) / 0.08;
           fc.style.opacity = String(fadeP);
 
-          // Z=501 — in front of dark panel (Z≈500) but behind text layer (Z=500, later in DOM)
+          // Z=500 — same plane as text layer; DOM order puts canvas behind text (text is later in DOM)
           // Breathing scale pulse is applied here (breatheScaleRef updated in breathing block below)
           const bScale = breatheScaleRef.current;
-          fc.style.transform = `translateZ(501px) scale(${bScale})`;
+          fc.style.transform = `translateZ(500px) scale(${bScale})`;
 
           // Vignette matches the frame canvas position
           const vig = frameVignetteRef.current;
@@ -246,7 +246,7 @@ export const TopoHero = ({
             vig.style.width = `${vp.w}px`;
             vig.style.height = `${vp.h}px`;
             vig.style.opacity = String(fadeP);
-            vig.style.transform = `translateZ(502px)`;
+            vig.style.transform = `translateZ(500px)`;
           }
 
           // Map hold to frame index
@@ -325,14 +325,12 @@ export const TopoHero = ({
           }
         }
 
-        // ── IRL exit: the original title slides up + fades before circle zooms out ──
+        // ── IRL exit: fade out shortly after video fades in (no slide) ──
         const titleEl = wg?.closest('.topo-frame-title') as HTMLElement;
         if (titleEl) {
-          const irlOutP = hold <= 0.62 ? 0 : hold >= 0.74 ? 1 : (hold - 0.62) / 0.12;
-          const irlOutE = 1 - Math.pow(1 - irlOutP, 3);
-
+          const irlOutP = hold <= 0.34 ? 0 : hold >= 0.52 ? 1 : (hold - 0.34) / 0.18;
           titleEl.style.opacity = String(1 - irlOutP);
-          titleEl.style.transform = `translateY(${-irlOutE * 40}px)`;
+          titleEl.style.transform = 'none';
         }
 
         // Also fade the tagline
