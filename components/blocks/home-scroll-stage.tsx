@@ -29,6 +29,22 @@ const CARD_H = 380;
 const CARD_GAP = 24;
 const CARD_STEP = CARD_H + CARD_GAP;
 
+// Stained glass parallax panels — card-shaped, depth-scaled, motion-blurred
+// depth: <1 = further back (smaller, more blur), >1 = closer (larger, more blur)
+const GLASS_PANELS = [
+  // Left side
+  { x: -0.36, yOffset: 0.1, depth: 0.55, color: 'rgba(80, 80, 80, 0.08)', border: 'rgba(120, 120, 120, 0.10)', shine: 25 },
+  { x: -0.30, yOffset: 0.5, depth: 0.75, color: 'rgba(50, 70, 50, 0.07)', border: 'rgba(80, 110, 80, 0.10)', shine: 40 },
+  { x: -0.40, yOffset: 0.85, depth: 0.40, color: 'rgba(60, 60, 60, 0.06)', border: 'rgba(100, 100, 100, 0.08)', shine: 15 },
+  // Right side
+  { x: 0.36, yOffset: 0.2, depth: 1.35, color: 'rgba(55, 75, 55, 0.08)', border: 'rgba(90, 120, 90, 0.10)', shine: 50 },
+  { x: 0.32, yOffset: 0.65, depth: 1.55, color: 'rgba(70, 70, 70, 0.07)', border: 'rgba(110, 110, 110, 0.09)', shine: 35 },
+  { x: 0.38, yOffset: 0.9, depth: 0.35, color: 'rgba(45, 60, 45, 0.06)', border: 'rgba(75, 95, 75, 0.08)', shine: 20 },
+  // Deep flanks
+  { x: -0.44, yOffset: 0.35, depth: 0.30, color: 'rgba(65, 65, 65, 0.05)', border: 'rgba(95, 95, 95, 0.07)', shine: 10 },
+  { x: 0.44, yOffset: 0.45, depth: 1.7, color: 'rgba(50, 65, 50, 0.06)', border: 'rgba(85, 105, 85, 0.08)', shine: 60 },
+];
+
 /**
  * Master scroll orchestrator for the home page.
  * Pins one viewport-sized container and drives layers based on scroll progress.
@@ -36,10 +52,10 @@ const CARD_STEP = CARD_H + CARD_GAP;
  *
  *   0%–28%     Hero visible, 3D tilt + layer separation
  *   20%–40%    Card transition: bracket slide, untilt, expand to fullscreen
- *   40%–70%    Hold phase: WILLIAM→IRL collapse, frame sequence, IRL slide-up
- *   70%–76%    Reveal: hero clip-paths from fullscreen to card dimensions
- *   76%–93%    Card scroll: hero card slides down, post cards enter from above
- *   93%–100%   Archive crossfade
+ *   40%–76%    Hold phase: WILLIAM→IRL collapse, frame sequence, IRL slide-up
+ *   76%–82%    Reveal: hero clip-paths from fullscreen to card dimensions
+ *   82%–95%    Card scroll: hero card slides down, post cards enter from above
+ *   95%–100%   Archive crossfade
  */
 export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: HomeScrollStageProps) {
   const postCount = recentPosts.filter((p) => p?.node).length;
@@ -51,6 +67,7 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
   const heroBorderRef = useRef<HTMLDivElement>(null);
   const archiveRef = useRef<HTMLDivElement>(null);
   const postCardRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const glassPanelRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const progressRef = useRef({ scroll: 0, transition: 0, hold: 0 });
   const lenisRef = useRef<Lenis | null>(null);
@@ -113,6 +130,9 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
     postCardRefs.current.forEach((card) => {
       if (card) gsap.set(card, { opacity: 0 });
     });
+    glassPanelRefs.current.forEach((panel) => {
+      if (panel) gsap.set(panel, { opacity: 0 });
+    });
 
     const st = ScrollTrigger.create({
       trigger: wrapper,
@@ -139,7 +159,6 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
         const clipT = ((viewH - CARD_H) / 2) * revealE;
         const clipR = clipL;
         const clipB = clipT;
-        const clipRadius = 0;
 
         // ── Card scroll (82%–95%) ──
         const cs = p <= 0.82 ? 0 : p >= 0.95 ? 1 : (p - 0.82) / 0.13;
@@ -157,7 +176,7 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
         }
 
         gsap.set(hero, {
-          clipPath: `inset(${clipT}px ${clipR}px ${clipB}px ${clipL}px round ${clipRadius}px)`,
+          clipPath: `inset(${clipT}px ${clipR}px ${clipB}px ${clipL}px)`,
           y: heroTranslateY,
           opacity: heroOpacity,
         });
@@ -170,13 +189,11 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
             height: CARD_H,
             left: (viewW - cardW) / 2,
             top: (viewH - CARD_H) / 2 + heroTranslateY,
-            borderRadius: clipRadius,
           });
         }
 
         // ── Post cards: absolutely positioned, enter from above ──
         const cardsVisible = p >= 0.80;
-        const numPosts = postCardRefs.current.length;
         postCardRefs.current.forEach((card, i) => {
           if (!card) return;
           if (!cardsVisible) {
@@ -195,6 +212,45 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
           card.style.transform = `translateY(${screenTop}px)`;
           card.style.width = `${cardW}px`;
           card.style.left = `${(viewW - cardW) / 2}px`;
+        });
+
+        // ── Stained glass parallax panels ──
+        const glassVisible = p >= 0.78;
+        glassPanelRefs.current.forEach((panel, i) => {
+          if (!panel) return;
+          const cfg = GLASS_PANELS[i];
+          if (!cfg) return;
+          if (!glassVisible) {
+            panel.style.opacity = '0';
+            return;
+          }
+
+          // Fade in during reveal
+          const glassFade = p <= 0.80 ? (p - 0.78) / 0.02 : 1;
+          // Fade out with archive
+          const glassOut = p >= 0.93 ? Math.max(0, 1 - (p - 0.93) / 0.04) : 1;
+
+          // Depth-based scale: closer panels are larger, further panels are smaller
+          const depthScale = 0.5 + cfg.depth * 0.5; // 0.35→0.675, 1.0→1.0, 1.7→1.35
+          const panelW = cardW * depthScale;
+          const panelH = CARD_H * depthScale;
+
+          // Parallax Y: each panel scrolls at its own speed relative to card scroll
+          const baseY = cfg.yOffset * viewH;
+          const parallaxOffset = cs * 5 * CARD_STEP * cfg.depth;
+          const panelY = baseY - parallaxOffset + viewH * 0.3;
+          const panelX = viewW / 2 + cfg.x * viewW - panelW / 2;
+
+          // Motion blur: proportional to depth deviation from 1.0 and scroll velocity
+          // Panels far from camera (very small or very large) get more blur
+          const depthDeviation = Math.abs(cfg.depth - 1.0);
+          const motionBlur = depthDeviation * 8 + 2; // 2–8px
+
+          panel.style.opacity = String(glassFade * glassOut * (0.4 + cfg.depth * 0.2));
+          panel.style.transform = `translate(${panelX}px, ${panelY}px)`;
+          panel.style.width = `${panelW}px`;
+          panel.style.height = `${panelH}px`;
+          panel.style.filter = `blur(${motionBlur}px)`;
         });
 
         // ── Archive crossfade (95%–100%) ──
@@ -217,9 +273,27 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
           width: '100%',
           height: '100vh',
           overflow: 'hidden',
-          background: '#000',
+          background: '#0a0a0a',
         }}
       >
+        {/* Grain overlay — matches hero background texture */}
+        <svg style={{ position: 'absolute', width: 0, height: 0 }}>
+          <filter id="stage-grain">
+            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" />
+            <feColorMatrix type="saturate" values="0" />
+          </filter>
+        </svg>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 10,
+            opacity: 0.15,
+            filter: 'url(#stage-grain)',
+          }}
+        />
+
         {/* Hero layer — clips to card, then slides down */}
         <div
           ref={heroRef}
@@ -263,6 +337,48 @@ export function HomeScrollStage({ pageData, recentPosts, archivePosts, tags }: H
             animation: 'stage-panel-pulse 3s ease-in-out infinite',
           }}
         />
+
+        {/* Stained glass parallax panels */}
+        {GLASS_PANELS.map((cfg, i) => (
+          <div
+            key={i}
+            ref={(el) => {
+              glassPanelRefs.current[i] = el;
+            }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              opacity: 0,
+              zIndex: cfg.depth > 1 ? 5 : 0,
+              background: cfg.color,
+              border: `1px solid ${cfg.border}`,
+              pointerEvents: 'none',
+              willChange: 'transform, opacity, filter',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Shine — diagonal gloss streak */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: `linear-gradient(${cfg.shine + 90}deg, transparent 25%, rgba(255,255,255,0.02) 45%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 55%, transparent 75%)`,
+                pointerEvents: 'none',
+              }}
+            />
+            {/* Edge highlight */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderTop: '1px solid rgba(255, 255, 255, 0.03)',
+                borderLeft: '1px solid rgba(255, 255, 255, 0.02)',
+                pointerEvents: 'none',
+              }}
+            />
+          </div>
+        ))}
 
         {/* Post cards — absolutely positioned, slide in from above during card scroll */}
         {postCards.map((post, i) => {
