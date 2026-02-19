@@ -38,6 +38,8 @@ export const TopoHero = ({
   const frameVignetteRef = useRef<HTMLDivElement>(null);
   const framesRef = useRef<HTMLImageElement[]>([]);
   const lastFrameIdxRef = useRef(-1);
+  const breatheStartRef = useRef(0); // timestamp when breathing zone was entered
+  const breatheScaleRef = useRef(1); // current breathing scale for frame canvas
 
   // Preload all frame images
   useEffect(() => {
@@ -86,8 +88,10 @@ export const TopoHero = ({
       const holdProgress = progressRef.current?.hold ?? 0;
 
       // Keep animating during active hold phase (letter slide-up + frame sequence)
+      // Also keep animating when breathing is active (idle at end of frame sequence)
       const inActiveHold = holdProgress > 0.01 && holdProgress < 0.99;
-      if (scrollProgress === lastScroll && transitionProgress === lastTransition && holdProgress === lastHold && !inActiveHold) {
+      const mayBreathe = holdProgress > 0.50; // keep looping in breathing zone
+      if (scrollProgress === lastScroll && transitionProgress === lastTransition && holdProgress === lastHold && !inActiveHold && !mayBreathe) {
         raf = requestAnimationFrame(animate);
         return;
       }
@@ -230,7 +234,9 @@ export const TopoHero = ({
           fc.style.opacity = String(fadeP);
 
           // Z=501 — in front of dark panel (Z≈500) but behind text layer (Z=500, later in DOM)
-          fc.style.transform = `translateZ(501px)`;
+          // Breathing scale pulse is applied here (breatheScaleRef updated in breathing block below)
+          const bScale = breatheScaleRef.current;
+          fc.style.transform = `translateZ(501px) scale(${bScale})`;
 
           // Vignette matches the frame canvas position
           const vig = frameVignetteRef.current;
@@ -247,10 +253,59 @@ export const TopoHero = ({
           const frameStart = 0.30;
           const frameEnd = 0.88;
           const frameP = hold <= frameStart ? 0 : hold >= frameEnd ? 1 : (hold - frameStart) / (frameEnd - frameStart);
-          const frameIdx = Math.min(FRAME_COUNT - 1, Math.floor(frameP * FRAME_COUNT));
+          let frameIdx = Math.min(FRAME_COUNT - 1, Math.floor(frameP * FRAME_COUNT));
 
-          // Only redraw when frame changes
-          if (frameIdx !== lastFrameIdxRef.current) {
+          // Breathing: eases in automatically as frame sequence nears end
+          // Amplitude is scroll-driven (frameP 0.7→1.0 = amplitude 0→1), oscillation is time-driven
+          const now = performance.now();
+          const BREATHE_FRAMES = 10;
+          const BREATHE_PERIOD = 2000;
+          const BREATHE_ZONE_START = 0.92; // frameP where breathing begins (well past the circle)
+
+          const amplitude = frameP <= BREATHE_ZONE_START ? 0 : Math.min(1, (frameP - BREATHE_ZONE_START) / (1 - BREATHE_ZONE_START));
+
+          if (amplitude > 0) {
+            if (breatheStartRef.current === 0) breatheStartRef.current = now;
+            const elapsed = now - breatheStartRef.current;
+            const breatheWave = (Math.sin(elapsed / BREATHE_PERIOD * Math.PI * 2) + 1) / 2;
+            // Subtle scale pulse: 1.0 → 1.03 synced with wave
+            breatheScaleRef.current = 1 + breatheWave * amplitude * 0.03;
+            const breatheFloat = breatheWave * amplitude * BREATHE_FRAMES;
+            const baseFrame = Math.min(FRAME_COUNT - 1, Math.floor(frameP * FRAME_COUNT));
+            const breatheA = Math.max(0, baseFrame - Math.floor(breatheFloat));
+            const breatheB = Math.max(0, baseFrame - Math.ceil(breatheFloat));
+            const breatheMix = breatheFloat - Math.floor(breatheFloat);
+
+            const ctx = fc.getContext('2d');
+            if (ctx) {
+              const cw = fc.width;
+              const ch = fc.height;
+              const fA = framesRef.current[breatheA];
+              const fB = framesRef.current[breatheB];
+              if (fA?.complete) {
+                const coverScale = Math.max(cw / fA.naturalWidth, ch / fA.naturalHeight);
+                const sw = fA.naturalWidth * coverScale;
+                const sh = fA.naturalHeight * coverScale;
+                ctx.globalAlpha = 1;
+                ctx.drawImage(fA, (cw - sw) / 2, (ch - sh) / 2, sw, sh);
+              }
+              if (fB?.complete && breatheA !== breatheB) {
+                const coverScale = Math.max(cw / fB.naturalWidth, ch / fB.naturalHeight);
+                const sw = fB.naturalWidth * coverScale;
+                const sh = fB.naturalHeight * coverScale;
+                ctx.globalAlpha = breatheMix;
+                ctx.drawImage(fB, (cw - sw) / 2, (ch - sh) / 2, sw, sh);
+                ctx.globalAlpha = 1;
+              }
+              lastFrameIdxRef.current = -2;
+            }
+          } else {
+            breatheStartRef.current = 0;
+            breatheScaleRef.current = 1;
+          }
+
+          // Only redraw when frame changes (scroll-driven, no breathing active)
+          if (amplitude === 0 && frameIdx !== lastFrameIdxRef.current) {
             lastFrameIdxRef.current = frameIdx;
             const frame = framesRef.current[frameIdx];
             if (frame?.complete) {
@@ -263,6 +318,7 @@ export const TopoHero = ({
                 const coverScale = Math.max(cw / iw, ch / ih);
                 const sw = iw * coverScale;
                 const sh = ih * coverScale;
+                ctx.globalAlpha = 1;
                 ctx.drawImage(frame, (cw - sw) / 2, (ch - sh) / 2, sw, sh);
               }
             }

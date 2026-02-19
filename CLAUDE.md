@@ -69,14 +69,13 @@ import { PostQuery, PostQueryVariables } from '@/tina/__generated__/types';
 
 The home page uses a pinned scroll orchestrator (`components/blocks/home-scroll-stage.tsx`) with three stacked layers driven by scroll progress:
 
-**Scroll phases** (% of total scroll height = `550 + postCount * 80` vh):
+**Scroll phases** (% of total scroll height = `650 + postCount * 100` vh):
 - **0%–28%**: Hero 3D tilt + layer separation (`progressRef.scroll` 0→1)
 - **20%–40%**: Card transition — bracket slide, untilt, expand to fullscreen (`progressRef.transition` 0→1)
 - **40%–70%**: Hold phase — WILLIAM→IRL collapse, frame sequence, IRL slide-up (`progressRef.hold` 0→1)
-- **68%–75%**: Hero → Posts crossfade
-- **75%–87%**: Posts cycling through individual posts
-- **87%–94%**: Posts → Archive crossfade
-- **94%–100%**: Archive visible
+- **70%–76%**: Reveal — hero `clip-path: inset()` crops from fullscreen to card dimensions (640×380), no crossfade
+- **76%–93%**: Card scroll — hero card (still the hero layer) slides down, 5 post cards enter from above as absolutely-positioned elements
+- **93%–100%**: Archive crossfade
 
 **Hero component** (`components/blocks/topo-hero.tsx`):
 - Uses `progressRef` (a shared mutable ref, no React re-renders) driven by GSAP ScrollTrigger
