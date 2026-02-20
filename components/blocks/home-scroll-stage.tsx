@@ -54,13 +54,15 @@ const GLASS_PANELS = [
  */
 export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps) {
   const postCount = recentPosts.filter((p) => p?.node).length;
-  const totalScrollVh = 650 + postCount * 100;
+  const cardCount = postCount + 1; // posts + fin card
+  const totalScrollVh = 650 + cardCount * 100;
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const pinnedRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const heroBorderRef = useRef<HTMLDivElement>(null);
   const postCardRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const finCardRef = useRef<HTMLDivElement>(null);
   const glassPanelRefs = useRef<(HTMLDivElement | null)[]>([]);
   const glassShineRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -162,7 +164,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
         const earlyCs = reveal > 0 ? Math.pow(reveal, 3) * 0.08 : 0;
         const totalCs = earlyCs + cs;
 
-        const heroTranslateY = postCount * totalCs * CARD_STEP;
+        const heroTranslateY = cardCount * totalCs * CARD_STEP;
 
         // Hero opacity: subtle fade during reveal, stronger fade as it exits
         let heroOpacity = 1;
@@ -200,15 +202,30 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             return;
           }
 
-          // Virtual list: posts are i=0..N-1, hero is i=N
-          // Uses totalCs so cards start easing in during reveal
-          const screenTop = (i - postCount * (1 - totalCs)) * CARD_STEP + (viewH - CARD_H) / 2;
+          // Virtual list: highest index enters first, fin is at 0 (enters last)
+          // Reverse post indices so newest (i=0) gets highest slot and enters first
+          const virtualIdx = postCount - i;
+          const screenTop = (virtualIdx - cardCount * (1 - totalCs)) * CARD_STEP + (viewH - CARD_H) / 2;
 
           card.style.opacity = String(cardFade);
           card.style.width = `${cardW}px`;
           card.style.left = `${(viewW - cardW) / 2}px`;
           card.style.transform = `translateY(${screenTop}px)`;
         });
+
+        // ── Fin card ──
+        const fin = finCardRef.current;
+        if (fin) {
+          if (cardFade <= 0) {
+            fin.style.opacity = '0';
+          } else {
+            const finTop = (0 - cardCount * (1 - totalCs)) * CARD_STEP + (viewH - CARD_H) / 2;
+            fin.style.opacity = String(cardFade);
+            fin.style.width = `${cardW}px`;
+            fin.style.left = `${(viewW - cardW) / 2}px`;
+            fin.style.transform = `translateY(${finTop}px)`;
+          }
+        }
 
         // ── Stained glass parallax panels ──
         const glassVisible = p >= 0.78;
@@ -237,7 +254,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
 
           // Parallax Y: each panel scrolls at its own speed relative to card scroll
           const baseY = cfg.yOffset * viewH;
-          const parallaxOffset = totalCs * postCount * CARD_STEP * cfg.depth;
+          const parallaxOffset = totalCs * cardCount * CARD_STEP * cfg.depth;
           const panelY = baseY - parallaxOffset + viewH * 0.3;
           const panelX = viewW / 2 + cfg.x * viewW - panelW / 2;
 
@@ -499,6 +516,57 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             </Link>
           );
         })}
+
+        {/* Fin card */}
+        <style>{`
+          @keyframes fin-glow {
+            0%, 100% {
+              box-shadow:
+                0 0 30px rgba(224, 224, 224, 0.03),
+                0 0 80px rgba(224, 224, 224, 0.015),
+                inset 0 0 60px rgba(224, 224, 224, 0.01);
+              border-color: rgba(224, 224, 224, 0.06);
+            }
+            50% {
+              box-shadow:
+                0 0 40px rgba(224, 224, 224, 0.06),
+                0 0 100px rgba(224, 224, 224, 0.03),
+                inset 0 0 80px rgba(224, 224, 224, 0.02);
+              border-color: rgba(224, 224, 224, 0.10);
+            }
+          }
+        `}</style>
+        <div
+          ref={finCardRef}
+          style={{
+            position: 'absolute',
+            top: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: `${CARD_H}px`,
+            opacity: 0,
+            zIndex: 3,
+            willChange: 'transform, opacity',
+            background: 'linear-gradient(160deg, rgba(20, 20, 20, 0.9) 0%, rgba(12, 12, 12, 0.95) 100%)',
+            border: '1px solid rgba(224, 224, 224, 0.06)',
+            animation: 'fin-glow 4s ease-in-out infinite',
+          }}
+        >
+          <span
+            style={{
+              fontFamily: 'var(--font-heading)',
+              fontSize: 'clamp(1.4rem, 3vw, 2rem)',
+              fontWeight: 300,
+              fontStyle: 'italic',
+              color: 'rgba(224, 224, 224, 0.35)',
+              letterSpacing: '0.15em',
+              textTransform: 'lowercase',
+            }}
+          >
+            fin.
+          </span>
+        </div>
       </div>
     </div>
   );
