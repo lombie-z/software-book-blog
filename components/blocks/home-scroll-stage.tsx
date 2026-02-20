@@ -55,7 +55,11 @@ const GLASS_PANELS = [
 export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps) {
   const postCount = recentPosts.filter((p) => p?.node).length;
   const cardCount = postCount + 1; // posts + fin card
-  const totalScrollVh = 650 + cardCount * 100;
+  const cardScrollVh = 650 + cardCount * 100;
+  const fallVh = 400; // extra scroll for fin fall + landing + ripple
+  const totalScrollVh = cardScrollVh + fallVh;
+  // The card scroll phases (0–0.97) occupy this fraction of the total scroll
+  const cardFrac = cardScrollVh / totalScrollVh;
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const pinnedRef = useRef<HTMLDivElement>(null);
@@ -137,10 +141,13 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
       pin: pinned,
       pinSpacing: false,
       onUpdate: (self) => {
-        const p = self.progress;
+        const rawP = self.progress;
         const viewH = pinned.offsetHeight;
         const viewW = pinned.offsetWidth;
         const cardW = Math.min(viewW * 0.82, 640);
+
+        // Remap: card phases occupy [0, cardFrac], normalized to p in [0, 1]
+        const p = Math.min(1, rawP / cardFrac);
 
         // Write progress directly to ref — no React re-renders
         progressRef.current.scroll = Math.min(1, p / 0.28);
@@ -156,13 +163,15 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
         const clipR = clipL;
         const clipB = clipT;
 
-        // ── Card scroll (82%–97%) ──
+        // ── Card scroll (82%–97% of card phase, continues into fall) ──
         const cs = p <= 0.82 ? 0 : p >= 0.97 ? 1 : (p - 0.82) / 0.15;
 
         // Unified scroll: eases in during reveal, then continues at regular pace
-        // earlyCs adds a gentle cubic ease-in worth ~8% of the total scroll range
         const earlyCs = reveal > 0 ? Math.pow(reveal, 3) * 0.08 : 0;
-        const totalCs = earlyCs + cs;
+
+        // Fall scroll extends totalCs so cards keep sliding through the fall phase
+        const fallRaw = rawP <= cardFrac ? 0 : Math.min(1, (rawP - cardFrac) / (1 - cardFrac));
+        const totalCs = earlyCs + cs + fallRaw * 0.6;
 
         const heroTranslateY = cardCount * totalCs * CARD_STEP;
 
@@ -192,9 +201,10 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           });
         }
 
-        // ── Post cards: absolutely positioned, scroll in from above like parallax panels ──
-        // Fade in during reveal, then always visible — natural scroll position handles entry
-        const cardFade = p <= 0.78 ? 0 : p <= 0.82 ? (p - 0.78) / 0.04 : 1;
+        // ── Post cards — keep sliding and fading ──
+        const fallFadeOut = fallRaw <= 0 ? 1 : Math.max(0, 1 - fallRaw * 3);
+        const cardFade = (p <= 0.78 ? 0 : p <= 0.82 ? (p - 0.78) / 0.04 : 1) * fallFadeOut;
+
         postCardRefs.current.forEach((card, i) => {
           if (!card) return;
           if (cardFade <= 0) {
@@ -202,8 +212,6 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             return;
           }
 
-          // Virtual list: highest index enters first, fin is at 0 (enters last)
-          // Reverse post indices so newest (i=0) gets highest slot and enters first
           const virtualIdx = postCount - i;
           const screenTop = (virtualIdx - cardCount * (1 - totalCs)) * CARD_STEP + (viewH - CARD_H) / 2;
 
@@ -213,19 +221,63 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           card.style.transform = `translateY(${screenTop}px)`;
         });
 
-        // ── Fin card ──
+        // ── Fin card — scrolls with cards, then leaf-falls when it enters the viewport ──
         const fin = finCardRef.current;
         if (fin) {
-          if (cardFade <= 0) {
-            fin.style.opacity = '0';
+          const center = (viewH - CARD_H) / 2;
+          // Fin scroll position without fall extension (freezes at end of card scroll)
+          const finTotalCs = earlyCs + cs;
+          const finScrollY = -cardCount * (1 - finTotalCs) * CARD_STEP + center;
+
+          // Breakaway: fin detaches when it enters the viewport near the top
+          const breakawayY = viewH * 0.15;
+          // What totalCs value puts the fin exactly at breakawayY
+          const breakawayCs = 1 + (breakawayY - center) / (cardCount * CARD_STEP);
+          // Extended totalCs adds fall-phase scroll budget for the fall animation
+          const finCsExtended = finTotalCs + fallRaw * 0.5;
+          const pastBreakaway = finCsExtended - breakawayCs;
+
+          if (pastBreakaway <= 0) {
+            // Normal card scroll — fin hasn't reached breakaway yet
+            const finFade = p <= 0.78 ? 0 : p <= 0.82 ? (p - 0.78) / 0.04 : 1;
+            if (finFade <= 0) {
+              fin.style.opacity = '0';
+            } else {
+              fin.style.opacity = String(finFade);
+              fin.style.width = `${cardW}px`;
+              fin.style.left = `${(viewW - cardW) / 2}px`;
+              fin.style.transform = `translateY(${finScrollY}px)`;
+            }
           } else {
-            const finTop = (0 - cardCount * (1 - totalCs)) * CARD_STEP + (viewH - CARD_H) / 2;
-            fin.style.opacity = String(cardFade);
+            // Leaf-fall: fin has entered the viewport, detach and fall
+            const totalBudget = (earlyCs + 1 - breakawayCs) + 0.5;
+            const fallProgress = Math.min(1, pastBreakaway / totalBudget);
+
+            // Drop: ease from breakaway position to floor
+            const dropEase = 1 - Math.pow(1 - fallProgress, 2.5);
+            const floorY = viewH * 0.55;
+            const fallY = breakawayY + (floorY - breakawayY) * dropEase;
+
+            // Sway: starts immediately (no squared delay) for seamless transition
+            const swayDampen = 1 - dropEase * dropEase;
+            const swayAmplitude = viewW * 0.16 * swayDampen;
+            const swayX = Math.sin(fallProgress * Math.PI * 2) * swayAmplitude;
+            const swayRot = Math.sin(fallProgress * Math.PI * 2) * 12 * swayDampen;
+
+            // Tilt backward onto the floor (~75deg)
+            const tiltBack = fallProgress * 75;
+
+            // Scale shrinks as it lies flat
+            const fallScale = 1 - dropEase * 0.35;
+
+            fin.style.opacity = '1';
             fin.style.width = `${cardW}px`;
             fin.style.left = `${(viewW - cardW) / 2}px`;
-            fin.style.transform = `translateY(${finTop}px)`;
+            fin.style.transform = `perspective(${viewH}px) translateY(${fallY}px) translateX(${swayX}px) rotateX(${tiltBack}deg) rotateZ(${swayRot}deg) scale(${fallScale})`;
+            fin.style.transformOrigin = 'center bottom';
           }
         }
+
 
         // ── Stained glass parallax panels ──
         const glassVisible = p >= 0.78;
@@ -245,7 +297,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           // Fade in during reveal
           const glassFade = p <= 0.80 ? (p - 0.78) / 0.02 : 1;
           // Fade out near the end
-          const glassOut = p >= 0.95 ? Math.max(0, 1 - (p - 0.95) / 0.04) : 1;
+          const glassOut = (p >= 0.95 ? Math.max(0, 1 - (p - 0.95) / 0.04) : 1) * fallFadeOut;
 
           // Depth-based scale: closer panels are larger, further panels are smaller
           const depthScale = 0.5 + cfg.depth * 0.5;
@@ -548,6 +600,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             opacity: 0,
             zIndex: 3,
             willChange: 'transform, opacity',
+            overflow: 'visible',
             background: 'linear-gradient(160deg, rgba(20, 20, 20, 0.9) 0%, rgba(12, 12, 12, 0.95) 100%)',
             border: '1px solid rgba(224, 224, 224, 0.06)',
             animation: 'fin-glow 4s ease-in-out infinite',
@@ -566,6 +619,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           >
             fin.
           </span>
+
         </div>
       </div>
     </div>
