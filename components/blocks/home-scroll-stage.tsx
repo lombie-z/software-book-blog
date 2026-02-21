@@ -1,5 +1,6 @@
 'use client';
-import { useLayoutEffect, useRef } from 'react';
+import { Suspense, useLayoutEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
@@ -7,6 +8,8 @@ import Link from 'next/link';
 import { Blocks } from '@/components/blocks';
 import type { Page, PostConnectionQuery } from '@/tina/__generated__/types';
 import type { CardPost } from './topo-hero';
+
+const ChainScene = dynamic(() => import('./chain/chain-scene').then((m) => ({ default: m.ChainScene })), { ssr: false });
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
@@ -55,11 +58,13 @@ const GLASS_PANELS = [
 export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps) {
   const postCount = recentPosts.filter((p) => p?.node).length;
   const cardCount = postCount + 1; // posts + fin card
-  const cardScrollVh = 650 + cardCount * 100;
-  const fallVh = 400; // extra scroll for fin fall + landing + ripple
-  const totalScrollVh = cardScrollVh + fallVh;
+  const cardScrollVh = 650 + cardCount * 130;
+  const fallVh = 500; // extra scroll for fin fall + landing
+  const chainVh = 400; // extra scroll for chain drop + pull
+  const totalScrollVh = cardScrollVh + fallVh + chainVh;
   // The card scroll phases (0–0.97) occupy this fraction of the total scroll
   const cardFrac = cardScrollVh / totalScrollVh;
+  const fallFrac = (cardScrollVh + fallVh) / totalScrollVh;
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const pinnedRef = useRef<HTMLDivElement>(null);
@@ -71,8 +76,13 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
   const glassShineRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const progressRef = useRef({ scroll: 0, transition: 0, hold: 0 });
+  const chainProgressRef = useRef({ value: 0 });
+  const chainCardRef = useRef({ screenY: 0, tiltDeg: 75, scale: 0.65, cardW: 640, originTop: false });
+  const chainActiveRef = useRef(false);
+  const [chainActive, setChainActive] = useState(false);
   const lastCsRef = useRef(0);
   const lenisRef = useRef<Lenis | null>(null);
+  const viewDimsRef = useRef({ w: 0, h: 0 });
 
   // Derive card posts from recent posts (first 5 with hero images)
   const cardPosts: CardPost[] = recentPosts
@@ -163,14 +173,18 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
         const clipR = clipL;
         const clipB = clipT;
 
-        // ── Card scroll (82%–97% of card phase, continues into fall) ──
-        const cs = p <= 0.82 ? 0 : p >= 0.97 ? 1 : (p - 0.82) / 0.15;
+        // ── Card scroll (82%–100% of card phase, continues into fall) ──
+        const csRaw = p <= 0.82 ? 0 : Math.min(1, (p - 0.82) / 0.18);
+        // Ease-in-out: gentle resistance at start and end of card list
+        const csSmooth = csRaw * csRaw * (3 - 2 * csRaw);
+        const cs = csRaw * 0.65 + csSmooth * 0.35;
 
         // Unified scroll: eases in during reveal, then continues at regular pace
         const earlyCs = reveal > 0 ? Math.pow(reveal, 3) * 0.08 : 0;
 
         // Fall scroll extends totalCs so cards keep sliding through the fall phase
-        const fallRaw = rawP <= cardFrac ? 0 : Math.min(1, (rawP - cardFrac) / (1 - cardFrac));
+        const fallEnd = fallFrac;
+        const fallRaw = rawP <= cardFrac ? 0 : rawP >= fallEnd ? 1 : (rawP - cardFrac) / (fallEnd - cardFrac);
         const totalCs = earlyCs + cs + fallRaw * 0.6;
 
         const heroTranslateY = cardCount * totalCs * CARD_STEP;
@@ -253,19 +267,23 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             const totalBudget = (earlyCs + 1 - breakawayCs) + 0.5;
             const fallProgress = Math.min(1, pastBreakaway / totalBudget);
 
+            // Momentum resistance: slow at sway peaks (0.25, 0.75), speed through center
+            const resistK = 0.18;
+            const mFall = fallProgress + resistK * Math.sin(fallProgress * Math.PI * 4) / (Math.PI * 4);
+
             // Drop: ease from breakaway position to floor
-            const dropEase = 1 - Math.pow(1 - fallProgress, 2.5);
+            const dropEase = 1 - Math.pow(1 - mFall, 2.5);
             const floorY = viewH * 0.55;
             const fallY = breakawayY + (floorY - breakawayY) * dropEase;
 
-            // Sway: starts immediately (no squared delay) for seamless transition
-            const swayDampen = 1 - dropEase * dropEase;
-            const swayAmplitude = viewW * 0.16 * swayDampen;
-            const swayX = Math.sin(fallProgress * Math.PI * 2) * swayAmplitude;
-            const swayRot = Math.sin(fallProgress * Math.PI * 2) * 12 * swayDampen;
+            // Sway: gentle linear decay so both swings are visible
+            const swayDampen = 1 - mFall;
+            const swayAmplitude = viewW * 0.14 * swayDampen;
+            const swayX = Math.sin(mFall * Math.PI * 2) * swayAmplitude;
+            const swayRot = Math.sin(mFall * Math.PI * 2) * 10 * swayDampen;
 
             // Tilt backward onto the floor (~75deg)
-            const tiltBack = fallProgress * 75;
+            const tiltBack = mFall * 75;
 
             // Scale shrinks as it lies flat
             const fallScale = 1 - dropEase * 0.35;
@@ -275,6 +293,55 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             fin.style.left = `${(viewW - cardW) / 2}px`;
             fin.style.transform = `perspective(${viewH}px) translateY(${fallY}px) translateX(${swayX}px) rotateX(${tiltBack}deg) rotateZ(${swayRot}deg) scale(${fallScale})`;
             fin.style.transformOrigin = 'center bottom';
+
+            // Write card state for chain scene
+            chainCardRef.current.screenY = fallY;
+            chainCardRef.current.tiltDeg = tiltBack;
+            chainCardRef.current.scale = fallScale;
+            chainCardRef.current.cardW = cardW;
+            chainCardRef.current.originTop = false;
+          }
+
+          // ── Chain phase: after leaf-fall settles, chain drops and pulls card up ──
+          const chainP = rawP <= fallEnd ? 0 : Math.min(1, (rawP - fallEnd) / (1 - fallEnd));
+          chainProgressRef.current.value = chainP;
+          viewDimsRef.current.w = viewW;
+          viewDimsRef.current.h = viewH;
+
+          // Activate/deactivate chain scene (triggers React state for mount/unmount)
+          if (chainP > 0 && !chainActiveRef.current) {
+            chainActiveRef.current = true;
+            setChainActive(true);
+          } else if (chainP <= 0 && chainActiveRef.current) {
+            chainActiveRef.current = false;
+            setChainActive(false);
+          }
+
+          // Pull-up override: when chain is pulling (chainP > 0.4), override fin card position
+          if (chainP > 0.4) {
+            const pullP = (chainP - 0.4) / 0.6;
+            const pullEase = pullP * pullP * (3 - 2 * pullP);
+            const restY = viewH * 0.55; // floor position from leaf-fall
+            const exitY = -CARD_H - 100; // above viewport
+            const pullY = restY + (exitY - restY) * pullEase;
+
+            // Straighten the tilt as it's pulled up
+            const tiltReduction = Math.min(1, pullP * 2.5);
+            const remainingTilt = 75 * (1 - tiltReduction);
+            const pullScale = 0.65 + tiltReduction * 0.35;
+
+            fin.style.opacity = String(Math.max(0, 1 - pullP * 1.2));
+            fin.style.width = `${cardW}px`;
+            fin.style.left = `${(viewW - cardW) / 2}px`;
+            fin.style.transform = `perspective(${viewH}px) translateY(${pullY}px) rotateX(${remainingTilt}deg) scale(${pullScale})`;
+            fin.style.transformOrigin = 'center top';
+
+            // Write card state for chain scene
+            chainCardRef.current.screenY = pullY;
+            chainCardRef.current.tiltDeg = remainingTilt;
+            chainCardRef.current.scale = pullScale;
+            chainCardRef.current.cardW = cardW;
+            chainCardRef.current.originTop = true;
           }
         }
 
@@ -621,6 +688,19 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           </span>
 
         </div>
+
+        {/* 3D Chain — lazy-loaded, only mounts during chain scroll phase */}
+        {chainActive && (
+          <Suspense fallback={null}>
+            <ChainScene
+              chainProgressRef={chainProgressRef}
+              chainCardRef={chainCardRef}
+              viewW={viewDimsRef.current.w || (typeof window !== 'undefined' ? window.innerWidth : 1920)}
+              viewH={viewDimsRef.current.h || (typeof window !== 'undefined' ? window.innerHeight : 1080)}
+              cardH={CARD_H}
+            />
+          </Suspense>
+        )}
       </div>
     </div>
   );
