@@ -78,6 +78,8 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
   const progressRef = useRef({ scroll: 0, transition: 0, hold: 0 });
   const chainProgressRef = useRef({ value: 0 });
   const chainCardRef = useRef({ screenY: 0, tiltDeg: 75, scale: 0.65, cardW: 640, originTop: false });
+  // Chain scene writes this: the Y screen position to place the card at (driven by rope physics)
+  const chainLiftRef = useRef({ liftY: -1, active: false });
   const chainActiveRef = useRef(false);
   const [chainActive, setChainActive] = useState(false);
   const lastCsRef = useRef(0);
@@ -317,31 +319,24 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             setChainActive(false);
           }
 
-          // Pull-up override: when chain is pulling (chainP > 0.4), override fin card position
-          if (chainP > 0.4) {
-            const pullP = (chainP - 0.4) / 0.6;
-            const pullEase = pullP * pullP * (3 - 2 * pullP);
-            const restY = viewH * 0.55; // floor position from leaf-fall
-            const exitY = -CARD_H - 100; // above viewport
-            const pullY = restY + (exitY - restY) * pullEase;
+          // When chain scene is lifting the card, override fin position from rope physics
+          if (chainLiftRef.current.active) {
+            const liftY = chainLiftRef.current.liftY;
+            const floorY = viewH * 0.55;
+            // How far above the floor the card has been lifted
+            const liftDelta = floorY - liftY;
+            // Straighten tilt as card rises (fully straight after 200px of lift)
+            const straightenP = Math.min(1, Math.max(0, liftDelta / 200));
+            const liftTilt = 75 * (1 - straightenP);
+            const liftScale = 0.65 + straightenP * 0.35;
+            // Fade out as card exits top of viewport
+            const fadeOut = liftY < -CARD_H ? 0 : liftY < 100 ? liftY / 100 : 1;
 
-            // Straighten the tilt as it's pulled up
-            const tiltReduction = Math.min(1, pullP * 2.5);
-            const remainingTilt = 75 * (1 - tiltReduction);
-            const pullScale = 0.65 + tiltReduction * 0.35;
-
-            fin.style.opacity = String(Math.max(0, 1 - pullP * 1.2));
+            fin.style.opacity = String(Math.max(0, fadeOut));
             fin.style.width = `${cardW}px`;
             fin.style.left = `${(viewW - cardW) / 2}px`;
-            fin.style.transform = `perspective(${viewH}px) translateY(${pullY}px) rotateX(${remainingTilt}deg) scale(${pullScale})`;
-            fin.style.transformOrigin = 'center top';
-
-            // Write card state for chain scene
-            chainCardRef.current.screenY = pullY;
-            chainCardRef.current.tiltDeg = remainingTilt;
-            chainCardRef.current.scale = pullScale;
-            chainCardRef.current.cardW = cardW;
-            chainCardRef.current.originTop = true;
+            fin.style.transform = `perspective(${viewH}px) translateY(${liftY}px) rotateX(${liftTilt}deg) scale(${liftScale})`;
+            fin.style.transformOrigin = 'center bottom';
           }
         }
 
@@ -695,6 +690,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             <ChainScene
               chainProgressRef={chainProgressRef}
               chainCardRef={chainCardRef}
+              chainLiftRef={chainLiftRef}
               viewW={viewDimsRef.current.w || (typeof window !== 'undefined' ? window.innerWidth : 1920)}
               viewH={viewDimsRef.current.h || (typeof window !== 'undefined' ? window.innerHeight : 1080)}
               cardH={CARD_H}

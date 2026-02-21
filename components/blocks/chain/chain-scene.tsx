@@ -3,45 +3,45 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
 // ── Chain config ──
-const LINK_COUNT = 14; // visible links per chain
-const ROPE_POINTS = 24; // MORE points than links → extra length = slack/sag
-const SEGMENT_LEN = 28; // rest distance between rope points
+const LINK_COUNT = 14;
+const ROPE_POINTS = 28; // lots of slack for the coiled start
+const SEGMENT_LEN = 24;
 const TUBE_R = 2.5;
 const LINK_HALF_W = 7;
 const LINK_STRAIGHT = 14;
-const LINK_HEIGHT = 2 * (LINK_STRAIGHT + LINK_HALF_W); // 42px — full link extent along its long axis
+const LINK_HEIGHT = 2 * (LINK_STRAIGHT + LINK_HALF_W); // 42px
 const CARD_INSET = 40;
 const GRAVITY = 2400;
 const CONSTRAINT_ITERS = 16;
 const DAMPING = 0.97;
 
-// ── Verlet rope ──
+// ── Verlet rope — top pinned, bottom FREE with floor constraint ──
 interface VerletRope {
-  pos: Float64Array; // [x0, y0, x1, y1, ...]
+  pos: Float64Array;
   prev: Float64Array;
   count: number;
 }
 
-function createRope(count: number, topX: number, topY: number, botX: number, botY: number): VerletRope {
+function createRopeCoiled(count: number, anchorX: number, floorY: number): VerletRope {
   const pos = new Float64Array(count * 2);
   const prev = new Float64Array(count * 2);
-  // Initialize as catenary-like curve (straight line + sag)
+  // Start coiled: zigzag pattern on the floor
   for (let i = 0; i < count; i++) {
-    const t = i / (count - 1);
-    const sag = Math.sin(t * Math.PI) * 80; // generous initial sag
-    pos[i * 2] = topX + (botX - topX) * t + sag * 0.3; // slight horizontal droop
-    pos[i * 2 + 1] = topY + (botY - topY) * t - sag;
+    const zigzag = (i % 2 === 0 ? -1 : 1) * 15; // 15px side-to-side
+    pos[i * 2] = anchorX + zigzag;
+    // Stack points near the floor with tiny vertical offsets
+    pos[i * 2 + 1] = floorY + (count - i) * 3; // slight pile-up above floor
     prev[i * 2] = pos[i * 2];
     prev[i * 2 + 1] = pos[i * 2 + 1];
   }
   return { pos, prev, count };
 }
 
-function stepRope(rope: VerletRope, dt: number, topX: number, topY: number, botX: number, botY: number) {
+function stepRope(rope: VerletRope, dt: number, topX: number, topY: number, floorY: number, attachX: number) {
   const { pos, prev, count } = rope;
 
   // Verlet integration
-  for (let i = 1; i < count - 1; i++) {
+  for (let i = 1; i < count; i++) {
     const ix = i * 2;
     const iy = ix + 1;
     const vx = (pos[ix] - prev[ix]) * DAMPING;
@@ -52,20 +52,14 @@ function stepRope(rope: VerletRope, dt: number, topX: number, topY: number, botX
     pos[iy] += vy - GRAVITY * dt * dt;
   }
 
-  // Pin endpoints
+  // Pin top endpoint only
   pos[0] = topX;
   pos[1] = topY;
   prev[0] = topX;
   prev[1] = topY;
-  const lastI = (count - 1) * 2;
-  pos[lastI] = botX;
-  pos[lastI + 1] = botY;
-  prev[lastI] = botX;
-  prev[lastI + 1] = botY;
 
-  // Distance constraints (forward + backward passes for stability)
+  // Distance constraints
   for (let iter = 0; iter < CONSTRAINT_ITERS; iter++) {
-    // Alternate direction each iteration to reduce bias
     const forward = iter % 2 === 0;
     const start = forward ? 0 : count - 2;
     const end = forward ? count - 1 : -1;
@@ -90,10 +84,6 @@ function stepRope(rope: VerletRope, dt: number, topX: number, topY: number, botX
         // Top pinned
         pos[bx] += ox * 2;
         pos[by] += oy * 2;
-      } else if (i === count - 2) {
-        // Bottom pinned
-        pos[ax] -= ox * 2;
-        pos[ay] -= oy * 2;
       } else {
         pos[ax] -= ox;
         pos[ay] -= oy;
@@ -101,12 +91,23 @@ function stepRope(rope: VerletRope, dt: number, topX: number, topY: number, botX
         pos[by] += oy;
       }
     }
+
+    // Floor constraint: no point goes below floorY (in Three.js Y-up coords)
+    for (let i = 1; i < count; i++) {
+      if (pos[i * 2 + 1] < floorY) {
+        pos[i * 2 + 1] = floorY;
+        prev[i * 2 + 1] = floorY;
+      }
+    }
+
+    // Bottom point X constraint: gently pull toward card attachment X
+    const lastI = (count - 1) * 2;
+    pos[lastI] += (attachX - pos[lastI]) * 0.3;
   }
 }
 
-// ── Sample rope position at a given arc-length distance from the top ──
+// ── Sample rope by arc length ──
 function sampleRopeByArc(rope: VerletRope, arcLen: Float64Array, targetArc: number): [number, number] {
-  // Binary search for the segment containing targetArc
   let lo = 0;
   let hi = rope.count - 1;
   while (lo < hi - 1) {
@@ -114,16 +115,15 @@ function sampleRopeByArc(rope: VerletRope, arcLen: Float64Array, targetArc: numb
     if (arcLen[mid] < targetArc) lo = mid;
     else hi = mid;
   }
-
   const segArc = arcLen[hi] - arcLen[lo];
   const frac = segArc > 0.001 ? (targetArc - arcLen[lo]) / segArc : 0;
-
-  const x = rope.pos[lo * 2] + (rope.pos[hi * 2] - rope.pos[lo * 2]) * frac;
-  const y = rope.pos[lo * 2 + 1] + (rope.pos[hi * 2 + 1] - rope.pos[lo * 2 + 1]) * frac;
-  return [x, y];
+  return [
+    rope.pos[lo * 2] + (rope.pos[hi * 2] - rope.pos[lo * 2]) * frac,
+    rope.pos[lo * 2 + 1] + (rope.pos[hi * 2 + 1] - rope.pos[lo * 2 + 1]) * frac,
+  ];
 }
 
-// ── Parametric stadium curve — smooth, no junction artifacts ──
+// ── Smooth stadium curve for link shape ──
 class StadiumCurve extends THREE.Curve<THREE.Vector3> {
   halfW: number;
   straight: number;
@@ -133,42 +133,35 @@ class StadiumCurve extends THREE.Curve<THREE.Vector3> {
     super();
     this.halfW = halfW;
     this.straight = straight;
-    // Perimeter = 2 straights + 2 semicircles
     this.perimeter = 2 * straight + 2 * Math.PI * halfW;
   }
 
   getPoint(t: number): THREE.Vector3 {
     const { halfW, straight, perimeter } = this;
     const d = t * perimeter;
-
-    const seg1 = straight; // right side: (halfW, -straight) → (halfW, straight)
-    const seg2 = seg1 + Math.PI * halfW; // top arc
-    const seg3 = seg2 + straight; // left side: (-halfW, straight) → (-halfW, -straight)
+    const seg1 = straight;
+    const seg2 = seg1 + Math.PI * halfW;
+    const seg3 = seg2 + straight;
 
     if (d <= seg1) {
-      // Right straight: bottom to top
       const f = d / straight;
       return new THREE.Vector3(halfW, -straight + f * 2 * straight, 0);
     }
     if (d <= seg2) {
-      // Top semicircle centered at (0, straight), from (halfW, straight) to (-halfW, straight)
-      const a = (d - seg1) / halfW; // 0 → PI
+      const a = (d - seg1) / halfW;
       return new THREE.Vector3(halfW * Math.cos(a), straight + halfW * Math.sin(a), 0);
     }
     if (d <= seg3) {
-      // Left straight: top to bottom
       const f = (d - seg2) / straight;
       return new THREE.Vector3(-halfW, straight - f * 2 * straight, 0);
     }
-    // Bottom semicircle centered at (0, -straight), from (-halfW, -straight) to (halfW, -straight)
-    const a = (d - seg3) / halfW; // 0 → PI
+    const a = (d - seg3) / halfW;
     return new THREE.Vector3(-halfW * Math.cos(a), -straight - halfW * Math.sin(a), 0);
   }
 }
 
 function createLinkGeometry(tubeR: number, halfW: number, straight: number): THREE.TubeGeometry {
-  const curve = new StadiumCurve(halfW, straight);
-  return new THREE.TubeGeometry(curve, 64, tubeR, 12, true);
+  return new THREE.TubeGeometry(new StadiumCurve(halfW, straight), 64, tubeR, 12, true);
 }
 
 export interface ChainCardState {
@@ -179,9 +172,15 @@ export interface ChainCardState {
   originTop: boolean;
 }
 
+export interface ChainLiftState {
+  liftY: number; // screen Y for the card
+  active: boolean;
+}
+
 interface ChainSceneProps {
   chainProgressRef: React.RefObject<{ value: number }>;
   chainCardRef: React.RefObject<ChainCardState>;
+  chainLiftRef: React.RefObject<ChainLiftState>;
   viewW: number;
   viewH: number;
   cardH: number;
@@ -191,24 +190,21 @@ function getCardBackEdge(card: ChainCardState, viewH: number, cardH: number) {
   const tiltRad = (card.tiltDeg * Math.PI) / 180;
   const perspective = viewH;
   const originY = card.originTop ? card.screenY : card.screenY + cardH * card.scale;
-
   const localY = card.originTop ? cardH : -cardH;
   const backLocalY = localY * Math.cos(tiltRad) * card.scale;
   const backLocalZ = -Math.abs(localY) * Math.sin(tiltRad) * card.scale;
   const perspFactor = perspective / (perspective - backLocalZ);
   const backScreenY = originY + backLocalY * perspFactor;
   const backHalfWidth = (card.cardW * card.scale / 2) * perspFactor;
-
   return { screenY: backScreenY, halfWidth: backHalfWidth, perspFactor };
 }
 
-// Reusable quaternion helpers for link orientation
 const _up = new THREE.Vector3(0, 1, 0);
 const _dir = new THREE.Vector3();
 const _qAlign = new THREE.Quaternion();
 const _qTwist = new THREE.Quaternion();
 
-export function ChainScene({ chainProgressRef, chainCardRef, viewW, viewH, cardH }: ChainSceneProps) {
+export function ChainScene({ chainProgressRef, chainCardRef, chainLiftRef, viewW, viewH, cardH }: ChainSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
 
@@ -216,7 +212,6 @@ export function ChainScene({ chainProgressRef, chainCardRef, viewW, viewH, cardH
     const container = containerRef.current;
     if (!container || viewW === 0 || viewH === 0) return;
 
-    // ── Three.js ──
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setSize(viewW, viewH);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -235,20 +230,14 @@ export function ChainScene({ chainProgressRef, chainCardRef, viewW, viewH, cardH
     rimLight.position.set(-80, -100, 200);
     scene.add(rimLight);
 
-    // Environment map
     const pmremGen = new THREE.PMREMGenerator(renderer);
     const envScene = new THREE.Scene();
     envScene.background = new THREE.Color(0x111118);
-    const fillA = new THREE.PointLight(0x334455, 2, 2000);
-    fillA.position.set(-300, 400, 200);
-    envScene.add(fillA);
-    const fillB = new THREE.PointLight(0x223344, 1.5, 2000);
-    fillB.position.set(300, -200, -100);
-    envScene.add(fillB);
+    envScene.add(new THREE.PointLight(0x334455, 2, 2000));
+    envScene.add(new THREE.PointLight(0x223344, 1.5, 2000));
     const envMap = pmremGen.fromScene(envScene, 0.04).texture;
     pmremGen.dispose();
 
-    // ── Geometry & Materials ──
     const linkGeo = createLinkGeometry(TUBE_R, LINK_HALF_W, LINK_STRAIGHT);
     const linkMat = new THREE.MeshStandardMaterial({
       metalness: 0.85,
@@ -283,53 +272,14 @@ export function ChainScene({ chainProgressRef, chainCardRef, viewW, viewH, cardH
     let ropeRight: VerletRope | null = null;
     let initialized = false;
 
-    function screenToThree(sx: number, sy: number): [number, number] {
-      return [sx - viewW / 2, viewH / 2 - sy];
+    function screenToThreeY(sy: number): number {
+      return viewH / 2 - sy;
     }
-
-    function getEndpoints(chainP: number) {
-      const card = chainCardRef.current;
-      if (!card) {
-        return {
-          leftTop: [0, viewH / 2] as [number, number],
-          leftBot: [-100, 0] as [number, number],
-          rightTop: [0, viewH / 2] as [number, number],
-          rightBot: [100, 0] as [number, number],
-        };
-      }
-
-      const backEdge = getCardBackEdge(card, viewH, cardH);
-      const attachHalfX = Math.max(20, backEdge.halfWidth - CARD_INSET * card.scale * backEdge.perspFactor);
-
-      const [lbx, lby] = screenToThree(viewW / 2 - attachHalfX, backEdge.screenY);
-      const [rbx, rby] = screenToThree(viewW / 2 + attachHalfX, backEdge.screenY);
-
-      // Top anchors: above viewport
-      const ceilingY = viewH / 2 + 200;
-
-      let topY: number;
-      if (chainP <= 0.3) {
-        const dropP = chainP / 0.3;
-        const dropEase = 1 - Math.pow(1 - dropP, 2.5);
-        const farAbove = viewH / 2 + ROPE_POINTS * SEGMENT_LEN + 400;
-        topY = farAbove + (ceilingY - farAbove) * dropEase;
-      } else if (chainP <= 0.4) {
-        topY = ceilingY;
-      } else {
-        const pullP = (chainP - 0.4) / 0.6;
-        const pullEase = pullP * pullP * (3 - 2 * pullP);
-        topY = ceilingY + pullEase * (viewH + 400);
-      }
-
-      const [ltx] = screenToThree(viewW / 2 - attachHalfX, 0);
-      const [rtx] = screenToThree(viewW / 2 + attachHalfX, 0);
-
-      return {
-        leftTop: [ltx, topY] as [number, number],
-        leftBot: [lbx, lby] as [number, number],
-        rightTop: [rtx, topY] as [number, number],
-        rightBot: [rbx, rby] as [number, number],
-      };
+    function screenToThreeX(sx: number): number {
+      return sx - viewW / 2;
+    }
+    function threeToScreenY(ty: number): number {
+      return viewH / 2 - ty;
     }
 
     // ── Animation loop ──
@@ -344,6 +294,7 @@ export function ChainScene({ chainProgressRef, chainCardRef, viewW, viewH, cardH
         initialized = false;
         ropeLeft = null;
         ropeRight = null;
+        if (chainLiftRef.current) chainLiftRef.current.active = false;
         renderer.clear();
         return;
       }
@@ -351,20 +302,60 @@ export function ChainScene({ chainProgressRef, chainCardRef, viewW, viewH, cardH
       const dt = lastTime ? Math.min((time - lastTime) / 1000, 1 / 30) : 1 / 60;
       lastTime = time;
 
-      const ep = getEndpoints(chainP);
+      // Read current card state
+      const card = chainCardRef.current;
+      if (!card) return;
 
+      const backEdge = getCardBackEdge(card, viewH, cardH);
+      const attachHalfX = Math.max(20, backEdge.halfWidth - CARD_INSET * card.scale * backEdge.perspFactor);
+      const leftAttachX = screenToThreeX(viewW / 2 - attachHalfX);
+      const rightAttachX = screenToThreeX(viewW / 2 + attachHalfX);
+      const floorThreeY = screenToThreeY(backEdge.screenY);
+
+      // Top anchor Y: starts at floor, rises above viewport
+      const ceilingY = viewH / 2 + 300;
+      let topY: number;
+      if (chainP <= 0.15) {
+        // Chains resting on floor, fading in
+        topY = floorThreeY + 20;
+      } else {
+        // Pull upward
+        const pullP = (chainP - 0.15) / 0.85;
+        const pullEase = pullP * pullP * (3 - 2 * pullP);
+        topY = floorThreeY + 20 + pullEase * (ceilingY - floorThreeY + viewH);
+      }
+
+      // Initialize ropes coiled on floor
       if (!initialized || !ropeLeft || !ropeRight) {
-        ropeLeft = createRope(ROPE_POINTS, ep.leftTop[0], ep.leftTop[1], ep.leftBot[0], ep.leftBot[1]);
-        ropeRight = createRope(ROPE_POINTS, ep.rightTop[0], ep.rightTop[1], ep.rightBot[0], ep.rightBot[1]);
+        ropeLeft = createRopeCoiled(ROPE_POINTS, leftAttachX, floorThreeY);
+        ropeRight = createRopeCoiled(ROPE_POINTS, rightAttachX, floorThreeY);
         initialized = true;
       }
 
-      // Step physics
-      stepRope(ropeLeft, dt, ep.leftTop[0], ep.leftTop[1], ep.leftBot[0], ep.leftBot[1]);
-      stepRope(ropeRight, dt, ep.rightTop[0], ep.rightTop[1], ep.rightBot[0], ep.rightBot[1]);
+      // Step physics — top pinned, bottom free with floor constraint
+      stepRope(ropeLeft, dt, leftAttachX, topY, floorThreeY, leftAttachX);
+      stepRope(ropeRight, dt, rightAttachX, topY, floorThreeY, rightAttachX);
 
-      // Place links along rope, spaced by LINK_HEIGHT so they touch/overlap
-      // First compute cumulative arc-length table for the rope
+      // Read bottom position (the free end attached to card)
+      const lbY = ropeLeft.pos[(ropeLeft.count - 1) * 2 + 1];
+      const rbY = ropeRight.pos[(ropeRight.count - 1) * 2 + 1];
+      const avgBottomThreeY = (lbY + rbY) / 2;
+
+      // Write lift position back to scroll stage if bottom has risen above floor
+      if (avgBottomThreeY > floorThreeY + 5) {
+        const liftScreenY = threeToScreenY(avgBottomThreeY);
+        // Map back: the card's screenY should be such that its back edge is at liftScreenY
+        // backEdge.screenY was computed from card.screenY, so the offset is:
+        const edgeOffset = backEdge.screenY - card.screenY;
+        if (chainLiftRef.current) {
+          chainLiftRef.current.liftY = liftScreenY - edgeOffset;
+          chainLiftRef.current.active = true;
+        }
+      } else {
+        if (chainLiftRef.current) chainLiftRef.current.active = false;
+      }
+
+      // ── Place chain links along ropes ──
       const ropes = [ropeLeft, ropeRight];
       for (let c = 0; c < 2; c++) {
         const rope = ropes[c];
@@ -379,20 +370,24 @@ export function ChainScene({ chainProgressRef, chainCardRef, viewW, viewH, cardH
         }
         const totalLen = arcLen[rope.count - 1];
 
-        // Chain of LINK_COUNT links, each LINK_HEIGHT tall, centered on the rope
         const chainLen = LINK_COUNT * LINK_HEIGHT;
-        // Start offset: center the chain along the rope
-        const startArc = Math.max(0, (totalLen - chainLen) / 2);
+        // Place links from the bottom of the rope upward (bottom = card end)
+        const startArc = Math.max(0, totalLen - chainLen);
 
         for (let i = 0; i < LINK_COUNT; i++) {
           const idx = c * LINK_COUNT + i;
-
-          // Arc-length position of this link's center
           const linkCenterArc = startArc + (i + 0.5) * LINK_HEIGHT;
-          // Sample two points slightly apart for direction
+          if (linkCenterArc > totalLen) {
+            // Link beyond rope — hide it
+            dummy.position.set(0, -99999, 0);
+            dummy.updateMatrix();
+            linkMesh.setMatrixAt(idx, dummy.matrix);
+            glowMesh.setMatrixAt(idx, dummy.matrix);
+            continue;
+          }
+
           const arcA = Math.max(0, linkCenterArc - LINK_HEIGHT * 0.3);
           const arcB = Math.min(totalLen, linkCenterArc + LINK_HEIGHT * 0.3);
-
           const [xa, ya] = sampleRopeByArc(rope, arcLen, arcA);
           const [xb, yb] = sampleRopeByArc(rope, arcLen, arcB);
           const [xc, yc] = sampleRopeByArc(rope, arcLen, Math.min(totalLen, linkCenterArc));
@@ -405,9 +400,8 @@ export function ChainScene({ chainProgressRef, chainCardRef, viewW, viewH, cardH
           _qAlign.setFromUnitVectors(_up, _dir);
 
           if (i % 2 !== 0) {
-            // Twist 90° around the LOCAL Y axis (the link's long axis) for interlocking
             _qTwist.setFromAxisAngle(_up, Math.PI / 2);
-            _qAlign.multiply(_qTwist); // multiply = apply in local space
+            _qAlign.multiply(_qTwist);
           }
 
           dummy.position.set(xc, yc, 0);
@@ -420,6 +414,14 @@ export function ChainScene({ chainProgressRef, chainCardRef, viewW, viewH, cardH
 
       linkMesh.instanceMatrix.needsUpdate = true;
       glowMesh.instanceMatrix.needsUpdate = true;
+
+      // Fade chains in/out
+      const fadeIn = Math.min(1, chainP / 0.1);
+      const fadeOut = chainP > 0.9 ? Math.max(0, 1 - (chainP - 0.9) / 0.1) : 1;
+      const chainOpacity = fadeIn * fadeOut;
+      linkMat.opacity = chainOpacity;
+      linkMat.transparent = chainOpacity < 1;
+      glowMat.opacity = 0.15 * chainOpacity;
 
       renderer.render(scene, camera);
     }
@@ -443,7 +445,7 @@ export function ChainScene({ chainProgressRef, chainCardRef, viewW, viewH, cardH
       cleanupRef.current?.();
       cleanupRef.current = null;
     };
-  }, [viewW, viewH, cardH, chainProgressRef, chainCardRef]);
+  }, [viewW, viewH, cardH, chainProgressRef, chainCardRef, chainLiftRef]);
 
   return (
     <div
