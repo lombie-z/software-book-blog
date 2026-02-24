@@ -94,6 +94,9 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
 
   const progressRef = useRef({ scroll: 0, transition: 0, hold: 0 });
   const lastCsRef = useRef(0);
+  // Tracks which section the user was last in before entering the fall zone.
+  // 'cards' = came from blog cards, 'socials' = came from frame sequence/socials
+  const finOriginRef = useRef<'cards' | 'socials'>('cards');
   const lenisRef = useRef<Lenis | null>(null);
   const frameCanvasRef = useRef<HTMLCanvasElement>(null);
   const postFramesRef = useRef<HTMLImageElement[]>([]);
@@ -227,6 +230,12 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
       pinSpacing: false,
       onUpdate: (self) => {
         const rawP = self.progress;
+
+        // Track which section the user is in — 'socials' updates here,
+        // 'cards' is deferred to the fin card logic (when pastBreakaway <= 0)
+        // so the reverse animation isn't cut short near the boundary.
+        if (rawP >= fallFrac) finOriginRef.current = 'socials';
+
         const viewH = pinned.offsetHeight;
         const viewW = pinned.offsetWidth;
         const cardW = Math.min(viewW * 0.82, 640);
@@ -386,6 +395,8 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           const pastBreakaway = finCsExtended - breakawayCs;
 
           if (pastBreakaway <= 0) {
+            // Fin is back in the card stack — safe to mark origin as 'cards'
+            finOriginRef.current = 'cards';
             // Normal card scroll — fin hasn't reached breakaway yet
             const finFade = p <= 0.74 ? 0 : p <= 0.78 ? (p - 0.74) / 0.04 : 1;
             if (finFade <= 0) {
@@ -401,20 +412,26 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             const totalBudget = (earlyCs + 1 - breakawayCs) + 0.5;
             const fallProgress = Math.min(1, pastBreakaway / totalBudget);
 
+            // From socials: same card, same math — just kill the sway so it
+            // rewinds as a clean untilt instead of the dramatic leaf-fall.
+            const fromSocials = finOriginRef.current === 'socials';
+
             // Momentum resistance: slow at sway peaks (0.25, 0.75), speed through center
             const resistK = 0.18;
-            const mFall = fallProgress + resistK * Math.sin(fallProgress * Math.PI * 4) / (Math.PI * 4);
+            const mFall = fromSocials
+              ? fallProgress // linear rewind when coming from socials
+              : fallProgress + resistK * Math.sin(fallProgress * Math.PI * 4) / (Math.PI * 4);
 
             // Drop: ease from breakaway position to floor
             const dropEase = 1 - Math.pow(1 - mFall, 2.5);
             const floorY = viewH * 0.55;
             const fallY = breakawayY + (floorY - breakawayY) * dropEase;
 
-            // Sway: gentle linear decay so both swings are visible
+            // Sway: zero when coming from socials
             const swayDampen = 1 - mFall;
-            const swayAmplitude = viewW * 0.14 * swayDampen;
+            const swayAmplitude = fromSocials ? 0 : viewW * 0.14 * swayDampen;
             const swayX = Math.sin(mFall * Math.PI * 2) * swayAmplitude;
-            const swayRot = Math.sin(mFall * Math.PI * 2) * 10 * swayDampen;
+            const swayRot = fromSocials ? 0 : Math.sin(mFall * Math.PI * 2) * 10 * swayDampen;
 
             const tiltBack = mFall * FIN_TILT_DEG;
 
