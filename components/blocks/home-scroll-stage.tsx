@@ -988,9 +988,9 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                   style={{
                     fontFamily: 'var(--font-heading)',
                     fontSize: 'clamp(1.1rem, 2.5vw, 1.6rem)',
-                    fontWeight: 700,
+                    fontWeight: 400,
                     color: 'rgba(245, 245, 245, 0.92)',
-                    textTransform: 'uppercase',
+                    textTransform: 'none',
                     letterSpacing: '-0.01em',
                     lineHeight: 1.15,
                     margin: 0,
