@@ -493,9 +493,14 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           // ── Frame sequence phase: after leaf-fall, scroll-driven video ──
           const framePRaw = rawP <= fallFrac ? 0 : Math.min(1, (rawP - fallFrac) / (1 - fallFrac));
           // Cap how fast frame progress can change per tick to prevent jarring jumps
-          const maxDelta = 0.008; // ~1.5 frames per tick — smooth in both directions
+          // But snap to 0 immediately when fully outside the frame zone,
+          // and allow faster catch-up when scrubbing (large gap = scrollbar jump)
           const prev = smoothedFpRef.current;
-          const clamped = Math.max(prev - maxDelta, Math.min(prev + maxDelta, framePRaw));
+          const gap = Math.abs(framePRaw - prev);
+          const maxDelta = gap > 0.05 ? gap * 0.3 : 0.004;
+          const clamped = framePRaw <= 0
+            ? 0
+            : Math.max(prev - maxDelta, Math.min(prev + maxDelta, framePRaw));
           smoothedFpRef.current = clamped;
           const frameP = clamped;
           frameProgressRef.current = frameP;
