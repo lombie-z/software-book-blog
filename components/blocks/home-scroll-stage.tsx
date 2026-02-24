@@ -331,12 +331,8 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
         const sectionNav2 = sectionNav2Ref.current;
         if (sectionNav2) {
           let nav2Opacity: number;
-          if (p < 0.68) {
+          if (p < 0.76) {
             nav2Opacity = 0;
-          } else if (p < 0.717) {
-            nav2Opacity = (p - 0.68) / 0.037;
-          } else if (p < 0.76) {
-            nav2Opacity = Math.max(0, 1 - ((p - 0.717) / 0.043) * 2);
           } else if (p < 0.82) {
             nav2Opacity = (p - 0.76) / 0.06;
           } else {
