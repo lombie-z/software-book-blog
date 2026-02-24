@@ -19,10 +19,12 @@ export const TopoHero = ({
   data,
   cardPosts,
   progressRef,
+  sectionNavSlot,
 }: {
   data: PageBlocksTopoHero;
   cardPosts?: CardPost[];
   progressRef?: ProgressRef;
+  sectionNavSlot?: React.ReactNode;
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const layersRef = useRef<HTMLDivElement[]>([]);
@@ -628,6 +630,9 @@ export const TopoHero = ({
 
         <div className="topo-viewport">
           <div className="topo-canvas-3d" ref={canvasRef}>
+            {/* Section nav slot — at translateZ(0), dark panel at Z(500) paints over it */}
+            {sectionNavSlot}
+
             {/* Dark panel — expands to fullscreen as seamless bridge to frame sequence */}
             <div
               className="topo-card-layer topo-dark-panel"

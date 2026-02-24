@@ -103,7 +103,8 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
   const socialRef = useRef<HTMLDivElement>(null);
   const sectionNavRef = useRef<HTMLDivElement>(null);
   const navBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const navOccluderRef = useRef<HTMLDivElement>(null);
+  const sectionNav2Ref = useRef<HTMLDivElement>(null);
+  const navBtn2Refs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Derive card posts from recent posts (first 5 with hero images)
   const cardPosts: CardPost[] = recentPosts
@@ -297,53 +298,53 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
         const fallFadeOut = fallRaw <= 0 ? 1 : Math.max(0, 1 - fallRaw * 3);
         const cardFade = (p <= 0.74 ? 0 : p <= 0.78 ? (p - 0.74) / 0.04 : 1) * fallFadeOut;
 
-        // ── Section nav visibility + active state ──
+        // ── Section nav ──
+        // Nav 1 (inside 3D scene): visible on landing, dark panel covers it naturally
         const sectionNav = sectionNavRef.current;
         if (sectionNav) {
-          let navOpacity: number;
-          if (p < 0.68) {
-            // Visible on landing; occluder handles covering it during transition
-            navOpacity = 1;
-          } else if (p < 0.717) {
-            // Fade back in near end of hold
-            navOpacity = (p - 0.68) / 0.037;
-          } else if (p < 0.76) {
-            // Fade out during reveal crop
-            navOpacity = Math.max(0, 1 - ((p - 0.717) / 0.043) * 2);
-          } else if (p < 0.82) {
-            // Fade back in once cards settle
-            navOpacity = (p - 0.76) / 0.06;
-          } else {
-            navOpacity = 1;
-          }
-          // Keep visible through fall and frame phases
-          if (rawP > cardFrac) navOpacity = 1;
+          // Active on landing, hide once hold starts (dark panel already covering)
+          const nav1Opacity = p < 0.40 ? 1 : 0;
+          sectionNav.style.opacity = String(nav1Opacity);
+          sectionNav.style.pointerEvents = nav1Opacity > 0.01 ? 'auto' : 'none';
 
-          sectionNav.style.opacity = String(navOpacity);
-          sectionNav.style.pointerEvents = navOpacity > 0.01 ? 'auto' : 'none';
-
-          // Occluder: black div at z:12 that covers nav, synced with dark panel expansion
-          const occluder = navOccluderRef.current;
-          if (occluder) {
-            const tp = progressRef.current.transition;
-            // Dark panel expands to fullscreen between tp=0.55 and tp=1.0 (p ≈ 0.31–0.40)
-            const occluderIn = tp <= 0.55 ? 0 : (tp - 0.55) / 0.45;
-            // Fade out before nav reappears
-            const occluderOut = p >= 0.66 ? Math.max(0, 1 - (p - 0.66) / 0.04) : 1;
-            const occluderOpacity = occluderIn * occluderOut;
-            occluder.style.opacity = String(occluderOpacity);
-          }
-
-          // Active state: 0=Landing, 1=Blog, 2=Socials
-          // Blog activates at p >= 0.68 so it's already active when nav reappears
-          let activeIdx = 0;
-          if (rawP >= fallFrac) {
-            activeIdx = 2;
-          } else if (p >= 0.68) {
-            activeIdx = 1;
-          }
+          // Active state for nav1: always Landing
           for (let i = 0; i < 3; i++) {
             const btn = navBtnRefs.current[i];
+            if (!btn) continue;
+            const isActive = i === 0;
+            btn.style.borderLeft = isActive ? '2px solid rgba(224, 224, 224, 0.7)' : '2px solid transparent';
+            btn.style.color = isActive ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.4)';
+            btn.style.background = isActive ? 'rgba(255, 255, 255, 0.06)' : 'transparent';
+          }
+        }
+
+        // Nav 2 (outside hero): appears after hold phase
+        const sectionNav2 = sectionNav2Ref.current;
+        if (sectionNav2) {
+          let nav2Opacity: number;
+          if (p < 0.68) {
+            nav2Opacity = 0;
+          } else if (p < 0.717) {
+            nav2Opacity = (p - 0.68) / 0.037;
+          } else if (p < 0.76) {
+            nav2Opacity = Math.max(0, 1 - ((p - 0.717) / 0.043) * 2);
+          } else if (p < 0.82) {
+            nav2Opacity = (p - 0.76) / 0.06;
+          } else {
+            nav2Opacity = 1;
+          }
+          if (rawP > cardFrac) nav2Opacity = 1;
+
+          sectionNav2.style.opacity = String(nav2Opacity);
+          sectionNav2.style.pointerEvents = nav2Opacity > 0.01 ? 'auto' : 'none';
+
+          // Active state: Blog when cards visible, Socials in frame phase
+          let activeIdx = 1;
+          if (rawP >= fallFrac) {
+            activeIdx = 2;
+          }
+          for (let i = 0; i < 3; i++) {
+            const btn = navBtn2Refs.current[i];
             if (!btn) continue;
             const isActive = i === activeIdx;
             btn.style.borderLeft = isActive ? '2px solid rgba(224, 224, 224, 0.7)' : '2px solid transparent';
@@ -746,6 +747,66 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             {...pageData}
             cardPosts={cardPosts}
             progressRef={progressRef}
+            sectionNavSlot={
+              <div
+                ref={sectionNavRef}
+                style={{
+                  position: 'absolute',
+                  left: 'calc(-50vw + 400px + 24px)',
+                  top: '50%',
+                  transform: 'translateY(-50%) translateZ(0px)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                  opacity: 1,
+                  pointerEvents: 'auto',
+                }}
+              >
+                {(['Landing', 'Blog', 'Socials'] as const).map((label, i) => (
+                  <button
+                    key={label}
+                    ref={(el) => { navBtnRefs.current[i] = el; }}
+                    type="button"
+                    onClick={() => {
+                      const wrapper = wrapperRef.current;
+                      if (!wrapper || !lenisRef.current) return;
+                      const scrollMax = wrapper.scrollHeight - window.innerHeight;
+                      const quartic = (t: number) => 1 - Math.pow(1 - t, 4);
+                      const smoothstep = (t: number) => t * t * (3 - 2 * t);
+                      if (i === 0) {
+                        lenisRef.current.scrollTo(0, { duration: 8, easing: smoothstep });
+                      } else if (i === 1) {
+                        lenisRef.current.scrollTo(scrollMax * cardFrac * 0.78, { duration: 10, easing: quartic });
+                      } else {
+                        lenisRef.current.scrollTo(scrollMax, { duration: 10, easing: quartic });
+                      }
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      borderLeft: '2px solid transparent',
+                      color: 'rgba(255, 255, 255, 0.4)',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.65rem',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'color 0.2s, background 0.2s, border-color 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+                    }}
+                    onMouseLeave={(e) => {
+                      // scroll handler resets color
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            }
           />
         </div>
 
@@ -1050,9 +1111,9 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           ))}
         </div>
 
-        {/* Section nav — left side, vertically centered */}
+        {/* Section nav 2 — post-hold, outside hero so it's not clipped */}
         <div
-          ref={sectionNavRef}
+          ref={sectionNav2Ref}
           style={{
             position: 'absolute',
             left: '24px',
@@ -1064,13 +1125,12 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             gap: '4px',
             opacity: 0,
             pointerEvents: 'none',
-            transition: 'opacity 0.3s ease',
           }}
         >
           {(['Landing', 'Blog', 'Socials'] as const).map((label, i) => (
             <button
               key={label}
-              ref={(el) => { navBtnRefs.current[i] = el; }}
+              ref={(el) => { navBtn2Refs.current[i] = el; }}
               type="button"
               onClick={() => {
                 const wrapper = wrapperRef.current;
@@ -1079,11 +1139,11 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                 const quartic = (t: number) => 1 - Math.pow(1 - t, 4);
                 const smoothstep = (t: number) => t * t * (3 - 2 * t);
                 if (i === 0) {
-                  lenisRef.current.scrollTo(0, { duration: 8, easing: smoothstep });
+                  lenisRef.current.scrollTo(0, { duration: 20, easing: smoothstep });
                 } else if (i === 1) {
-                  lenisRef.current.scrollTo(scrollMax * cardFrac * 0.78, { duration: 10, easing: quartic });
+                  lenisRef.current.scrollTo(scrollMax * cardFrac * 0.78, { duration: 16, easing: quartic });
                 } else {
-                  lenisRef.current.scrollTo(scrollMax, { duration: 10, easing: quartic });
+                  lenisRef.current.scrollTo(scrollMax, { duration: 20, easing: quartic });
                 }
               }}
               style={{
@@ -1104,30 +1164,13 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                 e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
               }}
               onMouseLeave={(e) => {
-                // Let the scroll handler reset the color on next tick
+                // scroll handler resets color
               }}
             >
               {label}
             </button>
           ))}
         </div>
-
-        {/* Occluder — small black div that covers just the nav area when dark panel expands */}
-        <div
-          ref={navOccluderRef}
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '120px',
-            height: '140px',
-            zIndex: 12,
-            background: '#050505',
-            opacity: 0,
-            pointerEvents: 'none',
-          }}
-        />
       </div>
     </div>
   );

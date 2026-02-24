@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { tinaField } from 'tinacms/dist/react';
 import type { Page, PageBlocks } from '../../tina/__generated__/types';
 import { TopoHero } from './topo-hero';
@@ -7,6 +8,7 @@ import type { ProgressRef } from './home-scroll-stage';
 type BlocksExtraProps = {
   cardPosts?: CardPost[];
   progressRef?: ProgressRef;
+  sectionNavSlot?: ReactNode;
 };
 
 export const Blocks = (props: Omit<Page, 'id' | '_sys' | '_values'> & BlocksExtraProps) => {
@@ -16,7 +18,7 @@ export const Blocks = (props: Omit<Page, 'id' | '_sys' | '_values'> & BlocksExtr
       {props.blocks.map(function (block, i) {
         return (
           <div key={i} data-tina-field={tinaField(block)}>
-            <Block {...block} cardPosts={props.cardPosts} progressRef={props.progressRef} />
+            <Block {...block} cardPosts={props.cardPosts} progressRef={props.progressRef} sectionNavSlot={props.sectionNavSlot} />
           </div>
         );
       })}
@@ -27,7 +29,7 @@ export const Blocks = (props: Omit<Page, 'id' | '_sys' | '_values'> & BlocksExtr
 const Block = (block: PageBlocks & BlocksExtraProps) => {
   switch (block.__typename) {
     case 'PageBlocksTopoHero':
-      return <TopoHero data={block} cardPosts={block.cardPosts} progressRef={block.progressRef} />;
+      return <TopoHero data={block} cardPosts={block.cardPosts} progressRef={block.progressRef} sectionNavSlot={block.sectionNavSlot} />;
     default:
       return null;
   }
