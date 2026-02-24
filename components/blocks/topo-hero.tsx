@@ -4,7 +4,7 @@ import type { Template } from 'tinacms';
 import { tinaField } from 'tinacms/dist/react';
 import type { PageBlocksTopoHero } from '@/tina/__generated__/types';
 import type { ProgressRef } from './home-scroll-stage';
-import Link from 'next/link';
+
 
 export type CardPost = {
   heroImg: string;
@@ -258,10 +258,12 @@ export const TopoHero = ({
           // Amplitude is scroll-driven (frameP 0.7→1.0 = amplitude 0→1), oscillation is time-driven
           const now = performance.now();
           const BREATHE_FRAMES = 10;
-          const BREATHE_PERIOD = 2000;
-          const BREATHE_ZONE_START = 0.92; // frameP where breathing begins (well past the circle)
+          const BREATHE_PERIOD = 3000; // slower breathing cycle
+          const BREATHE_ZONE_START = 0.96; // frameP where breathing begins
 
-          const amplitude = frameP <= BREATHE_ZONE_START ? 0 : Math.min(1, (frameP - BREATHE_ZONE_START) / (1 - BREATHE_ZONE_START));
+          // Ease-in cubic: ramps up very gently at first, then stronger
+          const rawAmp = frameP <= BREATHE_ZONE_START ? 0 : Math.min(1, (frameP - BREATHE_ZONE_START) / (1 - BREATHE_ZONE_START));
+          const amplitude = rawAmp * rawAmp * rawAmp;
 
           if (amplitude > 0) {
             if (breatheStartRef.current === 0) breatheStartRef.current = now;
@@ -510,27 +512,6 @@ export const TopoHero = ({
           .topo-interface { padding: 4rem; }
         }
 
-        .topo-cta {
-          pointer-events: auto;
-          background: var(--topo-silver);
-          color: var(--topo-bg);
-          padding: 1rem 2rem;
-          text-decoration: none;
-          font-family: var(--font-body);
-          font-weight: 700;
-          font-size: 0.875rem;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          clip-path: polygon(0 0, 100% 0, 100% 70%, 85% 100%, 0 100%);
-          transition: 0.3s;
-          display: inline-block;
-        }
-
-        .topo-cta:hover {
-          background: var(--topo-accent);
-          transform: translateY(-5px);
-        }
-
         .topo-card-layer {
           position: absolute;
           inset: 0;
@@ -642,11 +623,6 @@ export const TopoHero = ({
             >
               {data.tagline}
             </p>
-          )}
-          {data.ctaLabel && data.ctaLink && (
-            <Link href={data.ctaLink} className="topo-cta" data-tina-field={tinaField(data, 'ctaLabel')}>
-              {data.ctaLabel}
-            </Link>
           )}
         </div>
 
