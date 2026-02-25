@@ -792,11 +792,11 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                       const quartic = (t: number) => 1 - Math.pow(1 - t, 4);
                       const smoothstep = (t: number) => t * t * (3 - 2 * t);
                       if (i === 0) {
-                        lenisRef.current.scrollTo(0, { duration: 8, easing: smoothstep });
+                        lenisRef.current.scrollTo(0, { duration: 14, easing: smoothstep });
                       } else if (i === 1) {
-                        lenisRef.current.scrollTo(scrollMax * cardFrac * 0.78, { duration: 10, easing: quartic });
+                        lenisRef.current.scrollTo(scrollMax * cardFrac * 0.78, { duration: 14, easing: quartic });
                       } else {
-                        lenisRef.current.scrollTo(scrollMax, { duration: 10, easing: quartic });
+                        lenisRef.current.scrollTo(scrollMax, { duration: 20, easing: smoothstep });
                       }
                     }}
                     style={{
@@ -1157,11 +1157,11 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                 const quartic = (t: number) => 1 - Math.pow(1 - t, 4);
                 const smoothstep = (t: number) => t * t * (3 - 2 * t);
                 if (i === 0) {
-                  lenisRef.current.scrollTo(0, { duration: 20, easing: smoothstep });
+                  lenisRef.current.scrollTo(0, { duration: 14, easing: smoothstep });
                 } else if (i === 1) {
-                  lenisRef.current.scrollTo(scrollMax * cardFrac * 0.78, { duration: 16, easing: quartic });
+                  lenisRef.current.scrollTo(scrollMax * cardFrac * 0.78, { duration: 14, easing: quartic });
                 } else {
-                  lenisRef.current.scrollTo(scrollMax, { duration: 20, easing: quartic });
+                  lenisRef.current.scrollTo(scrollMax, { duration: 14, easing: quartic });
                 }
               }}
               style={{

@@ -30,6 +30,7 @@ export const TopoHero = ({
   const layersRef = useRef<HTMLDivElement[]>([]);
   const cardLayersRef = useRef<HTMLDivElement[]>([]);
   const interfaceRef = useRef<HTMLDivElement>(null);
+  const navSlotRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef({ w: 1920, h: 1080 });
   const williamGroupRef = useRef<HTMLDivElement>(null);
   const williamCharsRef = useRef<(HTMLSpanElement | null)[]>([]);
@@ -113,6 +114,12 @@ export const TopoHero = ({
       const scale = 1 - rotateProgress * 0.05 * unwind;
 
       canvas.style.transform = `rotateX(${rotX}deg) rotateZ(${rotZ}deg) scale(${scale})`;
+
+      // Counter-rotate nav slot so it stays upright while canvas tilts
+      if (navSlotRef.current) {
+        const invScale = scale !== 0 ? 1 / scale : 1;
+        navSlotRef.current.style.transform = `scale(${invScale}) rotateZ(${-rotZ}deg) rotateX(${-rotX}deg)`;
+      }
 
       // Hero layers: Z separation only (5 layers, all above card stack at Z=-600)
       const offsets = [-500, -250, 0, 250, 500];
@@ -630,8 +637,10 @@ export const TopoHero = ({
 
         <div className="topo-viewport">
           <div className="topo-canvas-3d" ref={canvasRef}>
-            {/* Section nav slot — at translateZ(0), dark panel at Z(500) paints over it */}
-            {sectionNavSlot}
+            {/* Section nav slot — counter-rotated so it stays upright while canvas tilts */}
+            <div ref={navSlotRef} style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' }}>
+              {sectionNavSlot}
+            </div>
 
             {/* Dark panel — expands to fullscreen as seamless bridge to frame sequence */}
             <div
