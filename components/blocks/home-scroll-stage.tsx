@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Blocks } from '@/components/blocks';
 import type { Page, PostConnectionQuery } from '@/tina/__generated__/types';
 import type { CardPost } from './topo-hero';
@@ -92,6 +93,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
   const glassPanelRefs = useRef<(HTMLDivElement | null)[]>([]);
   const glassShineRefs = useRef<(HTMLDivElement | null)[]>([]);
 
+  const router = useRouter();
   const progressRef = useRef({ scroll: 0, transition: 0, hold: 0 });
   const lastCsRef = useRef(0);
   // Tracks which section the user was last in before entering the fall zone.
@@ -133,6 +135,8 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
   // Lenis smooth scroll
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
+
+    const shouldScrollToPosts = window.location.hash === '#posts';
 
     const lenis = new Lenis({
       lerp: 0.03,
@@ -183,6 +187,17 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
     lenis.on('scroll', ScrollTrigger.update);
     gsap.ticker.add((time) => lenis.raf(time * 1000));
     gsap.ticker.lagSmoothing(0);
+
+    // If navigated with #posts hash, jump to the blog cards section
+    if (shouldScrollToPosts) {
+      window.history.replaceState(null, '', window.location.pathname);
+      requestAnimationFrame(() => {
+        const wrapper = wrapperRef.current;
+        if (!wrapper) return;
+        const scrollMax = wrapper.scrollHeight - window.innerHeight;
+        lenis.scrollTo(scrollMax * cardFrac * 0.78, { immediate: true });
+      });
+    }
 
     return () => {
       window.removeEventListener('wheel', detectInput);
@@ -914,6 +929,19 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
               key={post.slug}
               ref={(el) => {
                 postCardRefs.current[i] = el;
+              }}
+              onClick={(e) => {
+                const el = e.currentTarget;
+                if (!document.startViewTransition) return;
+                e.preventDefault();
+                el.style.viewTransitionName = 'blog-card';
+                const transition = document.startViewTransition(() => {
+                  el.style.viewTransitionName = '';
+                  return router.push(`/posts/${post.slug}`) as unknown as Promise<void>;
+                });
+                transition.finished.then(() => {
+                  el.style.viewTransitionName = '';
+                });
               }}
               style={{
                 position: 'absolute',

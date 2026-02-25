@@ -114,6 +114,36 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Card flip view transition */
+@keyframes flip-out {
+  from {
+    transform: perspective(1200px) rotateY(0deg);
+  }
+  to {
+    transform: perspective(1200px) rotateY(90deg);
+  }
+}
+
+@keyframes flip-in {
+  from {
+    transform: perspective(1200px) rotateY(-90deg);
+  }
+  to {
+    transform: perspective(1200px) rotateY(0deg);
+  }
+}
+
+::view-transition-old(blog-card) {
+  animation: flip-out 0.4s ease-in forwards;
+  backface-visibility: hidden;
+}
+
+::view-transition-new(blog-card) {
+  animation: flip-in 0.4s ease-out 0.4s both;
+  backface-visibility: hidden;
+  background: #0a0a0a;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

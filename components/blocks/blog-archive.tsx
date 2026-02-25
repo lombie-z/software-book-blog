@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Tilt } from '@/components/ui/tilt';
 import type { PostConnectionQuery, TagConnectionQuery } from '@/tina/__generated__/types';
@@ -9,7 +10,25 @@ type PostEdges = NonNullable<PostConnectionQuery['postConnection']['edges']>;
 type TagEdges = NonNullable<TagConnectionQuery['tagConnection']['edges']>;
 
 export function BlogArchive({ posts, tags }: { posts: PostEdges; tags: TagEdges }) {
+  const router = useRouter();
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+  const handleCardClick = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+      if (!document.startViewTransition) return;
+      e.preventDefault();
+      const el = e.currentTarget;
+      el.style.viewTransitionName = 'blog-card';
+      const transition = document.startViewTransition(() => {
+        el.style.viewTransitionName = '';
+        return router.push(href) as unknown as Promise<void>;
+      });
+      transition.finished.then(() => {
+        el.style.viewTransitionName = '';
+      });
+    },
+    [router],
+  );
 
   const filteredPosts = selectedTag
     ? posts.filter((post) => {
@@ -75,7 +94,7 @@ export function BlogArchive({ posts, tags }: { posts: PostEdges; tags: TagEdges 
 
               const cardClip = 'polygon(0 0, 100% 0, 100% calc(100% - 24px), calc(100% - 32px) 100%, 0 100%)';
               return (
-                <Link key={node._sys.filename} href={`/posts/${slug}`} className="block">
+                <Link key={node._sys.filename} href={`/posts/${slug}`} className="block" onClick={(e) => handleCardClick(e, `/posts/${slug}`)}>
                   <Tilt rotationFactor={8} isRevese>
                     <div
                       className="p-px"
