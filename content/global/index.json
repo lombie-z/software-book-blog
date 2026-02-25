@@ -11,10 +11,6 @@
       {
         "href": "/",
         "label": "Home"
-      },
-{
-        "href": "/posts",
-        "label": "Blog"
       }
     ]
   },
