@@ -185,7 +185,8 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
     });
 
     lenis.on('scroll', ScrollTrigger.update);
-    gsap.ticker.add((time) => lenis.raf(time * 1000));
+    const tickerCallback = (time: number) => lenis.raf(time * 1000);
+    gsap.ticker.add(tickerCallback);
     gsap.ticker.lagSmoothing(0);
 
     // If navigated with #posts hash, jump to the blog cards section
@@ -201,7 +202,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
 
     return () => {
       window.removeEventListener('wheel', detectInput);
-      gsap.ticker.remove(lenis.raf as any);
+      gsap.ticker.remove(tickerCallback);
       lenis.destroy();
       lenisRef.current = null;
     };
@@ -930,19 +931,19 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
               ref={(el) => {
                 postCardRefs.current[i] = el;
               }}
-              onClick={(e) => {
-                const el = e.currentTarget;
-                if (!document.startViewTransition) return;
-                e.preventDefault();
-                el.style.viewTransitionName = 'blog-card';
-                const transition = document.startViewTransition(() => {
-                  el.style.viewTransitionName = '';
-                  return router.push(`/posts/${post.slug}`) as unknown as Promise<void>;
-                });
-                transition.finished.then(() => {
-                  el.style.viewTransitionName = '';
-                });
-              }}
+              // onClick={(e) => {
+              //   const el = e.currentTarget;
+              //   if (!document.startViewTransition) return;
+              //   e.preventDefault();
+              //   el.style.viewTransitionName = 'blog-card';
+              //   const transition = document.startViewTransition(() => {
+              //     el.style.viewTransitionName = '';
+              //     return router.push(`/posts/${post.slug}`) as unknown as Promise<void>;
+              //   });
+              //   transition.finished.then(() => {
+              //     el.style.viewTransitionName = '';
+              //   });
+              // }
               style={{
                 position: 'absolute',
                 top: 0,
