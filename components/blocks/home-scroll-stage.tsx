@@ -92,6 +92,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
   const finCardRef = useRef<HTMLDivElement>(null);
   const glassPanelRefs = useRef<(HTMLDivElement | null)[]>([]);
   const glassShineRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const stageGrainRef = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
   const progressRef = useRef({ scroll: 0, transition: 0, hold: 0 });
@@ -262,7 +263,8 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
         // Write progress directly to ref — no React re-renders
         progressRef.current.scroll = Math.min(1, p / 0.28);
         progressRef.current.transition = p <= 0.20 ? 0 : p >= 0.40 ? 1 : (p - 0.20) / 0.20;
-        progressRef.current.hold = p <= 0.40 ? 0 : p >= 0.717 ? 1 : (p - 0.40) / 0.317;
+        progressRef.current.hold = p <= 0.40 ? 0 : p >= 0.78 ? 1 : (p - 0.40) / 0.38;
+
 
         // ── Reveal: hero clips from fullscreen to card ──
         // Starts at p=0.717 (when IRL frame sequence hits last frame) so there's
@@ -270,7 +272,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
         const revealStart = 0.717;
         const revealEnd = 0.78;
         const reveal = p <= revealStart ? 0 : p >= revealEnd ? 1 : (p - revealStart) / (revealEnd - revealStart);
-        const revealE = 1 - Math.pow(1 - reveal, 2.5);
+        const revealE = reveal * reveal * (3 - 2 * reveal);
 
         const clipL = ((viewW - cardW) / 2) * revealE;
         const clipT = ((viewH - CARD_H) / 2) * revealE;
@@ -757,6 +759,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           </filter>
         </svg>
         <div
+          ref={stageGrainRef}
           style={{
             position: 'absolute',
             inset: 0,
@@ -951,7 +954,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                 height: `${CARD_H}px`,
                 overflow: 'hidden',
                 textDecoration: 'none',
-                zIndex: 3,
+                zIndex: 12,
                 opacity: 0,
                 boxShadow: '0 0 20px rgba(224, 224, 224, 0.04), 0 0 60px rgba(224, 224, 224, 0.02)',
                 willChange: 'transform, opacity',
@@ -1062,7 +1065,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             justifyContent: 'center',
             height: `${CARD_H}px`,
             opacity: 0,
-            zIndex: 3,
+            zIndex: 9,
             willChange: 'transform, opacity',
             overflow: 'hidden',
             background: 'linear-gradient(160deg, rgba(20, 20, 20, 0.9) 0%, rgba(12, 12, 12, 0.95) 100%)',
@@ -1094,7 +1097,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             top: '15%',
             left: '50%',
             transform: 'translateX(-50%)',
-            zIndex: 9,
+            zIndex: 12,
             display: 'flex',
             gap: '24px',
             opacity: 0,

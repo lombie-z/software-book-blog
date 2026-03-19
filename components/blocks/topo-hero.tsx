@@ -260,7 +260,7 @@ export const TopoHero = ({
 
           // Map hold to frame index
           const frameStart = 0.30;
-          const frameEnd = 0.88;
+          const frameEnd = 1.0;
           const frameP = hold <= frameStart ? 0 : hold >= frameEnd ? 1 : (hold - frameStart) / (frameEnd - frameStart);
 
           // Breathing: eases in automatically as frame sequence nears end
@@ -268,7 +268,7 @@ export const TopoHero = ({
           const now = performance.now();
           const BREATHE_FRAMES = 10;
           const BREATHE_PERIOD = 3000; // slower breathing cycle
-          const BREATHE_ZONE_START = 0.96; // frameP where breathing begins
+          const BREATHE_ZONE_START = 0.93; // frameP where breathing begins
 
           // Ease-in cubic: ramps up very gently at first, then stronger
           const rawAmp = frameP <= BREATHE_ZONE_START ? 0 : Math.min(1, (frameP - BREATHE_ZONE_START) / (1 - BREATHE_ZONE_START));
@@ -615,14 +615,6 @@ export const TopoHero = ({
       `}</style>
 
       <div className="topo-hero">
-        <svg style={{ position: 'absolute', width: 0, height: 0 }}>
-          <filter id="topo-grain">
-            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" />
-            <feColorMatrix type="saturate" values="0" />
-          </filter>
-        </svg>
-
-        <div className="topo-grain" style={{ filter: 'url(#topo-grain)' }} />
 
         <div className="topo-interface" ref={interfaceRef}>
           {data.tagline && (
