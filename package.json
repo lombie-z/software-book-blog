@@ -11,6 +11,7 @@
     "lint": "biome lint",
     "dev:build": "next build",
     "start-local": "next start -p 3002",
+    "build-ci": "bash scripts/ci-build.sh",
     "pr:screenshots": "node scripts/pr-screenshots.mjs"
   },
   "devDependencies": {
