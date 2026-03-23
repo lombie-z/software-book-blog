@@ -9,6 +9,11 @@ permissions:
   issues: write
   pull-requests: read
 
+env:
+  NEXT_PUBLIC_TINA_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_TINA_CLIENT_ID }}
+  TINA_TOKEN: ${{ secrets.TINA_TOKEN }}
+  NEXT_PUBLIC_TINA_BRANCH: ${{ github.head_ref }}
+
 concurrency:
   group: pr-screenshots-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -32,8 +37,8 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: Build (local Tina)
-        run: pnpm build-local
+      - name: Build
+        run: pnpm build
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
@@ -48,6 +53,7 @@ jobs:
         run: pnpm pr:screenshots
         env:
           BASE_URL: http://127.0.0.1:3002
+
 
       - name: Upload screenshots artifact
         uses: actions/upload-artifact@v4
@@ -66,7 +72,7 @@ jobs:
               marker,
               '## UI Preview (automated screenshots)',
               '',
-              'Screenshots are generated from `pnpm build-local` (no Tina cloud).',
+              'Screenshots are generated from `pnpm build` using Tina Cloud secrets.',
               '',
               `➡️ Open the workflow run: ${runUrl}`,
               'Then download the **pr-screenshots** artifact (includes an index.md for quick viewing).',
