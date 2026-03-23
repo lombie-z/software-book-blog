@@ -9,7 +9,9 @@
     "start": "tinacms build && next start -p 3002",
     "export": "npm run build && next export",
     "lint": "biome lint",
-    "dev:build": "next build"
+    "dev:build": "next build",
+    "start-local": "next start -p 3002",
+    "pr:screenshots": "node scripts/pr-screenshots.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
@@ -23,7 +25,9 @@
     "postcss": "^8.5.6",
     "postcss-import": "^16.1.1",
     "postcss-nesting": "^13.0.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "playwright": "^1.52.0",
+    "wait-on": "^8.0.5"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
