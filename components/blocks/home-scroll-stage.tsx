@@ -132,9 +132,15 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
       tag: p!.node!.tags?.[0]?.tag?.name ?? '',
     }));
 
-  // Lenis smooth scroll
+  // Lenis smooth scroll — skipped on mobile (native scroll is better for touch)
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
+    const isMobileDevice = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
+    if (isMobileDevice) {
+      // GSAP ticker still needs to run for ScrollTrigger
+      gsap.ticker.lagSmoothing(0);
+      return;
+    }
 
     const shouldScrollToPosts = window.location.hash === '#posts';
 
@@ -208,15 +214,31 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
     };
   }, []);
 
-  // Preload post-fin frame sequence as JPEGs
+  // Preload post-fin frame sequence as JPEGs — lazy-batched on mobile
   useEffect(() => {
-    const frames: HTMLImageElement[] = [];
-    for (let i = 1; i <= POST_FRAME_COUNT; i++) {
-      const img = new Image();
-      img.src = `${POST_FRAME_PATH}${String(i).padStart(3, '0')}.jpg`;
-      frames.push(img);
-    }
+    const isMobileDevice = typeof window !== 'undefined' &&
+      (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768);
+    const frames: HTMLImageElement[] = new Array(POST_FRAME_COUNT);
     postFramesRef.current = frames;
+
+    const loadRange = (start: number, end: number) => {
+      for (let i = start; i < end; i++) {
+        const img = new Image();
+        img.src = `${POST_FRAME_PATH}${String(i + 1).padStart(3, '0')}.jpg`;
+        frames[i] = img;
+      }
+    };
+
+    if (isMobileDevice) {
+      // Load first 25% immediately, defer the rest
+      loadRange(0, 48);
+      const t1 = setTimeout(() => loadRange(48, 96), 1000);
+      const t2 = setTimeout(() => loadRange(96, 144), 2000);
+      const t3 = setTimeout(() => loadRange(144, POST_FRAME_COUNT), 3000);
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    } else {
+      loadRange(0, POST_FRAME_COUNT);
+    }
   }, []);
 
   // Canvas dimensions set dynamically in onUpdate based on viewport + card alignment
@@ -229,6 +251,26 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
     const hero = heroRef.current;
     const heroBorder = heroBorderRef.current;
     if (!wrapper || !pinned || !hero) return;
+
+    const isMobileDevice = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // On mobile, compress the total scroll distance to reduce fatigue.
+    // Shadow the component-scope cardFrac/fallFrac so the onUpdate closure
+    // picks up mobile-adjusted phase boundaries automatically.
+    // eslint-disable-next-line prefer-const
+    let cardFrac = cardScrollVh / totalScrollVh; // matches component-scope on desktop
+    // eslint-disable-next-line prefer-const
+    let fallFrac = (cardScrollVh + fallVh) / totalScrollVh; // matches component-scope on desktop
+    if (isMobileDevice) {
+      const mobileCardVh = Math.round(cardScrollVh * 0.6);
+      const mobileFallVh = 200;
+      const mobileFrameVh = 200;
+      const mobileTotalVh = mobileCardVh + mobileFallVh + mobileFrameVh;
+      wrapper.style.height = `${mobileTotalVh}vh`;
+      cardFrac = mobileCardVh / mobileTotalVh;
+      fallFrac = (mobileCardVh + mobileFallVh) / mobileTotalVh;
+    }
 
     gsap.set(hero, { opacity: 1 });
     postCardRefs.current.forEach((card) => {
@@ -666,7 +708,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
         }
 
 
-        // ── Stained glass parallax panels ──
+        // ── Stained glass parallax panels — skipped on mobile (16 DOM writes/frame) ──
         const glassVisible = p >= 0.74;
         // Scroll velocity for motion shadows (based on totalCs for unified movement)
         const csVelocity = totalCs - lastCsRef.current;
@@ -676,7 +718,8 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           if (!panel) return;
           const cfg = GLASS_PANELS[i];
           if (!cfg) return;
-          if (!glassVisible) {
+          // Hide glass panels on mobile and when reduced motion is preferred
+          if (isMobileDevice || reduceMotion || !glassVisible) {
             panel.style.opacity = '0';
             return;
           }
@@ -744,7 +787,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
         style={{
           position: 'relative',
           width: '100%',
-          height: '100vh',
+          height: '100dvh',
           overflow: 'hidden',
           background: '#0a0a0a',
         }}
@@ -784,6 +827,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             sectionNavSlot={
               <div
                 ref={sectionNavRef}
+                className="stage-section-nav"
                 style={{
                   position: 'absolute',
                   left: 'calc(-50vw + 400px + 24px)',
@@ -859,6 +903,16 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                 0 0 80px rgba(224, 224, 224, 0.06),
                 inset 0 0 60px rgba(224, 224, 224, 0.03);
             }
+          }
+          @media (max-width: 767px), (pointer: coarse) {
+            .stage-section-nav { display: none !important; }
+            .stage-section-nav-2 { display: none !important; }
+            @media (prefers-reduced-motion: reduce) {
+              .stage-panel-pulse, .fin-glow { animation: none !important; }
+            }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .stage-panel-pulse, .fin-glow { animation: none !important; }
           }
         `}</style>
         <div
@@ -1161,6 +1215,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
         {/* Section nav 2 — post-hold, outside hero so it's not clipped */}
         <div
           ref={sectionNav2Ref}
+          className="stage-section-nav-2"
           style={{
             position: 'absolute',
             left: '24px',
