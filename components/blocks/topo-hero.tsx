@@ -4,6 +4,7 @@ import type { Template } from 'tinacms';
 import { tinaField } from 'tinacms/dist/react';
 import type { PageBlocksTopoHero } from '@/tina/__generated__/types';
 import type { ProgressRef } from './home-scroll-stage';
+import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
 
 
 export type CardPost = {
@@ -26,12 +27,17 @@ export const TopoHero = ({
   progressRef?: ProgressRef;
   sectionNavSlot?: React.ReactNode;
 }) => {
+  const isMobile = useIsMobile();
+  const reduceMotion = usePrefersReducedMotion();
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const layersRef = useRef<HTMLDivElement[]>([]);
   const cardLayersRef = useRef<HTMLDivElement[]>([]);
   const interfaceRef = useRef<HTMLDivElement>(null);
   const navSlotRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef({ w: 1920, h: 1080 });
+  // Actual 3D canvas element dimensions (responsive on mobile)
+  const canvasDimsRef = useRef({ w: 800, h: 418 });
   const williamGroupRef = useRef<HTMLDivElement>(null);
   const williamCharsRef = useRef<(HTMLSpanElement | null)[]>([]);
   const williamWidthRef = useRef(0);
@@ -44,21 +50,40 @@ export const TopoHero = ({
   const breatheStartRef = useRef(0); // timestamp when breathing zone was entered
   const breatheScaleRef = useRef(1); // current breathing scale for frame canvas
 
-  // Preload all frame images
+  // Preload frame images — eager on desktop, lazy-batched on mobile
   useEffect(() => {
-    const frames: HTMLImageElement[] = [];
-    for (let i = 1; i <= FRAME_COUNT; i++) {
-      const img = new Image();
-      img.src = `${FRAME_PATH}${String(i).padStart(3, '0')}.jpg`;
-      frames.push(img);
-    }
+    const frames: HTMLImageElement[] = new Array(FRAME_COUNT);
     framesRef.current = frames;
-  }, []);
 
-  // Track viewport dimensions + size frame canvas
+    const loadRange = (start: number, end: number) => {
+      for (let i = start; i < end; i++) {
+        const img = new Image();
+        img.src = `${FRAME_PATH}${String(i + 1).padStart(3, '0')}.jpg`;
+        frames[i] = img;
+      }
+    };
+
+    if (isMobile) {
+      // Load first batch immediately (covers ~25% of sequence)
+      loadRange(0, 48);
+      // Defer remaining batches to avoid blocking initial load
+      const t1 = setTimeout(() => loadRange(48, 96), 800);
+      const t2 = setTimeout(() => loadRange(96, 144), 1600);
+      const t3 = setTimeout(() => loadRange(144, FRAME_COUNT), 2400);
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    } else {
+      loadRange(0, FRAME_COUNT);
+    }
+  }, [isMobile]);
+
+  // Track viewport dimensions, canvas dims, and size frame canvas
   useEffect(() => {
     const update = () => {
       viewportRef.current = { w: window.innerWidth, h: window.innerHeight };
+      const canvasEl = canvasRef.current;
+      if (canvasEl) {
+        canvasDimsRef.current = { w: canvasEl.offsetWidth, h: canvasEl.offsetHeight };
+      }
       const fc = frameCanvasRef.current;
       if (fc) {
         fc.width = window.innerWidth;
@@ -93,7 +118,8 @@ export const TopoHero = ({
       // Keep animating during active hold phase (letter slide-up + frame sequence)
       // Also keep animating when breathing is active (idle at end of frame sequence)
       const inActiveHold = holdProgress > 0.01 && holdProgress < 0.99;
-      const mayBreathe = holdProgress > 0.50; // keep looping in breathing zone
+      // On mobile/reduced-motion, skip breathing to save render cycles
+      const mayBreathe = !isMobile && !reduceMotion && holdProgress > 0.50;
       if (scrollProgress === lastScroll && transitionProgress === lastTransition && holdProgress === lastHold && !inActiveHold && !mayBreathe) {
         raf = requestAnimationFrame(animate);
         return;
@@ -107,11 +133,17 @@ export const TopoHero = ({
       const separateProgress = separateLinear * separateLinear;
       const tp = transitionProgress;
 
-      // Canvas rotation unwind — completes by tp=0.55 so scene is flat before card expands
-      const unwind = Math.pow(Math.max(0, 1 - tp / 0.55), 3);
-      const rotX = rotateProgress * 55 * unwind;
-      const rotZ = rotateProgress * -25 * unwind;
-      const scale = 1 - rotateProgress * 0.05 * unwind;
+      // Skip 3D rotation on mobile and when reduced motion is preferred
+      let rotX = 0;
+      let rotZ = 0;
+      let scale = 1;
+      if (!isMobile && !reduceMotion) {
+        // Canvas rotation unwind — completes by tp=0.55 so scene is flat before card expands
+        const unwind = Math.pow(Math.max(0, 1 - tp / 0.55), 3);
+        rotX = rotateProgress * 55 * unwind;
+        rotZ = rotateProgress * -25 * unwind;
+        scale = 1 - rotateProgress * 0.05 * unwind;
+      }
 
       canvas.style.transform = `rotateX(${rotX}deg) rotateZ(${rotZ}deg) scale(${scale})`;
 
@@ -160,7 +192,8 @@ export const TopoHero = ({
               const p2e = 1 - Math.pow(1 - (tp - 0.55) / 0.45, 2.5);
               const perspFactor = 2000 / (2000 - 500);
               const vp = viewportRef.current;
-              const fillScale = Math.max(vp.w / (800 * perspFactor), vp.h / (418 * perspFactor)) * 1.05;
+              const cd = canvasDimsRef.current;
+              const fillScale = Math.max(vp.w / (cd.w * perspFactor), vp.h / (cd.h * perspFactor)) * 1.05;
               cardScale = 1 + (fillScale - 1) * p2e;
               borderR = 4 * (1 - p2e);
             }
@@ -229,10 +262,11 @@ export const TopoHero = ({
         const fc = frameCanvasRef.current;
         if (fc && framesRef.current.length > 0) {
           const vp = viewportRef.current;
+          const cd = canvasDimsRef.current;
 
-          // Position the canvas to fill viewport from within the 800x418 3D canvas
-          const offsetX = -(vp.w - 800) / 2;
-          const offsetY = -(vp.h - 418) / 2;
+          // Position the canvas to fill viewport from within the 3D canvas element
+          const offsetX = -(vp.w - cd.w) / 2;
+          const offsetY = -(vp.h - cd.h) / 2;
           fc.style.left = `${offsetX}px`;
           fc.style.top = `${offsetY}px`;
           fc.style.width = `${vp.w}px`;
@@ -265,13 +299,16 @@ export const TopoHero = ({
 
           // Breathing: eases in automatically as frame sequence nears end
           // Amplitude is scroll-driven (frameP 0.7→1.0 = amplitude 0→1), oscillation is time-driven
+          // Skipped on mobile and when prefers-reduced-motion is set
           const now = performance.now();
           const BREATHE_FRAMES = 10;
           const BREATHE_PERIOD = 3000; // slower breathing cycle
           const BREATHE_ZONE_START = 0.96; // frameP where breathing begins
 
           // Ease-in cubic: ramps up very gently at first, then stronger
-          const rawAmp = frameP <= BREATHE_ZONE_START ? 0 : Math.min(1, (frameP - BREATHE_ZONE_START) / (1 - BREATHE_ZONE_START));
+          const rawAmp = (isMobile || reduceMotion || frameP <= BREATHE_ZONE_START)
+            ? 0
+            : Math.min(1, (frameP - BREATHE_ZONE_START) / (1 - BREATHE_ZONE_START));
           const amplitude = rawAmp * rawAmp * rawAmp;
 
           if (amplitude > 0) {
@@ -389,7 +426,7 @@ export const TopoHero = ({
 
     raf = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(raf);
-  }, [progressRef]);
+  }, [progressRef, isMobile, reduceMotion]);
 
   const cards = cardPosts?.slice(0, 5) ?? [];
 
@@ -406,7 +443,7 @@ export const TopoHero = ({
           background-color: var(--topo-bg);
           color: var(--topo-silver);
           overflow: hidden;
-          height: 100vh;
+          height: 100dvh;
           width: 100%;
           display: flex;
           align-items: center;
@@ -432,7 +469,8 @@ export const TopoHero = ({
 
         .topo-canvas-3d {
           position: relative;
-          width: 800px; height: 418px;
+          width: min(800px, 100vw);
+          height: min(418px, 52.25vw);
           transform-style: preserve-3d;
         }
 

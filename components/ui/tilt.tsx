@@ -10,6 +10,7 @@ import {
   type MotionStyle,
   type SpringOptions,
 } from 'motion/react';
+import { useIsMobile, usePrefersReducedMotion } from '@/lib/use-mobile';
 
 type TiltProps = {
   children: React.ReactNode;
@@ -29,6 +30,8 @@ export function Tilt({
   springOptions,
 }: TiltProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
+  const reduceMotion = usePrefersReducedMotion();
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -42,7 +45,7 @@ export function Tilt({
   const transform = useMotionTemplate`perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!ref.current) return;
+    if (!ref.current || isMobile || reduceMotion) return;
 
     const rect = ref.current.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
@@ -56,6 +59,15 @@ export function Tilt({
     x.set(0);
     y.set(0);
   };
+
+  // On mobile and reduced-motion: render as a plain div with no 3D transform
+  if (isMobile || reduceMotion) {
+    return (
+      <div ref={ref} className={className} style={style as React.CSSProperties}>
+        {children}
+      </div>
+    );
+  }
 
   return (
     <motion.div
