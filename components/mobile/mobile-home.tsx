@@ -22,7 +22,7 @@ interface MobileHomeProps {
 const SESSION_KEY = 'iwrl-reading-bucket';
 
 function loadBucketSlugs(): string[] {
-  if (typeof sessionStorage === 'undefined') return [];
+  if (typeof window === 'undefined') return [];
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
     return raw ? (JSON.parse(raw) as string[]) : [];
@@ -32,6 +32,7 @@ function loadBucketSlugs(): string[] {
 }
 
 function saveBucketSlugs(slugs: string[]) {
+  if (typeof window === 'undefined') return;
   try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(slugs)); } catch {}
 }
 
