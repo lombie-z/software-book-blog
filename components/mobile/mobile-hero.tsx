@@ -12,7 +12,7 @@ type PermState = 'detecting' | 'ios-prompt' | 'requesting' | 'active' | 'touch-f
 // Positive = moves in tilt direction (foreground feel).
 // Negative = moves opposite to tilt (background feel).
 // Layer order: warm-silhouette, portrait, green-silhouette, frame, text
-const LAYER_DEPTHS = [20, 13, 7, 0, -7] as const;
+const LAYER_DEPTHS = [50, 32, 18, 0, -18] as const;
 
 // Natural phone-hold pitch offset — beta ≈ 70° when upright
 const BETA_OFFSET = 70;
@@ -198,11 +198,11 @@ export function MobileHero() {
         }
 
         /* ── Parallax layers ── */
-        /* inset: -40px makes each layer 80px wider/taller than the viewport,
-           so 40px of parallax travel is available before edges show. */
+        /* inset: -70px makes each layer 140px wider/taller than the viewport,
+           so 70px of parallax travel is available before edges show. */
         .mh-layer {
           position: absolute;
-          inset: -40px;
+          inset: -70px;
           background-size: cover;
           background-position: center;
           will-change: transform;
