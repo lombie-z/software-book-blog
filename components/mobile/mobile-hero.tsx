@@ -182,7 +182,7 @@ export function MobileHero() {
           display: flex;
           align-items: center;
           justify-content: center;
-          touch-action: none;
+          touch-action: pan-y;
           -webkit-user-select: none;
           user-select: none;
         }
