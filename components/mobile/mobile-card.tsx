@@ -40,7 +40,6 @@ function FiligreeCorner({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
       width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true"
       style={{
         position: 'absolute',
-        color: 'oklch(0.78 0.10 85 / 0.52)',
         ...(pos.includes('t') ? { top: 10 } : { bottom: 10 }),
         ...(pos.includes('l') ? { left: 10 } : { right: 10 }),
         transform: `scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})`,
@@ -100,11 +99,13 @@ const CARD_CSS = `
   .mc-front {
     background: oklch(0.11 0.005 85);
     border: 1px solid oklch(0.78 0.10 85 / 0.16);
+    color: oklch(0.78 0.10 85 / 0.52);
   }
   .mc-back {
     background: oklch(0.12 0.015 255);
     border: 1px solid oklch(0.60 0.10 255 / 0.22);
     transform: rotateY(180deg);
+    color: oklch(0.60 0.10 255 / 0.52);
   }
   .mc-hero-bg {
     position: absolute;
@@ -272,6 +273,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
   const [flipped, setFlipped] = useState(false);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const frontFaceRef = useRef<HTMLDivElement>(null);
   const glowRightRef = useRef<HTMLDivElement>(null);
   const glowLeftRef = useRef<HTMLDivElement>(null);
   const labelSaveRef = useRef<HTMLSpanElement>(null);
@@ -317,6 +319,27 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
       if (glowLeftRef.current)  glowLeftRef.current.style.opacity  = String(left);
       if (labelSaveRef.current) labelSaveRef.current.style.opacity = String(Math.max(0, (dx - 20) / 60));
       if (labelSkipRef.current) labelSkipRef.current.style.opacity = String(Math.max(0, (-dx - 20) / 60));
+      // Interpolate filigree corner color to match the border glow direction
+      if (frontFaceRef.current) {
+        let color: string;
+        if (right > 0) {
+          // gold: L 0.78→0.82, C 0.10→0.16, H 85, A 0.52→0.80
+          const L = (0.78 + 0.04 * right).toFixed(3);
+          const C = (0.10 + 0.06 * right).toFixed(3);
+          const A = (0.52 + 0.28 * right).toFixed(3);
+          color = `oklch(${L} ${C} 85 / ${A})`;
+        } else if (left > 0) {
+          // blue: L 0.78→0.58, C 0.10→0.12, H 85→240, A 0.52→0.80
+          const L = (0.78 - 0.20 * left).toFixed(3);
+          const C = (0.10 + 0.02 * left).toFixed(3);
+          const H = (85 + 155 * left).toFixed(1);
+          const A = (0.52 + 0.28 * left).toFixed(3);
+          color = `oklch(${L} ${C} ${H} / ${A})`;
+        } else {
+          color = 'oklch(0.78 0.10 85 / 0.52)';
+        }
+        frontFaceRef.current.style.color = color;
+      }
     };
 
     const onDown = (e: PointerEvent) => {
@@ -402,7 +425,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
           style={{ transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
         >
           {/* FRONT */}
-          <div className="mc-face mc-front" style={{ opacity: flipped ? 0 : 1, transition: 'opacity 0.15s ease' }}>
+          <div ref={frontFaceRef} className="mc-face mc-front" style={{ opacity: flipped ? 0 : 1, transition: 'opacity 0.15s ease' }}>
             {heroImg && (
               <>
                 <div className="mc-hero-bg" style={{ backgroundImage: `url(${heroImg})` }} />
