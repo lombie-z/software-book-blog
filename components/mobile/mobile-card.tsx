@@ -137,9 +137,9 @@ const CARD_CSS = `
   }
   .mc-front-content {
     position: absolute;
-    bottom: 26px;
-    left: 28px;
-    right: 28px;
+    bottom: 32px;
+    left: 36px;
+    right: 36px;
     z-index: 2;
   }
   .mc-category {
@@ -180,12 +180,12 @@ const CARD_CSS = `
     margin: 0;
   }
   .mc-back-inner {
-    position: absolute;
-    inset: 26px 28px;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 40px 36px 32px;
     display: flex;
     flex-direction: column;
     gap: 14px;
-    z-index: 2;
   }
   .mc-excerpt {
     font-family: var(--font-body, system-ui, sans-serif);
@@ -447,10 +447,6 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
 
           {/* BACK */}
           <div className="mc-face mc-back">
-            <FiligreeCorner pos="tl" />
-            <FiligreeCorner pos="tr" />
-            <FiligreeCorner pos="bl" />
-            <FiligreeCorner pos="br" />
             <div className="mc-back-inner">
               <div className="mc-excerpt">
                 {node.excerpt ? <TinaMarkdown content={node.excerpt} /> : 'No excerpt available.'}

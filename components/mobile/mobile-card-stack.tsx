@@ -68,7 +68,8 @@ const STACK_CSS = `
     align-items: center;
     justify-content: center;
     gap: 20px;
-    height: 460px;
+    height: min(calc(100dvh - 200px), 640px);
+    min-height: 380px;
     text-align: center;
     padding: 0 28px;
   }
