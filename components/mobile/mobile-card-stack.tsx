@@ -187,7 +187,7 @@ export function MobileCardStack({ posts, onSave }: MobileCardStackProps) {
                 const stackIndex = (visiblePosts.length - 1 - revIdx) as 0 | 1 | 2;
                 return (
                   <MobileCard
-                    key={post.node._sys.id ?? post.node._sys.breadcrumbs.join('/')}
+                    key={post.node._sys.filename ?? post.node._sys.breadcrumbs.join('/')}
                     post={post}
                     stackIndex={stackIndex}
                     onSwipeRight={handleSwipeRight}

@@ -414,7 +414,7 @@ export function ReadingQueue({ posts, onClose, onRemove }: ReadingQueueProps) {
             posts.map((post, i) => (
               post.node ? (
                 <QueueItem
-                  key={post.node._sys.id ?? post.node._sys.breadcrumbs.join('/')}
+                  key={post.node._sys.filename ?? post.node._sys.breadcrumbs.join('/')}
                   post={post}
                   index={i}
                   total={posts.length}
