@@ -9,6 +9,16 @@ import type { PostConnectionQuery } from '@/tina/__generated__/types';
 
 type PostEdge = NonNullable<NonNullable<PostConnectionQuery['postConnection']['edges']>[number]>;
 
+function richTextToPlain(value: unknown): string {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value !== 'object') return '';
+  const node = value as { text?: string; children?: unknown[] };
+  if (node.text) return node.text;
+  if (Array.isArray(node.children)) return node.children.map(richTextToPlain).join(' ');
+  return '';
+}
+
 interface ReadingQueueProps {
   posts: PostEdge[];
   onClose: () => void;
@@ -276,7 +286,7 @@ function QueueItem({ post, index, total, onNavigate, onRemove }: QueueItemProps)
   const date = node.date
     ? new Date(node.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '';
-  const excerptText = typeof node.excerpt === 'string' ? node.excerpt : (node.excerpt ? JSON.stringify(node.excerpt) : '');
+  const excerptText = richTextToPlain(node.excerpt);
   const readingTime = Math.max(1, Math.ceil(excerptText.split(/\s+/).filter(Boolean).length / 200));
 
   useEffect(() => {

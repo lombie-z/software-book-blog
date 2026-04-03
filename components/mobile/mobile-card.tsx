@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { TinaMarkdown } from 'tinacms/dist/rich-text';
 import type { PostConnectionQuery } from '@/tina/__generated__/types';
 
 type PostEdge = NonNullable<NonNullable<PostConnectionQuery['postConnection']['edges']>[number]>;
@@ -452,7 +453,9 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
             <FiligreeCorner pos="br" />
             <div className="mc-back-inner">
               <h3 className="mc-back-title">{title}</h3>
-              <p className="mc-excerpt">{excerpt || 'No excerpt available.'}</p>
+              <div className="mc-excerpt">
+                {node.excerpt ? <TinaMarkdown content={node.excerpt} /> : 'No excerpt available.'}
+              </div>
               <div className="mc-back-footer">
                 <span className="mc-reading-time">~{readingTime} min read</span>
                 <a href={`/posts/${slug}`} className="mc-read-link">Read →</a>
