@@ -71,6 +71,7 @@ const CARD_CSS = `
     user-select: none;
     will-change: transform;
     cursor: grab;
+    perspective: 1000px;
   }
   .mc-wrapper:active { cursor: grabbing; }
   .mc-wrapper.mc-top {
@@ -247,7 +248,7 @@ const CARD_CSS = `
   .mc-label {
     position: absolute;
     top: auto;
-    bottom: -48px;
+    bottom: -34px;
     font-family: var(--font-mono);
     font-size: 0.66rem;
     font-weight: 700;

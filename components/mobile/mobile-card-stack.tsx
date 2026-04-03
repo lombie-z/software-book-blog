@@ -17,7 +17,7 @@ const STACK_CSS = `
   .mcs-wrap {
     position: relative;
     width: 100%;
-    padding: 0 24px;
+    padding: 0 24px 80px;
     box-sizing: border-box;
   }
   .mcs-stage {
@@ -29,7 +29,7 @@ const STACK_CSS = `
   .mcs-swipe-hint {
     display: flex;
     justify-content: space-between;
-    padding: 56px 22px 0;
+    padding: 10px 22px 0;
     pointer-events: none;
   }
   .mcs-swipe-hint span {

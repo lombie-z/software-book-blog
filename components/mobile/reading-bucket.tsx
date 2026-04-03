@@ -84,24 +84,25 @@ const BUCKET_CSS = `
   @keyframes rb-hint-out { from { opacity: 1; } to { opacity: 0; } }
 `;
 
-// Bucket SVG icon
-function BucketIcon() {
+// Book SVG icon (open book)
+function BookIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      {/* Bucket body */}
+      {/* Left page */}
       <path
-        d="M 4 8 L 5.5 18 L 16.5 18 L 18 8 Z"
-        stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" fill="none"
+        d="M 11 7 C 9 6 6 6 3 7 L 3 17 C 6 16 9 16 11 17"
+        stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"
       />
-      {/* Bucket handle arc */}
+      {/* Right page */}
       <path
-        d="M 7 8 Q 7 4 11 4 Q 15 4 15 8"
-        stroke="currentColor" strokeWidth="1.3" fill="none"
+        d="M 11 7 C 13 6 16 6 19 7 L 19 17 C 16 16 13 16 11 17"
+        stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"
       />
-      {/* Lid / top rim */}
-      <path d="M 3 8 L 19 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      {/* Decorative dot */}
-      <circle cx="11" cy="13" r="1.2" fill="currentColor" opacity="0.5" />
+      {/* Spine */}
+      <path d="M 11 7 L 11 17" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      {/* Left page lines */}
+      <path d="M 5.5 10 L 9 9.5" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" opacity="0.5" />
+      <path d="M 5.5 13 L 9 12.5" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" opacity="0.5" />
     </svg>
   );
 }
@@ -129,7 +130,7 @@ export function ReadingBucket({ count, onOpen, showHint }: ReadingBucketProps) {
         aria-label={count > 0 ? `Reading queue — ${count} saved` : 'Reading queue — empty'}
       >
         <div className="rb-icon">
-          <BucketIcon />
+          <BookIcon />
           {count > 0 && (
             // Re-keying by count triggers the CSS bounce animation on each add
             <span key={count} className="rb-badge" aria-hidden="true">
