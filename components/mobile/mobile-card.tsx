@@ -228,6 +228,8 @@ const CARD_CSS = `
     border: 1px solid oklch(0.65 0.12 255 / 0.3);
     border-radius: 2px;
     -webkit-tap-highlight-color: transparent;
+    background: transparent;
+    cursor: pointer;
   }
   .mc-glow-right {
     position: absolute;
@@ -468,7 +470,22 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
               </div>
               <div className="mc-back-footer">
                 <span className="mc-reading-time">~{readingTime} min read</span>
-                <a href={`/posts/${slug}`} className="mc-read-link" onPointerDown={e => e.stopPropagation()}>Read →</a>
+                <button
+                  className="mc-read-link"
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const url = `/posts/${slug}`;
+                    const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
+                    if (doc.startViewTransition) {
+                      doc.startViewTransition(() => { window.location.href = url; });
+                    } else {
+                      window.location.href = url;
+                    }
+                  }}
+                >
+                  Read →
+                </button>
               </div>
             </div>
           </div>

@@ -1,7 +1,9 @@
 import React from 'react';
+import { headers } from 'next/headers';
 import client from '@/tina/__generated__/client';
 import Layout from '@/components/layout/layout';
 import PostClientPage from './client-page';
+import MobilePostClientPage from './mobile-client-page';
 
 export const revalidate = 300;
 
@@ -15,6 +17,13 @@ export default async function PostPage({
   const data = await client.queries.post({
     relativePath: `${filepath}.mdx`,
   });
+
+  const headersList = await headers();
+  const isMobile = headersList.get('x-device-type') === 'mobile';
+
+  if (isMobile) {
+    return <MobilePostClientPage {...data} />;
+  }
 
   return (
     <Layout rawPageData={data}>

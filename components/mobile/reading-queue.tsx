@@ -383,11 +383,18 @@ function QueueItem({ post, index, total, onNavigate, onRemove }: QueueItemProps)
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+function navigateWithTransition(url: string) {
+  const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
+  if (doc.startViewTransition) {
+    doc.startViewTransition(() => { window.location.href = url; });
+  } else {
+    window.location.href = url;
+  }
+}
+
 export function ReadingQueue({ posts, onClose, onRemove }: ReadingQueueProps) {
   const navigate = (slug: string) => {
-    if (typeof window !== 'undefined') {
-      window.location.href = `/posts/${slug}`;
-    }
+    navigateWithTransition(`/posts/${slug}`);
   };
 
   const handleReadAll = () => {
