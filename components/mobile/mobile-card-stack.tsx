@@ -20,11 +20,17 @@ const STACK_CSS = `
     padding: 0 24px 80px;
     box-sizing: border-box;
   }
+  .mcs-card-region {
+    position: relative;
+    height: min(calc(100dvh - 200px), 640px);
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+  }
   .mcs-stage {
     position: relative;
     width: 100%;
-    height: min(calc(100dvh - 200px), 640px);
-    min-height: 380px;
+    flex: 1;
   }
   .mcs-swipe-hint {
     display: flex;
@@ -63,13 +69,12 @@ const STACK_CSS = `
 
   /* Empty / completion state */
   .mcs-empty {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 20px;
-    height: min(calc(100dvh - 200px), 640px);
-    min-height: 380px;
     text-align: center;
     padding: 0 28px;
   }
@@ -177,21 +182,21 @@ export function MobileCardStack({ posts, onSave }: MobileCardStackProps) {
     <>
       <style>{STACK_CSS}</style>
       <div className="mcs-wrap">
-        {isEmpty ? (
-          <div className="mcs-empty">
-            <div className="mcs-empty-circle">
-              <span className="mcs-empty-circle-inner">✦</span>
+        <div className="mcs-card-region">
+          {isEmpty ? (
+            <div className="mcs-empty">
+              <div className="mcs-empty-circle">
+                <span className="mcs-empty-circle-inner">✦</span>
+              </div>
+              <h2 className="mcs-empty-title">You&apos;ve seen them all</h2>
+              <p className="mcs-empty-sub">All {total} posts reviewed</p>
+              <div className="mcs-btn-row">
+                <button className="mcs-btn" onClick={handleShuffle}>
+                  Shuffle Again
+                </button>
+              </div>
             </div>
-            <h2 className="mcs-empty-title">You&apos;ve seen them all</h2>
-            <p className="mcs-empty-sub">All {total} posts reviewed</p>
-            <div className="mcs-btn-row">
-              <button className="mcs-btn" onClick={handleShuffle}>
-                Shuffle Again
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
+          ) : (
             <div className="mcs-stage">
               {/*
                 Render reversed so the lowest-index (top) card paints last (on top).
@@ -211,8 +216,12 @@ export function MobileCardStack({ posts, onSave }: MobileCardStackProps) {
                 );
               })}
             </div>
+          )}
+        </div>
 
-            {/* Swipe hint + animated labels live below the stage (labels are positioned bottom: -48px from inside the card) */}
+        {!isEmpty && (
+          <>
+            {/* Swipe hint labels sit below the card region */}
             <div className="mcs-swipe-hint" aria-hidden="true">
               <span>← skip</span>
               <span>save →</span>

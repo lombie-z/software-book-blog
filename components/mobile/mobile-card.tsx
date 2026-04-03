@@ -221,7 +221,10 @@ const CARD_CSS = `
     text-transform: uppercase;
     color: oklch(0.65 0.12 255);
     text-decoration: none;
-    padding: 6px 14px;
+    padding: 12px 22px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
     border: 1px solid oklch(0.65 0.12 255 / 0.3);
     border-radius: 2px;
     -webkit-tap-highlight-color: transparent;
@@ -310,7 +313,8 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
     const el = wrapperRef.current;
     if (!el) return;
 
-    const state = { startX: 0, startY: 0, time: 0, active: false, moved: false, committed: false };
+    let rafId = 0;
+    const state = { startX: 0, startY: 0, curX: 0, curY: 0, time: 0, active: false, moved: false, committed: false };
 
     const updateOverlays = (dx: number) => {
       const right = Math.max(0, Math.min(1, dx / SWIPE_THRESHOLD));
@@ -355,16 +359,26 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
 
     const onMove = (e: PointerEvent) => {
       if (!state.active) return;
+      state.curX = e.clientX;
+      state.curY = e.clientY;
       const dx = e.clientX - state.startX;
       const dy = (e.clientY - state.startY) * 0.2;
       if (Math.abs(dx) > 5 || Math.abs(dy) > 5) state.moved = true;
-      el.style.transform = `translateX(${dx}px) translateY(${dy}px) rotate(${dx * 0.065}deg) scale(1)`;
-      updateOverlays(dx);
+      if (!rafId) {
+        rafId = requestAnimationFrame(() => {
+          rafId = 0;
+          const rdx = state.curX - state.startX;
+          const rdy = (state.curY - state.startY) * 0.2;
+          el.style.transform = `translateX(${rdx}px) translateY(${rdy}px) rotate(${rdx * 0.065}deg) scale(1)`;
+          updateOverlays(rdx);
+        });
+      }
     };
 
     const onUp = (e: PointerEvent) => {
       if (!state.active) return;
       state.active = false;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
 
       const dx = e.clientX - state.startX;
       const dy = (e.clientY - state.startY) * 0.2;
@@ -393,7 +407,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
           else cbRef.current.onSwipeLeft();
         }, 360);
       } else {
-        el.style.transition = 'transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        el.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
         el.style.transform = `translateY(0px) scale(1)`;
         updateOverlays(0);
       }
@@ -404,6 +418,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
     el.addEventListener('pointerup', onUp);
     el.addEventListener('pointercancel', onUp);
     return () => {
+      if (rafId) cancelAnimationFrame(rafId);
       el.removeEventListener('pointerdown', onDown);
       el.removeEventListener('pointermove', onMove);
       el.removeEventListener('pointerup', onUp);
@@ -453,7 +468,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
               </div>
               <div className="mc-back-footer">
                 <span className="mc-reading-time">~{readingTime} min read</span>
-                <a href={`/posts/${slug}`} className="mc-read-link">Read →</a>
+                <a href={`/posts/${slug}`} className="mc-read-link" onPointerDown={e => e.stopPropagation()}>Read →</a>
               </div>
             </div>
           </div>
