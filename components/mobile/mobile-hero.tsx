@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,7 +26,7 @@ const LERP_ALPHA = 0.07;
 function FiligreeCorner({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
   const flipX = pos === 'tr' || pos === 'br';
   const flipY = pos === 'bl' || pos === 'br';
-  const style: React.CSSProperties = {
+  const style: CSSProperties = {
     position: 'absolute',
     color: 'rgba(224, 224, 224, 0.55)',
     ...(pos.includes('t') ? { top: -1 } : { bottom: -1 }),

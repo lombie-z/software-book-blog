@@ -1,5 +1,7 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 /**
  * FiligreeTransitions — shared transition wrapper for mobile page changes.
  *
@@ -8,7 +10,7 @@
  */
 
 interface FiligreeTransitionsProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function FiligreeTransitions({ children }: FiligreeTransitionsProps) {
