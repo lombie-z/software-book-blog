@@ -12,6 +12,17 @@ interface MobileCardProps {
   onSwipeLeft: () => void;
 }
 
+// Extract plain text from a TinaCMS rich-text AST (or return the value if already a string)
+function richTextToPlain(value: unknown): string {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value !== 'object') return '';
+  const node = value as { type?: string; text?: string; children?: unknown[] };
+  if (node.text) return node.text;
+  if (Array.isArray(node.children)) return node.children.map(richTextToPlain).join(' ');
+  return '';
+}
+
 const SWIPE_THRESHOLD = 80; // px to commit
 const VEL_THRESHOLD = 0.32; // px/ms to commit
 const STACK_SCALES = [1, 0.955, 0.91] as const;
@@ -298,7 +309,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
   const date = node.date
     ? new Date(node.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '';
-  const excerpt = node.excerpt ?? '';
+  const excerpt = richTextToPlain(node.excerpt);
   const category = node.tags?.[0]?.tag?.name ?? '';
   const slug = node._sys.breadcrumbs.join('/');
   const readingTime = Math.max(1, Math.ceil(excerpt.split(/\s+/).filter(Boolean).length / 200));

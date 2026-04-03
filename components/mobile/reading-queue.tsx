@@ -276,7 +276,8 @@ function QueueItem({ post, index, total, onNavigate, onRemove }: QueueItemProps)
   const date = node.date
     ? new Date(node.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '';
-  const readingTime = Math.max(1, Math.ceil((node.excerpt ?? '').split(/\s+/).filter(Boolean).length / 200));
+  const excerptText = typeof node.excerpt === 'string' ? node.excerpt : (node.excerpt ? JSON.stringify(node.excerpt) : '');
+  const readingTime = Math.max(1, Math.ceil(excerptText.split(/\s+/).filter(Boolean).length / 200));
 
   useEffect(() => {
     const el = itemRef.current;
