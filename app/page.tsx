@@ -2,7 +2,7 @@ import React from 'react';
 import client from '@/tina/__generated__/client';
 import HomeClientPage from './home-client-page';
 
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   const [pageData, postsData] = await Promise.all([
