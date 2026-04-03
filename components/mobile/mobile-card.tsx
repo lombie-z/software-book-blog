@@ -301,10 +301,17 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
-    el.style.transition = 'transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease';
-    el.style.transform = `translateY(${STACK_TRANSLATE_Y[stackIndex]}px) scale(${STACK_SCALES[stackIndex]})`;
-    el.style.opacity = String(STACK_OPACITY[stackIndex]);
+    // Set z-index immediately so stacking order is correct during animation
     el.style.zIndex = String(10 - stackIndex);
+    // Defer the transition+transform to the next rAF so the browser has
+    // committed the current computed style first — otherwise setting both
+    // transition and transform in the same JS task collapses to no animation.
+    const id = requestAnimationFrame(() => {
+      el.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease';
+      el.style.transform = `translateY(${STACK_TRANSLATE_Y[stackIndex]}px) scale(${STACK_SCALES[stackIndex]})`;
+      el.style.opacity = String(STACK_OPACITY[stackIndex]);
+    });
+    return () => cancelAnimationFrame(id);
   }, [stackIndex]);
 
   // ── Pointer events — top card only ───────────────────────────────────────

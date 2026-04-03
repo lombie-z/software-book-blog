@@ -67,9 +67,12 @@ const STACK_CSS = `
     background: oklch(0.28 0 0);
   }
 
-  /* Empty / completion state */
+  /* Empty / completion state — sits behind cards inside .mcs-stage,
+     fades in when the last card leaves. No layout shift possible. */
   .mcs-empty {
-    flex: 1;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -77,6 +80,14 @@ const STACK_CSS = `
     gap: 20px;
     text-align: center;
     padding: 0 28px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.45s ease;
+  }
+  .mcs-empty--visible {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.45s ease 0.12s;
   }
   .mcs-empty-circle {
     width: 96px;
@@ -183,8 +194,10 @@ export function MobileCardStack({ posts, onSave }: MobileCardStackProps) {
       <style>{STACK_CSS}</style>
       <div className="mcs-wrap">
         <div className="mcs-card-region">
-          {isEmpty ? (
-            <div className="mcs-empty">
+          <div className="mcs-stage">
+            {/* Completion screen — always in DOM, positioned behind cards.
+                Fades in when the last card exits; no height shift ever. */}
+            <div className={`mcs-empty${isEmpty ? ' mcs-empty--visible' : ''}`} aria-hidden={!isEmpty}>
               <div className="mcs-empty-circle">
                 <span className="mcs-empty-circle-inner">✦</span>
               </div>
@@ -196,48 +209,45 @@ export function MobileCardStack({ posts, onSave }: MobileCardStackProps) {
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="mcs-stage">
-              {/*
-                Render reversed so the lowest-index (top) card paints last (on top).
-                Each card uses position: absolute; inset: 0 within mcs-stage.
-              */}
-              {[...visiblePosts].reverse().map((post, revIdx) => {
-                if (!post?.node) return null;
-                const stackIndex = (visiblePosts.length - 1 - revIdx) as 0 | 1 | 2;
-                return (
-                  <MobileCard
-                    key={post.node._sys.filename ?? post.node._sys.breadcrumbs.join('/')}
-                    post={post}
-                    stackIndex={stackIndex}
-                    onSwipeRight={handleSwipeRight}
-                    onSwipeLeft={handleSwipeLeft}
-                  />
-                );
-              })}
-            </div>
-          )}
+
+            {/* Cards render on top (z-index 10–8 via inline style) */}
+            {[...visiblePosts].reverse().map((post, revIdx) => {
+              if (!post?.node) return null;
+              const stackIndex = (visiblePosts.length - 1 - revIdx) as 0 | 1 | 2;
+              return (
+                <MobileCard
+                  key={post.node._sys.filename ?? post.node._sys.breadcrumbs.join('/')}
+                  post={post}
+                  stackIndex={stackIndex}
+                  onSwipeRight={handleSwipeRight}
+                  onSwipeLeft={handleSwipeLeft}
+                />
+              );
+            })}
+          </div>
         </div>
 
-        {!isEmpty && (
-          <>
-            {/* Swipe hint labels sit below the card region */}
-            <div className="mcs-swipe-hint" aria-hidden="true">
-              <span>← skip</span>
-              <span>save →</span>
-            </div>
-
-            {/* Progress pips */}
-            <div className="mcs-progress" aria-label={`Post ${deckIndex + 1} of ${total}`}>
-              {pips.map(idx => (
-                <div
-                  key={idx}
-                  className={`mcs-pip${idx === deckIndex ? ' mcs-pip--active' : idx < deckIndex ? ' mcs-pip--done' : ''}`}
-                />
-              ))}
-            </div>
-          </>
-        )}
+        {/* Hints and pips stay in DOM to avoid layout shift — fade out when done */}
+        <div
+          className="mcs-swipe-hint"
+          aria-hidden="true"
+          style={{ opacity: isEmpty ? 0 : 1, transition: 'opacity 0.3s ease', pointerEvents: 'none' }}
+        >
+          <span>← skip</span>
+          <span>save →</span>
+        </div>
+        <div
+          className="mcs-progress"
+          aria-label={isEmpty ? undefined : `Post ${deckIndex + 1} of ${total}`}
+          style={{ opacity: isEmpty ? 0 : 1, transition: 'opacity 0.3s ease' }}
+        >
+          {pips.map(idx => (
+            <div
+              key={idx}
+              className={`mcs-pip${idx === deckIndex ? ' mcs-pip--active' : idx < deckIndex ? ' mcs-pip--done' : ''}`}
+            />
+          ))}
+        </div>
       </div>
     </>
   );
