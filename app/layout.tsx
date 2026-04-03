@@ -40,8 +40,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn(fontSans.variable, nunito.variable, lato.variable, lucidaBlackletter.variable)}>
-      <body className="min-h-screen bg-background font-body antialiased">
+    <html lang="en" suppressHydrationWarning className={cn(fontSans.variable, nunito.variable, lato.variable, lucidaBlackletter.variable)}>
+      <body suppressHydrationWarning className="min-h-screen bg-background font-body antialiased">
         {children}
         <TailwindIndicator />
       </body>
