@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PostConnectionQuery } from '@/tina/__generated__/types';
 import { MobileCard } from './mobile-card';
 
@@ -161,26 +161,44 @@ const STACK_CSS = `
 
 export function MobileCardStack({ posts, onSave }: MobileCardStackProps) {
   const [deckIndex, setDeckIndex] = useState(0);
+  // When a card is swiped, suppress mounting the new back card until the
+  // promotion animation finishes. Simultaneously mounting a new card while
+  // two existing cards animate their stackIndex causes layout recalculation
+  // that eats animation frames — visible as jank on the first 4+ cards.
+  const [showBackCard, setShowBackCard] = useState(true);
+  const backCardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (backCardTimer.current) clearTimeout(backCardTimer.current); }, []);
 
   const validPosts = posts.filter(p => p?.node);
   const isEmpty = deckIndex >= validPosts.length;
 
-  // Top 3 visible posts
-  const visiblePosts = validPosts.slice(deckIndex, deckIndex + 3);
+  // Only show the 3rd (back) card when showBackCard is true
+  const visiblePosts = validPosts.slice(deckIndex, deckIndex + (showBackCard ? 3 : 2));
+
+  const scheduleBackCard = useCallback(() => {
+    if (backCardTimer.current) clearTimeout(backCardTimer.current);
+    setShowBackCard(false);
+    backCardTimer.current = setTimeout(() => setShowBackCard(true), 420);
+  }, []);
 
   const handleSwipeRight = useCallback(() => {
     const post = validPosts[deckIndex];
     if (post?.node) {
       onSave(post.node._sys.breadcrumbs.join('/'));
     }
+    scheduleBackCard();
     setDeckIndex(i => i + 1);
-  }, [deckIndex, validPosts, onSave]);
+  }, [deckIndex, validPosts, onSave, scheduleBackCard]);
 
   const handleSwipeLeft = useCallback(() => {
+    scheduleBackCard();
     setDeckIndex(i => i + 1);
-  }, []);
+  }, [scheduleBackCard]);
 
   const handleShuffle = useCallback(() => {
+    if (backCardTimer.current) clearTimeout(backCardTimer.current);
+    setShowBackCard(true);
     setDeckIndex(0);
   }, []);
 
