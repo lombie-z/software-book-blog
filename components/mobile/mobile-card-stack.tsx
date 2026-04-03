@@ -23,13 +23,27 @@ const STACK_CSS = `
   .mcs-stage {
     position: relative;
     width: 100%;
-    height: 460px;
+    height: min(calc(100dvh - 200px), 640px);
+    min-height: 380px;
+  }
+  .mcs-swipe-hint {
+    display: flex;
+    justify-content: space-between;
+    padding: 56px 22px 0;
+    pointer-events: none;
+  }
+  .mcs-swipe-hint span {
+    font-family: var(--font-mono);
+    font-size: 0.5rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: oklch(0.38 0 0);
   }
   .mcs-progress {
     display: flex;
     justify-content: center;
     gap: 6px;
-    padding-top: 20px;
+    padding-top: 12px;
   }
   .mcs-pip {
     width: 4px;
@@ -195,6 +209,12 @@ export function MobileCardStack({ posts, onSave }: MobileCardStackProps) {
                   />
                 );
               })}
+            </div>
+
+            {/* Swipe hint + animated labels live below the stage (labels are positioned bottom: -48px from inside the card) */}
+            <div className="mcs-swipe-hint" aria-hidden="true">
+              <span>← skip</span>
+              <span>save →</span>
             </div>
 
             {/* Progress pips */}

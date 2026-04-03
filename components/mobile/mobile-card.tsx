@@ -185,13 +185,6 @@ const CARD_CSS = `
     gap: 14px;
     z-index: 2;
   }
-  .mc-back-title {
-    font-family: var(--font-heading);
-    font-size: 1.05rem;
-    color: oklch(0.92 0.02 255);
-    line-height: 1.2;
-    margin: 0;
-  }
   .mc-excerpt {
     font-family: var(--font-body, system-ui, sans-serif);
     font-size: 0.875rem;
@@ -253,7 +246,8 @@ const CARD_CSS = `
   }
   .mc-label {
     position: absolute;
-    top: 24px;
+    top: auto;
+    bottom: -48px;
     font-family: var(--font-mono);
     font-size: 0.66rem;
     font-weight: 700;
@@ -269,24 +263,6 @@ const CARD_CSS = `
   }
   .mc-label-save { right: 22px; color: oklch(0.82 0.16 85); border-color: oklch(0.82 0.16 85 / 0.5); }
   .mc-label-skip { left: 22px;  color: oklch(0.58 0.12 240); border-color: oklch(0.58 0.12 240 / 0.5); }
-  .mc-swipe-hint {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: space-between;
-    padding: 0 22px 14px;
-    z-index: 2;
-    pointer-events: none;
-  }
-  .mc-swipe-hint span {
-    font-family: var(--font-mono);
-    font-size: 0.5rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: oklch(0.40 0 0);
-  }
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -452,7 +428,6 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
             <FiligreeCorner pos="bl" />
             <FiligreeCorner pos="br" />
             <div className="mc-back-inner">
-              <h3 className="mc-back-title">{title}</h3>
               <div className="mc-excerpt">
                 {node.excerpt ? <TinaMarkdown content={node.excerpt} /> : 'No excerpt available.'}
               </div>
@@ -471,10 +446,6 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
             <div ref={glowLeftRef}  className="mc-glow-left"  aria-hidden="true" />
             <span ref={labelSaveRef} className="mc-label mc-label-save" aria-hidden="true">SAVE</span>
             <span ref={labelSkipRef} className="mc-label mc-label-skip" aria-hidden="true">SKIP</span>
-            <div className="mc-swipe-hint" aria-hidden="true">
-              <span>← skip</span>
-              <span>save →</span>
-            </div>
           </>
         )}
       </div>

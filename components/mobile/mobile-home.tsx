@@ -93,7 +93,7 @@ export function MobileHome({ posts }: MobileHomeProps) {
       </div>
 
       {/* Phase 3: Tinder-style card stack */}
-      <div style={{ paddingBottom: '120px' }}>
+      <div style={{ paddingBottom: '40px' }}>
         <MobileCardStack posts={posts} onSave={handleSave} />
       </div>
 
