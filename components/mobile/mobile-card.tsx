@@ -137,8 +137,8 @@ const CARD_CSS = `
   .mc-front-content {
     position: absolute;
     bottom: 26px;
-    left: 22px;
-    right: 22px;
+    left: 28px;
+    right: 28px;
     z-index: 2;
   }
   .mc-category {
@@ -180,7 +180,7 @@ const CARD_CSS = `
   }
   .mc-back-inner {
     position: absolute;
-    inset: 26px 22px;
+    inset: 26px 28px;
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -402,7 +402,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
           style={{ transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
         >
           {/* FRONT */}
-          <div className="mc-face mc-front">
+          <div className="mc-face mc-front" style={{ opacity: flipped ? 0 : 1, transition: 'opacity 0.15s ease' }}>
             {heroImg && (
               <>
                 <div className="mc-hero-bg" style={{ backgroundImage: `url(${heroImg})` }} />
