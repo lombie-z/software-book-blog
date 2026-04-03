@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PostConnectionQuery } from '@/tina/__generated__/types';
 
 type PostEdge = NonNullable<NonNullable<PostConnectionQuery['postConnection']['edges']>[number]>;
@@ -290,7 +290,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
 
   // Keep callbacks stable across effect closures
   const cbRef = useRef({ onSwipeRight, onSwipeLeft });
-  useEffect(() => { cbRef.current = { onSwipeRight, onSwipeLeft }; });
+  useLayoutEffect(() => { cbRef.current = { onSwipeRight, onSwipeLeft }; });
 
   const node = post.node!;
   const title = node.title ?? '';
