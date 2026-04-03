@@ -26,9 +26,9 @@ function richTextToPlain(value: unknown): string {
 
 const SWIPE_THRESHOLD = 80; // px to commit
 const VEL_THRESHOLD = 0.32; // px/ms to commit
-const STACK_SCALES = [1, 0.955, 0.91] as const;
-const STACK_TRANSLATE_Y = [0, 14, 28] as const;
-const STACK_OPACITY = [1, 0.88, 0.76] as const;
+const STACK_SCALES = [1, 1, 1] as const;       // no scale — avoids promotion jank
+const STACK_TRANSLATE_Y = [0, 8, 16] as const;  // subtle offset for depth
+const STACK_OPACITY = [1, 0.55, 0.3] as const;  // opacity carries the depth signal
 
 // ─── Filigree corner bracket ──────────────────────────────────────────────────
 
@@ -301,17 +301,10 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
-    // Set z-index immediately so stacking order is correct during animation
     el.style.zIndex = String(10 - stackIndex);
-    // Defer the transition+transform to the next rAF so the browser has
-    // committed the current computed style first — otherwise setting both
-    // transition and transform in the same JS task collapses to no animation.
-    const id = requestAnimationFrame(() => {
-      el.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease';
-      el.style.transform = `translateY(${STACK_TRANSLATE_Y[stackIndex]}px) scale(${STACK_SCALES[stackIndex]})`;
-      el.style.opacity = String(STACK_OPACITY[stackIndex]);
-    });
-    return () => cancelAnimationFrame(id);
+    el.style.transition = 'opacity 0.25s ease';
+    el.style.transform = `translateY(${STACK_TRANSLATE_Y[stackIndex]}px)`;
+    el.style.opacity = String(STACK_OPACITY[stackIndex]);
   }, [stackIndex]);
 
   // ── Pointer events — top card only ───────────────────────────────────────
