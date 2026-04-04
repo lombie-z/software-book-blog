@@ -12,10 +12,5 @@ export default async function Home() {
 
   const posts = [...(postsData.data.postConnection.edges || [])].reverse();
 
-  return (
-    <HomeClientPage
-      pageProps={pageData}
-      posts={posts}
-    />
-  );
+  return <HomeClientPage pageProps={pageData} posts={posts} />;
 }
