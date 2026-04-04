@@ -68,7 +68,7 @@ export const components: Components<{
         background: 'oklch(0.13 0.01 85)',
         border: '1px solid oklch(0.78 0.10 85 / 0.20)',
         borderRadius: '4px',
-        padding: '1.75rem 1.5rem',
+        padding: '1.25rem 1.5rem 1.75rem',
         margin: '1.5rem 0',
       }}>
         <div style={{ marginBottom: '1rem', color: 'oklch(0.88 0.01 85)' }}>

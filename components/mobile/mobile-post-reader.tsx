@@ -9,8 +9,10 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { TinaMarkdown } from 'tinacms/dist/rich-text';
+import { Prism } from 'tinacms/dist/rich-text/prism';
 import type { PostQuery } from '@/tina/__generated__/types';
 import { components } from '@/components/mdx-components';
+import { Mermaid } from '@/components/blocks/mermaid';
 import ErrorBoundary from '@/components/error-boundary';
 
 const SESSION_KEY = 'iwrl-reading-bucket';
@@ -530,7 +532,14 @@ export default function MobilePostReader({ post }: { post: Post }) {
               prose-blockquote:border-[#5a4e38] prose-blockquote:text-[#8a8070]
               prose-code:text-[#d4ab6a]"
           >
-            <TinaMarkdown content={post._body} components={{ ...components }} />
+            <TinaMarkdown content={post._body} components={{
+              ...components,
+              code_block: (props) => {
+                if (!props) return <></>;
+                if (props.lang === 'mermaid') return <Mermaid value={props.value} />;
+                return <Prism lang={props.lang} value={props.value} theme="vsDark" />;
+              },
+            }} />
           </div>
         </div>
       </div>
