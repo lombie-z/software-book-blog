@@ -5,6 +5,7 @@
 // Swipe left on any item to remove it from the queue.
 
 import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import type { PostConnectionQuery } from '@/tina/__generated__/types';
 
 type PostEdge = NonNullable<NonNullable<PostConnectionQuery['postConnection']['edges']>[number]>;
@@ -98,17 +99,18 @@ const QUEUE_CSS = `
     height: 36px;
     border-radius: 50%;
     background: transparent;
-    border: 1px solid oklch(0.60 0.10 255 / 0.22);
-    color: oklch(0.65 0.10 255);
+    border: 1px solid oklch(0.32 0 0);
+    color: oklch(0.50 0 0);
     font-size: 1rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    align-self: center;
     -webkit-tap-highlight-color: transparent;
     flex-shrink: 0;
   }
-  .rq-close:active { background: oklch(0.60 0.10 255 / 0.1); }
+  .rq-close:active { background: oklch(0.20 0 0); }
 
   /* Scroll list */
   .rq-list {
@@ -383,18 +385,11 @@ function QueueItem({ post, index, total, onNavigate, onRemove }: QueueItemProps)
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-function navigateWithTransition(url: string) {
-  const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
-  if (doc.startViewTransition) {
-    doc.startViewTransition(() => { window.location.href = url; });
-  } else {
-    window.location.href = url;
-  }
-}
-
 export function ReadingQueue({ posts, onClose, onRemove }: ReadingQueueProps) {
+  const router = useRouter();
+
   const navigate = (slug: string) => {
-    navigateWithTransition(`/posts/${slug}`);
+    router.push(`/posts/${slug}`);
   };
 
   const handleReadAll = () => {

@@ -5,6 +5,7 @@
 // queue-aware bottom nav, baroque typography, View Transition support.
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { TinaMarkdown } from 'tinacms/dist/rich-text';
@@ -21,15 +22,6 @@ function readBucket(): string[] {
     return raw ? (JSON.parse(raw) as string[]) : [];
   } catch {
     return [];
-  }
-}
-
-function navigateWithTransition(url: string) {
-  const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
-  if (doc.startViewTransition) {
-    doc.startViewTransition(() => { window.location.href = url; });
-  } else {
-    window.location.href = url;
   }
 }
 
@@ -303,6 +295,45 @@ const CSS = `
     color: oklch(0.82 0.12 85) !important;
   }
 
+  /* ── Tables ──────────────────────────────────────────────────────────────────*/
+  .mpr-body .prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  .mpr-body .prose thead tr {
+    border-bottom: 1px solid oklch(0.78 0.10 85 / 0.25);
+  }
+  .mpr-body .prose thead th {
+    padding: 6px 10px;
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: oklch(0.65 0.08 85) !important;
+  }
+  .mpr-body .prose tbody tr {
+    border-bottom: 1px solid oklch(0.22 0 0);
+  }
+  .mpr-body .prose tbody td {
+    padding: 7px 10px;
+    color: oklch(0.80 0.01 0) !important;
+  }
+
+  /* ── Blockquotes ─────────────────────────────────────────────────────────────*/
+  .mpr-body .prose blockquote {
+    border-left: 2px solid oklch(0.78 0.10 85 / 0.35) !important;
+    background: oklch(0.11 0.01 85 / 0.5);
+    padding: 0.6rem 1rem;
+    margin: 1rem 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .mpr-body .prose blockquote p {
+    color: oklch(0.68 0.04 85) !important;
+    font-style: italic;
+  }
+
   /* ── Bottom navigation bar ───────────────────────────────────────────────────*/
   .mpr-bnav {
     position: fixed;
@@ -384,6 +415,7 @@ export default function MobilePostReader({ post }: { post: Post }) {
   const [headerHidden, setHeaderHidden] = useState(false);
   const [queue, setQueue] = useState<string[]>([]);
   const lastScrollY = useRef(0);
+  const router = useRouter();
 
   const slug = post._sys.breadcrumbs.join('/');
   const title = post.title ?? '';
@@ -437,7 +469,7 @@ export default function MobilePostReader({ post }: { post: Post }) {
       <header className={`mpr-hdr${headerHidden ? ' mpr-hdr--hidden' : ''}`}>
         <button
           className="mpr-hdr-back"
-          onClick={() => navigateWithTransition('/')}
+          onClick={() => router.push('/')}
           aria-label="Back to card stack"
         >
           ←
@@ -477,26 +509,8 @@ export default function MobilePostReader({ post }: { post: Post }) {
           {category && <span className="mpr-tag">{category}</span>}
           <h1 className="mpr-title">{title}</h1>
           <div className="mpr-meta">
-            {post.author?.avatar && (
-              <Image
-                src={post.author.avatar}
-                alt={post.author.name ?? ''}
-                width={26}
-                height={26}
-                style={{
-                  width: '26px', height: '26px',
-                  borderRadius: '50%', objectFit: 'cover',
-                  border: '1px solid oklch(0.78 0.10 85 / 0.22)',
-                  flexShrink: 0,
-                }}
-              />
-            )}
-            {post.author?.name && (
-              <span className="mpr-meta-label">{post.author.name}</span>
-            )}
-            {post.author?.name && date && <span className="mpr-meta-sep">—</span>}
             {date && <span className="mpr-meta-label">{date}</span>}
-            <span className="mpr-meta-sep">·</span>
+            {date && <span className="mpr-meta-sep">·</span>}
             <span className="mpr-meta-rt">~{readingTime} min read</span>
           </div>
         </div>
@@ -527,7 +541,7 @@ export default function MobilePostReader({ post }: { post: Post }) {
           <>
             <button
               className="mpr-bnav-btn"
-              onClick={() => prevSlug && navigateWithTransition(`/posts/${prevSlug}`)}
+              onClick={() => prevSlug && router.push(`/posts/${prevSlug}`)}
               disabled={!prevSlug}
               aria-label="Previous post in queue"
             >
@@ -539,7 +553,7 @@ export default function MobilePostReader({ post }: { post: Post }) {
             </div>
             <button
               className="mpr-bnav-btn"
-              onClick={() => nextSlug && navigateWithTransition(`/posts/${nextSlug}`)}
+              onClick={() => nextSlug && router.push(`/posts/${nextSlug}`)}
               disabled={!nextSlug}
               aria-label="Next post in queue"
             >
@@ -550,7 +564,7 @@ export default function MobilePostReader({ post }: { post: Post }) {
           <>
             <button
               className="mpr-bnav-btn"
-              onClick={() => navigateWithTransition('/')}
+              onClick={() => router.push('/')}
               aria-label="Back to card stack"
             >
               ← Stack

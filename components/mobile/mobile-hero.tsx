@@ -177,7 +177,7 @@ export function MobileHero() {
         .mh-hero {
           position: relative;
           width: 100%;
-          height: 100dvh;
+          height: 100svh;
           overflow: hidden;
           background: #050505;
           display: flex;

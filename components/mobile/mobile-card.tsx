@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { TinaMarkdown } from 'tinacms/dist/rich-text';
 import type { PostConnectionQuery } from '@/tina/__generated__/types';
 
@@ -26,8 +27,8 @@ function richTextToPlain(value: unknown): string {
 
 const SWIPE_THRESHOLD = 80; // px to commit
 const VEL_THRESHOLD = 0.32; // px/ms to commit
-const STACK_SCALES = [1, 1, 1] as const;       // no scale — avoids promotion jank
-const STACK_TRANSLATE_Y = [0, 8, 16] as const;  // subtle offset for depth
+const STACK_SCALES = [1, 1, 1] as const;        // no scale — avoids promotion jank
+const STACK_TRANSLATE_Y = [0, 0, 0] as const;   // flat stack — no Y offset
 const STACK_OPACITY = [1, 0.55, 0.3] as const;  // opacity carries the depth signal
 
 // ─── Filigree corner bracket ──────────────────────────────────────────────────
@@ -276,6 +277,7 @@ const CARD_CSS = `
 
 export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: MobileCardProps) {
   const [flipped, setFlipped] = useState(false);
+  const router = useRouter();
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const frontFaceRef = useRef<HTMLDivElement>(null);
@@ -305,7 +307,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
     if (!el) return;
     el.style.zIndex = String(10 - stackIndex);
     el.style.transition = 'opacity 0.25s ease';
-    el.style.transform = `translateY(${STACK_TRANSLATE_Y[stackIndex]}px)`;
+    el.style.transform = '';
     el.style.opacity = String(STACK_OPACITY[stackIndex]);
   }, [stackIndex]);
 
@@ -475,13 +477,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
                   onPointerDown={e => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
-                    const url = `/posts/${slug}`;
-                    const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
-                    if (doc.startViewTransition) {
-                      doc.startViewTransition(() => { window.location.href = url; });
-                    } else {
-                      window.location.href = url;
-                    }
+                    router.push(`/posts/${slug}`);
                   }}
                 >
                   Read →

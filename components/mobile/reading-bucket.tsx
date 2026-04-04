@@ -84,25 +84,14 @@ const BUCKET_CSS = `
   @keyframes rb-hint-out { from { opacity: 1; } to { opacity: 0; } }
 `;
 
-// Book SVG icon (open book)
+// Book SVG icon (closed book)
 function BookIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      {/* Left page */}
-      <path
-        d="M 11 7 C 9 6 6 6 3 7 L 3 17 C 6 16 9 16 11 17"
-        stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"
-      />
-      {/* Right page */}
-      <path
-        d="M 11 7 C 13 6 16 6 19 7 L 19 17 C 16 16 13 16 11 17"
-        stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"
-      />
-      {/* Spine */}
-      <path d="M 11 7 L 11 17" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      {/* Left page lines */}
-      <path d="M 5.5 10 L 9 9.5" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" opacity="0.5" />
-      <path d="M 5.5 13 L 9 12.5" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" opacity="0.5" />
+      {/* Book body */}
+      <rect x="4" y="4" width="14" height="15" rx="1.5" stroke="currentColor" strokeWidth="1.4" fill="none" />
+      {/* Spine line */}
+      <line x1="7.5" y1="4" x2="7.5" y2="19" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   );
 }
