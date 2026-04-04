@@ -4,7 +4,6 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Blocks } from '@/components/blocks';
 import type { Page, PostConnectionQuery } from '@/tina/__generated__/types';
 import type { CardPost } from './topo-hero';
@@ -25,26 +24,6 @@ interface HomeScrollStageProps {
 const CARD_H = 380;
 const CARD_GAP = 24;
 const CARD_STEP = CARD_H + CARD_GAP;
-const POST_FRAME_COUNT = 192;
-const POST_FRAME_PATH = '/images/post-frames/';
-const POST_FRAME_W = 1080;
-const POST_FRAME_H = 1920;
-// Target visual height (px) of the tilted card at rest. The perspective is
-// computed dynamically from this + floorY so the trapezoid matches the video
-// card on every viewport. Increase → more foreshortened, decrease → taller.
-const FIN_VISUAL_H = 185;
-const FIN_TILT_DEG = 75;
-// Small trim (%) per side at the top edge to correct CSS perspective width coupling.
-// Scales with finPerspective so it only kicks in on larger viewports. Increase to narrow more.
-const FIN_TOP_TRIM = 0.8;
-const _SIN75 = Math.sin(75 * Math.PI / 180); // 0.966
-const _COS75 = Math.cos(75 * Math.PI / 180); // 0.259
-
-// Measured from frame 001 pixel analysis:
-// Card bottom edge (front, transform-origin) in normalized frame coords
-const FRAME_CARD_CX = 0.4903; // center X of card bottom edge
-const FRAME_CARD_BY = 0.6086; // Y of card bottom edge
-const FRAME_CARD_FRONT_W = 0.6056; // width of card bottom edge as fraction of frame
 
 // Stained glass parallax panels — card-shaped, depth-scaled, motion-blurred
 // depth: <1 = further back (smaller, more blur), >1 = closer (larger, more blur)
@@ -75,41 +54,23 @@ const GLASS_PANELS = [
  */
 export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps) {
   const postCount = recentPosts.filter((p) => p?.node).length;
-  const cardCount = postCount + 1; // posts + fin card
+  const cardCount = postCount;
   const cardScrollVh = 650 + cardCount * 130;
-  const fallVh = 500; // extra scroll for fin fall + landing
-  const frameVh = 600; // scroll-driven frame sequence after fin
-  const totalScrollVh = cardScrollVh + fallVh + frameVh;
-  // The card scroll phases (0–0.97) occupy this fraction of the total scroll
-  const cardFrac = cardScrollVh / totalScrollVh;
-  const fallFrac = (cardScrollVh + fallVh) / totalScrollVh;
+  const totalScrollVh = cardScrollVh;
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const pinnedRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const heroBorderRef = useRef<HTMLDivElement>(null);
   const postCardRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-  const finCardRef = useRef<HTMLDivElement>(null);
   const glassPanelRefs = useRef<(HTMLDivElement | null)[]>([]);
   const glassShineRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const socialFooterRef = useRef<HTMLDivElement>(null);
+  const bottomGradRef = useRef<HTMLDivElement>(null);
 
-  const router = useRouter();
   const progressRef = useRef({ scroll: 0, transition: 0, hold: 0 });
   const lastCsRef = useRef(0);
-  // Tracks which section the user was last in before entering the fall zone.
-  // 'cards' = came from blog cards, 'socials' = came from frame sequence/socials
-  const finOriginRef = useRef<'cards' | 'socials'>('cards');
   const lenisRef = useRef<Lenis | null>(null);
-  const frameCanvasRef = useRef<HTMLCanvasElement>(null);
-  const postFramesRef = useRef<HTMLImageElement[]>([]);
-  const lastPostFrameRef = useRef(-1);
-  const frameProgressRef = useRef(0);
-  const smoothedFpRef = useRef(0);
-  const socialRef = useRef<HTMLDivElement>(null);
-  const sectionNavRef = useRef<HTMLDivElement>(null);
-  const navBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const sectionNav2Ref = useRef<HTMLDivElement>(null);
-  const navBtn2Refs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Derive card posts from recent posts (first 5 with hero images)
   const cardPosts: CardPost[] = recentPosts
@@ -160,7 +121,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
     // Section-based scroll resistance: slow down at phase boundaries so the
     // experience "catches" at natural rest points. User can push through with
     // continued scrolling.
-    const sectionBoundaries = [0.28, 0.40, 0.717, 0.78]; // normalized to cardFrac
+    const sectionBoundaries = [0.28, 0.40, 0.717, 0.78];
     const resistanceRadius = 0.025; // how wide the sticky zone is (in rawP)
     lenis.on('scroll', () => {
       const wrapper = wrapperRef.current;
@@ -168,14 +129,10 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
       const scrollMax = wrapper.scrollHeight - window.innerHeight;
       if (scrollMax <= 0) return;
       const rawP = lenis.scroll / scrollMax;
-      // Check proximity to any boundary (mapped to total scroll via cardFrac)
       let minDist = 1;
       for (const b of sectionBoundaries) {
-        const globalB = b * cardFrac;
-        minDist = Math.min(minDist, Math.abs(rawP - globalB));
+        minDist = Math.min(minDist, Math.abs(rawP - b));
       }
-      // Also add resistance at fall/frame boundaries
-      minDist = Math.min(minDist, Math.abs(rawP - cardFrac), Math.abs(rawP - fallFrac));
 
       // Lerp: low (sticky) near boundaries, normal elsewhere
       const proximity = Math.max(0, 1 - minDist / resistanceRadius);
@@ -196,7 +153,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
         const wrapper = wrapperRef.current;
         if (!wrapper) return;
         const scrollMax = wrapper.scrollHeight - window.innerHeight;
-        lenis.scrollTo(scrollMax * cardFrac * 0.78, { immediate: true });
+        lenis.scrollTo(scrollMax * 0.78, { immediate: true });
       });
     }
 
@@ -207,19 +164,6 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
       lenisRef.current = null;
     };
   }, []);
-
-  // Preload post-fin frame sequence as JPEGs
-  useEffect(() => {
-    const frames: HTMLImageElement[] = [];
-    for (let i = 1; i <= POST_FRAME_COUNT; i++) {
-      const img = new Image();
-      img.src = `${POST_FRAME_PATH}${String(i).padStart(3, '0')}.jpg`;
-      frames.push(img);
-    }
-    postFramesRef.current = frames;
-  }, []);
-
-  // Canvas dimensions set dynamically in onUpdate based on viewport + card alignment
 
   // ScrollTrigger stage
   useLayoutEffect(() => {
@@ -246,18 +190,11 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
       pinSpacing: false,
       onUpdate: (self) => {
         const rawP = self.progress;
-
-        // Track which section the user is in — 'socials' updates here,
-        // 'cards' is deferred to the fin card logic (when pastBreakaway <= 0)
-        // so the reverse animation isn't cut short near the boundary.
-        if (rawP >= fallFrac) finOriginRef.current = 'socials';
+        const p = rawP; // totalScrollVh === cardScrollVh, so p === rawP
 
         const viewH = pinned.offsetHeight;
         const viewW = pinned.offsetWidth;
         const cardW = Math.min(viewW * 0.82, 640);
-
-        // Remap: card phases occupy [0, cardFrac], normalized to p in [0, 1]
-        const p = Math.min(1, rawP / cardFrac);
 
         // Write progress directly to ref — no React re-renders
         progressRef.current.scroll = Math.min(1, p / 0.28);
@@ -277,7 +214,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
         const clipR = clipL;
         const clipB = clipT;
 
-        // ── Card scroll (82%–100% of card phase, continues into fall) ──
+        // ── Card scroll (78%–100%) ──
         const csRaw = p <= 0.78 ? 0 : Math.min(1, (p - 0.78) / 0.22);
         // Ease-in-out: gentle resistance at start and end of card list
         const csSmooth = csRaw * csRaw * (3 - 2 * csRaw);
@@ -285,11 +222,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
 
         // Unified scroll: eases in during reveal, then continues at regular pace
         const earlyCs = reveal > 0 ? Math.pow(reveal, 3) * 0.08 : 0;
-
-        // Fall scroll extends totalCs so cards keep sliding through the fall phase
-        const fallEnd = fallFrac;
-        const fallRaw = rawP <= cardFrac ? 0 : rawP >= fallEnd ? 1 : (rawP - cardFrac) / (fallEnd - cardFrac);
-        const totalCs = earlyCs + cs + fallRaw * 0.6;
+        const totalCs = earlyCs + cs;
 
         const heroTranslateY = cardCount * totalCs * CARD_STEP;
 
@@ -319,60 +252,8 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           });
         }
 
-        // ── Post cards — keep sliding and fading ──
-        const fallFadeOut = fallRaw <= 0 ? 1 : Math.max(0, 1 - fallRaw * 3);
-        const cardFade = (p <= 0.74 ? 0 : p <= 0.78 ? (p - 0.74) / 0.04 : 1) * fallFadeOut;
-
-        // ── Section nav ──
-        // Nav 1 (inside 3D scene): visible on landing, dark panel covers it naturally
-        const sectionNav = sectionNavRef.current;
-        if (sectionNav) {
-          // Active on landing, hide once hold starts (dark panel already covering)
-          const nav1Opacity = p < 0.40 ? 1 : 0;
-          sectionNav.style.opacity = String(nav1Opacity);
-          sectionNav.style.pointerEvents = nav1Opacity > 0.01 ? 'auto' : 'none';
-
-          // Active state for nav1: always Landing
-          for (let i = 0; i < 3; i++) {
-            const btn = navBtnRefs.current[i];
-            if (!btn) continue;
-            const isActive = i === 0;
-            btn.style.borderLeft = isActive ? '2px solid rgba(224, 224, 224, 0.7)' : '2px solid transparent';
-            btn.style.color = isActive ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.4)';
-            btn.style.background = isActive ? 'rgba(255, 255, 255, 0.06)' : 'transparent';
-          }
-        }
-
-        // Nav 2 (outside hero): appears after hold phase
-        const sectionNav2 = sectionNav2Ref.current;
-        if (sectionNav2) {
-          let nav2Opacity: number;
-          if (p < 0.76) {
-            nav2Opacity = 0;
-          } else if (p < 0.82) {
-            nav2Opacity = (p - 0.76) / 0.06;
-          } else {
-            nav2Opacity = 1;
-          }
-          if (rawP > cardFrac) nav2Opacity = 1;
-
-          sectionNav2.style.opacity = String(nav2Opacity);
-          sectionNav2.style.pointerEvents = nav2Opacity > 0.01 ? 'auto' : 'none';
-
-          // Active state: Blog when cards visible, Socials in frame phase
-          let activeIdx = 1;
-          if (rawP >= fallFrac) {
-            activeIdx = 2;
-          }
-          for (let i = 0; i < 3; i++) {
-            const btn = navBtn2Refs.current[i];
-            if (!btn) continue;
-            const isActive = i === activeIdx;
-            btn.style.borderLeft = isActive ? '2px solid rgba(224, 224, 224, 0.7)' : '2px solid transparent';
-            btn.style.color = isActive ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.4)';
-            btn.style.background = isActive ? 'rgba(255, 255, 255, 0.06)' : 'transparent';
-          }
-        }
+        // ── Post cards — slide and fade in during card scroll ──
+        const cardFade = p <= 0.74 ? 0 : p <= 0.78 ? (p - 0.74) / 0.04 : 1;
 
         postCardRefs.current.forEach((card, i) => {
           if (!card) return;
@@ -390,281 +271,24 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           card.style.transform = `translateY(${screenTop}px)`;
         });
 
-        // ── Fin card — scrolls with cards, then leaf-falls when it enters the viewport ──
-        const fin = finCardRef.current;
-        if (fin) {
-          const center = (viewH - CARD_H) / 2;
-          // Fin scroll position without fall extension (freezes at end of card scroll)
-          const finTotalCs = earlyCs + cs;
-          const finScrollY = -cardCount * (1 - finTotalCs) * CARD_STEP + center;
-
-          // Breakaway: fin detaches when it enters the viewport near the top
-          const breakawayY = viewH * 0.15;
-          // What totalCs value puts the fin exactly at breakawayY
-          const breakawayCs = 1 + (breakawayY - center) / (cardCount * CARD_STEP);
-          // Extended totalCs adds fall-phase scroll budget for the fall animation
-          const finCsExtended = finTotalCs + fallRaw * 0.5;
-          const pastBreakaway = finCsExtended - breakawayCs;
-
-          if (pastBreakaway <= 0) {
-            // Fin is back in the card stack — safe to mark origin as 'cards'
-            finOriginRef.current = 'cards';
-            // Normal card scroll — fin hasn't reached breakaway yet
-            const finFade = p <= 0.74 ? 0 : p <= 0.78 ? (p - 0.74) / 0.04 : 1;
-            if (finFade <= 0) {
-              fin.style.opacity = '0';
-            } else {
-              fin.style.opacity = String(finFade);
-              fin.style.width = `${cardW}px`;
-              fin.style.left = `${(viewW - cardW) / 2}px`;
-              fin.style.transform = `translateY(${finScrollY}px)`;
-            }
+        // ── Sticky social footer — fades in when cards are visible ──
+        const footer = socialFooterRef.current;
+        const bottomGrad = bottomGradRef.current;
+        if (footer) {
+          let footerOpacity: number;
+          if (p < 0.80) {
+            footerOpacity = 0;
+          } else if (p < 0.90) {
+            footerOpacity = (p - 0.80) / 0.10;
           } else {
-            // Leaf-fall: fin has entered the viewport, detach and fall
-            const totalBudget = (earlyCs + 1 - breakawayCs) + 0.5;
-            const fallProgress = Math.min(1, pastBreakaway / totalBudget);
-
-            // From socials: same card, same math — just kill the sway so it
-            // rewinds as a clean untilt instead of the dramatic leaf-fall.
-            const fromSocials = finOriginRef.current === 'socials';
-
-            // Momentum resistance: slow at sway peaks (0.25, 0.75), speed through center
-            const resistK = 0.18;
-            const mFall = fromSocials
-              ? fallProgress // linear rewind when coming from socials
-              : fallProgress + resistK * Math.sin(fallProgress * Math.PI * 4) / (Math.PI * 4);
-
-            // Drop: ease from breakaway position to floor
-            const dropEase = 1 - Math.pow(1 - mFall, 2.5);
-            const floorY = viewH * 0.55;
-            const fallY = breakawayY + (floorY - breakawayY) * dropEase;
-
-            // Sway: zero when coming from socials
-            const swayDampen = 1 - mFall;
-            const swayAmplitude = fromSocials ? 0 : viewW * 0.14 * swayDampen;
-            const swayX = Math.sin(mFall * Math.PI * 2) * swayAmplitude;
-            const swayRot = fromSocials ? 0 : Math.sin(mFall * Math.PI * 2) * 10 * swayDampen;
-
-            const tiltBack = mFall * FIN_TILT_DEG;
-
-            // Scale shrinks as it lies flat
-            const fallScale = 1 - dropEase * 0.30;
-
-            // Compute perspective so the tilted card's visual height = FIN_VISUAL_H
-            // on every viewport. Formula derived from:
-            //   V = h(d·cosθ + Y·sinθ) / (d + h·sinθ)  →  d = h·sinθ·(Y - V) / (V - h·cosθ)
-            // Uses final resting values so the transition frame matches the video.
-            const finalH = CARD_H * 0.70; // fallScale at mFall=1
-            const hSin = finalH * _SIN75;
-            const hCos = finalH * _COS75;
-            const finPerspective = Math.max(200, hSin * (floorY - FIN_VISUAL_H) / (FIN_VISUAL_H - hCos));
-
-            fin.style.opacity = '1';
-            fin.style.width = `${cardW}px`;
-            fin.style.left = `${(viewW - cardW) / 2}px`;
-            fin.style.transform = `perspective(${finPerspective}px) translateY(${fallY}px) translateX(${swayX}px) rotateX(${tiltBack}deg) rotateZ(${swayRot}deg) scale(${fallScale})`;
-            fin.style.transformOrigin = 'center bottom';
-            // Trim top-edge width to correct CSS perspective width coupling.
-            // Applied proportionally to tilt progress.
-            const trimPct = mFall * FIN_TOP_TRIM;
-            fin.style.clipPath = trimPct > 0.01
-              ? `polygon(${trimPct}% 0%, ${100 - trimPct}% 0%, 100% 100%, 0% 100%)`
-              : 'none';
-
-            // Transition card appearance: glow → video-matched as it falls
-            const morphP = Math.min(1, mFall * 2); // fully morphed by halfway through fall
-            // Background: from dark translucent to video's darker grey (#181818)
-            const bgR = Math.round(12 + (24 - 12) * morphP);
-            const bgG = bgR;
-            const bgB = bgR;
-            fin.style.background = `linear-gradient(160deg, rgb(${bgR + 8}, ${bgG + 8}, ${bgB + 8}) 0%, rgb(${bgR - 4}, ${bgG - 4}, ${bgB - 4}) 40%, rgb(${bgR}, ${bgG}, ${bgB}) 100%)`;
-            // Border fades out, replaced by soft shadow
-            fin.style.border = `1px solid rgba(224, 224, 224, ${0.06 * (1 - morphP)})`;
-            // Box shadow: glow → ambient shadow
-            const glowA = 1 - morphP;
-            const shadowA = morphP;
-            fin.style.boxShadow = [
-              `0 0 30px rgba(224, 224, 224, ${0.04 * glowA})`,
-              `0 0 80px rgba(224, 224, 224, ${0.02 * glowA})`,
-              `inset 0 0 60px rgba(224, 224, 224, ${0.01 * glowA})`,
-              `inset 0 0 40px rgba(60, 60, 60, ${0.15 * shadowA})`,
-              `0 0 20px rgba(0, 0, 0, ${0.5 * shadowA})`,
-            ].join(', ');
-            // Kill glow animation once morphing
-            if (morphP > 0) fin.style.animation = 'none';
-
-            // Transition background from #0a0a0a to match video bg during fall
-            const bgP = Math.min(1, mFall * 1.5);
-            const bgFrom = 10; // #0a
-            const bgTo = 18;   // perceived match for video frame 1 (solid reads darker than noisy avg)
-            const bgVal = Math.round(bgFrom + (bgTo - bgFrom) * bgP);
-            pinned.style.background = `rgb(${bgVal}, ${bgVal}, ${bgVal})`;
-
+            footerOpacity = 1;
           }
-
-          // ── Frame sequence phase: after leaf-fall, scroll-driven video ──
-          const framePRaw = rawP <= fallFrac ? 0 : Math.min(1, (rawP - fallFrac) / (1 - fallFrac));
-          // Cap how fast frame progress can change per tick to prevent jarring jumps
-          // But snap to 0 immediately when fully outside the frame zone,
-          // and allow faster catch-up when scrubbing (large gap = scrollbar jump)
-          const prev = smoothedFpRef.current;
-          const gap = Math.abs(framePRaw - prev);
-          const maxDelta = gap > 0.05 ? gap * 0.3 : 0.004;
-          const clamped = framePRaw <= 0
-            ? 0
-            : Math.max(prev - maxDelta, Math.min(prev + maxDelta, framePRaw));
-          smoothedFpRef.current = clamped;
-          const frameP = clamped;
-          frameProgressRef.current = frameP;
-
-          // Fade fin card out as frame sequence begins
-          if (frameP > 0 && pastBreakaway > 0) {
-            const finFadeOut = Math.max(0, 1 - frameP / 0.08);
-            fin.style.opacity = String(finFadeOut);
+          footer.style.opacity = String(footerOpacity);
+          footer.style.pointerEvents = footerOpacity > 0.01 ? 'auto' : 'none';
+          if (bottomGrad) {
+            bottomGrad.style.opacity = String(footerOpacity);
           }
         }
-
-        // ── Post-fin frame sequence: scroll-driven "video" ──
-        // Position canvas so video card aligns with CSS fin card.
-        // Crop top 20% and bottom 20% of the video frame; show middle 60%.
-        const fc = frameCanvasRef.current;
-        const fp = frameProgressRef.current;
-
-        if (fc) {
-          if (fp <= 0) {
-            fc.style.opacity = '0';
-          } else {
-            // ── Align video to CSS card using matching perspective transform ──
-            // Instead of trying to match the video's baked perspective to CSS via scaling
-            // (impossible across viewports), we apply the SAME perspective+tilt to the canvas.
-            // This makes the canvas deform identically to the CSS card on every screen.
-
-            // Scale video so its card bottom edge matches cardW * fallScale BEFORE perspective
-            // (perspective is applied via CSS transform on the canvas, not baked into scale)
-            const cssVisualW = cardW * 0.70;
-            const videoCardFrontW = FRAME_CARD_FRONT_W * POST_FRAME_W;
-            const drawScale = cssVisualW / videoCardFrontW;
-
-            const fullW = POST_FRAME_W * drawScale;
-            const fullH = POST_FRAME_H * drawScale;
-
-            // Position: card bottom-center at (viewW/2, floorY + CARD_H) in pinned coords
-            // But the canvas will have perspective applied, so we position it in
-            // un-perspectived space — the CSS transform handles the projection
-            const cardBottomY = viewH * 0.55 + CARD_H;
-            const cardCenterX = viewW / 2;
-
-            // Full frame position so video card bottom-center aligns with CSS card
-            const fullLeft = cardCenterX - FRAME_CARD_CX * fullW;
-            const fullTop = cardBottomY - FRAME_CARD_BY * fullH;
-
-            // Crop: top 20% and bottom 20% of the full frame
-            const cropTop = 0.2;
-            const cropBot = 0.2;
-            const visibleTop = fullTop + cropTop * fullH;
-            const visibleH = (1 - cropTop - cropBot) * fullH;
-
-            // Canvas pixel buffer and CSS display size
-            const canvasW = Math.ceil(fullW);
-            const canvasH = Math.ceil(visibleH);
-            if (fc.width !== canvasW || fc.height !== canvasH) {
-              fc.width = canvasW;
-              fc.height = canvasH;
-            }
-            fc.style.left = `${fullLeft}px`;
-            fc.style.top = `${visibleTop}px`;
-            fc.style.width = `${fullW}px`;
-            fc.style.height = `${visibleH}px`;
-
-            // No corrective transform needed — the CSS card now uses the same
-            // fixed perspective (738px) as the video was rendered with, so the
-            // foreshortening matches naturally on every viewport.
-            fc.style.transform = 'none';
-
-            // Pacing: ease through video — fast at start/end, slow through middle
-            // Uses a symmetric S-curve that crawls through the mid-section
-            // fp 0→1 maps to frameFrac 0→1, but spends more scroll time in the middle
-            const midPoint = 117 / POST_FRAME_COUNT; // center of the slow zone
-            // Piecewise hermite: ease-out into mid, ease-in out of mid
-            let frameFrac: number;
-            if (fp <= 0.5) {
-              // First half of scroll → 0 to midPoint
-              const t = fp / 0.5; // 0→1
-              const eased = t * t * (3 - 2 * t); // smoothstep
-              frameFrac = eased * midPoint;
-            } else {
-              // Second half of scroll → midPoint to 1
-              // ease-in (accelerating out) so it doesn't stall on the last frame
-              const t = (fp - 0.5) / 0.5; // 0→1
-              const eased = t * t; // quadratic ease-in — slow departure from mid, fast finish
-              frameFrac = midPoint + eased * (1 - midPoint);
-            }
-
-            // Fade in/out
-            const frameFadeIn = Math.min(1, fp / 0.08);
-            const frameFadeOut = fp > 0.92 ? Math.max(0, 1 - (fp - 0.92) / 0.08) : 1;
-            fc.style.opacity = String(frameFadeIn * frameFadeOut);
-
-            // Social buttons: fade in around midpoint, persist after video fades
-            const socialStart = 0.35;
-            const social = socialRef.current;
-            if (social) {
-              if (fp < socialStart) {
-                social.style.opacity = '0';
-                social.style.pointerEvents = 'none';
-              } else {
-                const socialFadeIn = Math.min(1, (fp - socialStart) / 0.1);
-                social.style.opacity = String(socialFadeIn);
-                social.style.pointerEvents = socialFadeIn > 0.5 ? 'auto' : 'none';
-              }
-            }
-
-            // Keep stage background in sync with video's shifting bg color
-            // Frame 1: ~#121212 (perceived — solid color reads darker than noisy video avg)
-            // Frame 100+: #0c0c10 (darker, slight purple)
-            const videoBgP = Math.min(1, frameFrac * 2);
-            const vBgR = Math.round(18 - (18 - 12) * videoBgP);
-            const vBgG = Math.round(18 - (18 - 12) * videoBgP);
-            const vBgB = Math.round(18 - (18 - 16) * videoBgP);
-            pinned.style.background = `rgb(${vBgR}, ${vBgG}, ${vBgB})`;
-
-            // Draw: source crop from the frame image
-            // The source region is the middle 60% vertically
-            const srcY = cropTop * POST_FRAME_H;
-            const srcH = (1 - cropTop - cropBot) * POST_FRAME_H;
-
-            // Draw current frame
-            {
-              const frameCount = postFramesRef.current.length;
-              const exactFrame = frameFrac * (frameCount - 1);
-              const frameA = Math.floor(exactFrame);
-              const frameB = Math.min(frameCount - 1, frameA + 1);
-              const mix = exactFrame - frameA;
-
-              const mixKey = frameA + mix;
-              if (Math.abs(mixKey - lastPostFrameRef.current) > 0.001) {
-                lastPostFrameRef.current = mixKey;
-                const ctx = fc.getContext('2d');
-                if (ctx) {
-                  ctx.clearRect(0, 0, canvasW, canvasH);
-
-                  const fImgA = postFramesRef.current[frameA];
-                  if (fImgA?.complete) {
-                    ctx.globalAlpha = 1;
-                    ctx.drawImage(fImgA, 0, srcY, POST_FRAME_W, srcH, 0, 0, canvasW, canvasH);
-                  }
-                  const fImgB = postFramesRef.current[frameB];
-                  if (fImgB?.complete && frameA !== frameB && mix > 0.01) {
-                    ctx.globalAlpha = mix;
-                    ctx.drawImage(fImgB, 0, srcY, POST_FRAME_W, srcH, 0, 0, canvasW, canvasH);
-                    ctx.globalAlpha = 1;
-                  }
-                }
-              }
-            }
-          }
-        }
-
 
         // ── Stained glass parallax panels ──
         const glassVisible = p >= 0.74;
@@ -684,7 +308,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           // Fade in during reveal
           const glassFade = p <= 0.76 ? (p - 0.74) / 0.02 : 1;
           // Fade out near the end
-          const glassOut = (p >= 0.95 ? Math.max(0, 1 - (p - 0.95) / 0.04) : 1) * fallFadeOut;
+          const glassOut = p >= 0.95 ? Math.max(0, 1 - (p - 0.95) / 0.04) : 1;
 
           // Depth-based scale: closer panels are larger, further panels are smaller
           const depthScale = 0.5 + cfg.depth * 0.5;
@@ -781,66 +405,6 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             {...pageData}
             cardPosts={cardPosts}
             progressRef={progressRef}
-            sectionNavSlot={
-              <div
-                ref={sectionNavRef}
-                style={{
-                  position: 'absolute',
-                  left: 'calc(-50vw + 400px + 24px)',
-                  top: '50%',
-                  transform: 'translateY(-50%) translateZ(0px)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px',
-                  opacity: 1,
-                  pointerEvents: 'auto',
-                }}
-              >
-                {(['Landing', 'Blog', 'Socials'] as const).map((label, i) => (
-                  <button
-                    key={label}
-                    ref={(el) => { navBtnRefs.current[i] = el; }}
-                    type="button"
-                    onClick={() => {
-                      const wrapper = wrapperRef.current;
-                      if (!wrapper || !lenisRef.current) return;
-                      const scrollMax = wrapper.scrollHeight - window.innerHeight;
-                      const quartic = (t: number) => 1 - Math.pow(1 - t, 4);
-                      const smoothstep = (t: number) => t * t * (3 - 2 * t);
-                      if (i === 0) {
-                        lenisRef.current.scrollTo(0, { duration: 14, easing: smoothstep });
-                      } else if (i === 1) {
-                        lenisRef.current.scrollTo(scrollMax * cardFrac * 0.78, { duration: 14, easing: quartic });
-                      } else {
-                        lenisRef.current.scrollTo(scrollMax, { duration: 20, easing: smoothstep });
-                      }
-                    }}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      borderLeft: '2px solid transparent',
-                      color: 'rgba(255, 255, 255, 0.4)',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '0.65rem',
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                      padding: '8px 12px',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      transition: 'color 0.2s, background 0.2s, border-color 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
-                    }}
-                    onMouseLeave={(e) => {
-                      // scroll handler resets color
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            }
           />
         </div>
 
@@ -1033,191 +597,82 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           );
         })}
 
-        {/* Fin card */}
-        <style>{`
-          @keyframes fin-glow {
-            0%, 100% {
-              box-shadow:
-                0 0 30px rgba(224, 224, 224, 0.03),
-                0 0 80px rgba(224, 224, 224, 0.015),
-                inset 0 0 60px rgba(224, 224, 224, 0.01);
-              border-color: rgba(224, 224, 224, 0.06);
-            }
-            50% {
-              box-shadow:
-                0 0 40px rgba(224, 224, 224, 0.06),
-                0 0 100px rgba(224, 224, 224, 0.03),
-                inset 0 0 80px rgba(224, 224, 224, 0.02);
-              border-color: rgba(224, 224, 224, 0.10);
-            }
-          }
-        `}</style>
-        <div
-          ref={finCardRef}
-          style={{
-            position: 'absolute',
-            top: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: `${CARD_H}px`,
-            opacity: 0,
-            zIndex: 3,
-            willChange: 'transform, opacity',
-            overflow: 'hidden',
-            background: 'linear-gradient(160deg, rgba(20, 20, 20, 0.9) 0%, rgba(12, 12, 12, 0.95) 100%)',
-            border: '1px solid rgba(224, 224, 224, 0.06)',
-            animation: 'fin-glow 4s ease-in-out infinite',
-          }}
-        />
+      </div>
 
-        {/* Post-fin frame sequence — scroll-driven video canvas */}
-        <canvas
-          ref={frameCanvasRef}
-          style={{
-            position: 'absolute',
-            zIndex: 8,
-            pointerEvents: 'none',
-            opacity: 0,
-            maskImage: 'linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%), linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)',
-            maskComposite: 'intersect',
-            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%), linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)',
-            WebkitMaskComposite: 'source-in',
-          }}
-        />
+      {/* Bottom gradient — gives the island contrast against any background */}
+      <div
+        ref={bottomGradRef}
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '120px',
+          background: 'linear-gradient(to top, rgba(0, 0, 0, 0.55) 0%, transparent 100%)',
+          pointerEvents: 'none',
+          zIndex: 19,
+          opacity: 0,
+        }}
+      />
 
-        {/* Social media buttons — appear during video hold phase */}
-        <div
-          ref={socialRef}
-          style={{
-            position: 'absolute',
-            top: '15%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 9,
-            display: 'flex',
-            gap: '24px',
-            opacity: 0,
-            pointerEvents: 'none',
-            transition: 'opacity 0.3s ease',
-          }}
-        >
-          {/* Green glow backdrop */}
-          <div
+      {/* Sticky floating social island */}
+      <div
+        ref={socialFooterRef}
+        style={{
+          position: 'fixed',
+          bottom: '28px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 20,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '10px 20px',
+          borderRadius: '50px',
+          background: 'rgba(10, 10, 10, 0.82)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          border: '1px solid rgba(255, 255, 255, 0.09)',
+          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.04) inset',
+          opacity: 0,
+          pointerEvents: 'none',
+        }}
+      >
+        {[
+          { label: 'GitHub', href: 'https://github.com', icon: 'M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z' },
+          { label: 'LinkedIn', href: 'https://linkedin.com', icon: 'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z' },
+          { label: 'X', href: 'https://x.com', icon: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z' },
+        ].map((s) => (
+          <a
+            key={s.label}
+            href={s.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={s.label}
             style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '280px',
-              height: '120px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
               borderRadius: '50%',
-              background: 'radial-gradient(ellipse, rgba(76, 149, 101, 0.25) 0%, rgba(86, 145, 83, 0.12) 40%, transparent 70%)',
-              pointerEvents: 'none',
-              filter: 'blur(20px)',
+              color: 'rgba(255, 255, 255, 0.6)',
+              transition: 'color 0.2s, background 0.15s',
             }}
-          />
-          {[
-            { label: 'GitHub', href: 'https://github.com', icon: 'M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z' },
-            { label: 'LinkedIn', href: 'https://linkedin.com', icon: 'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z' },
-            { label: 'X', href: 'https://x.com', icon: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z' },
-          ].map((s) => (
-            <a
-              key={s.label}
-              href={s.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={s.label}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.10)',
-                color: 'rgba(255, 255, 255, 0.7)',
-                transition: 'background 0.2s, color 0.2s, transform 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
-                e.currentTarget.style.transform = 'scale(1.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
-                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d={s.icon} />
-              </svg>
-            </a>
-          ))}
-        </div>
-
-        {/* Section nav 2 — post-hold, outside hero so it's not clipped */}
-        <div
-          ref={sectionNav2Ref}
-          style={{
-            position: 'absolute',
-            left: '24px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            zIndex: 11,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            opacity: 0,
-            pointerEvents: 'none',
-          }}
-        >
-          {(['Landing', 'Blog', 'Socials'] as const).map((label, i) => (
-            <button
-              key={label}
-              ref={(el) => { navBtn2Refs.current[i] = el; }}
-              type="button"
-              onClick={() => {
-                const wrapper = wrapperRef.current;
-                if (!wrapper || !lenisRef.current) return;
-                const scrollMax = wrapper.scrollHeight - window.innerHeight;
-                const quartic = (t: number) => 1 - Math.pow(1 - t, 4);
-                const smoothstep = (t: number) => t * t * (3 - 2 * t);
-                if (i === 0) {
-                  lenisRef.current.scrollTo(0, { duration: 14, easing: smoothstep });
-                } else if (i === 1) {
-                  lenisRef.current.scrollTo(scrollMax * cardFrac * 0.78, { duration: 14, easing: quartic });
-                } else {
-                  lenisRef.current.scrollTo(scrollMax, { duration: 14, easing: quartic });
-                }
-              }}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                borderLeft: '2px solid transparent',
-                color: 'rgba(255, 255, 255, 0.4)',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.65rem',
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                padding: '8px 12px',
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'color 0.2s, background 0.2s, border-color 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
-              }}
-              onMouseLeave={(e) => {
-                // scroll handler resets color
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)';
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d={s.icon} />
+            </svg>
+          </a>
+        ))}
       </div>
     </div>
   );
