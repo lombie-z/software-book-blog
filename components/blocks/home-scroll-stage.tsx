@@ -247,6 +247,10 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           opacity: heroOpacity,
         });
 
+        // Disable pointer events on hero once cards are visible — hero sits above
+        // cards (z-index 6 vs 3) and would block clicks even when fully transparent.
+        hero.style.pointerEvents = p >= 0.78 ? 'none' : 'auto';
+
         // Hero card border overlay — follows the hero clip area
         if (heroBorder) {
           gsap.set(heroBorder, {
@@ -438,6 +442,12 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                 inset 0 0 60px rgba(224, 224, 224, 0.03);
             }
           }
+          .post-card-link {
+            transition: scale 0.2s ease !important;
+          }
+          .post-card-link:hover {
+            scale: 1.02 !important;
+          }
         `}</style>
         <div
           ref={heroBorderRef}
@@ -506,6 +516,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             <Link
               href={`/posts/${post.slug}`}
               key={post.slug}
+              className='post-card-link'
               ref={(el) => {
                 postCardRefs.current[i] = el;
               }}
