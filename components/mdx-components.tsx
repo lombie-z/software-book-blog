@@ -64,37 +64,63 @@ export const components: Components<{
   },
   NewsletterSignup: (props) => {
     return (
-      <div className='bg-white'>
-        <div className='max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8'>
-          <div className=''>
-            <TinaMarkdown content={props.children} />
-          </div>
-          <div className='mt-8 '>
-            <form className='sm:flex'>
-              <label htmlFor='email-address' className='sr-only'>
-                Email address
-              </label>
-              <input
-                id='email-address'
-                name='email-address'
-                type='email'
-                autoComplete='email'
-                required
-                className='w-full px-5 py-3 border border-gray-300 shadow-xs placeholder-gray-400 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 sm:max-w-xs rounded-md'
-                placeholder={props.placeholder}
-              />
-              <div className='mt-3 rounded-md shadow-sm sm:mt-0 sm:ml-3 sm:shrink-0'>
-                <button
-                  type='submit'
-                  className='w-full flex items-center justify-center py-3 px-5 border border-transparent text-base font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-teal-500'
-                >
-                  {props.buttonText}
-                </button>
-              </div>
-            </form>
-            <div className='mt-3 text-sm text-gray-500'>{props.disclaimer && <TinaMarkdown content={props.disclaimer} />}</div>
-          </div>
+      <div style={{
+        background: 'oklch(0.13 0.01 85)',
+        border: '1px solid oklch(0.78 0.10 85 / 0.20)',
+        borderRadius: '4px',
+        padding: '1.75rem 1.5rem',
+        margin: '1.5rem 0',
+      }}>
+        <div style={{ marginBottom: '1rem', color: 'oklch(0.88 0.01 85)' }}>
+          <TinaMarkdown content={props.children} />
         </div>
+        <form style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <label htmlFor='email-address' style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
+            Email address
+          </label>
+          <input
+            id='email-address'
+            name='email-address'
+            type='email'
+            autoComplete='email'
+            required
+            style={{
+              flex: '1 1 200px',
+              padding: '0.6rem 0.9rem',
+              background: 'oklch(0.09 0 0)',
+              border: '1px solid oklch(0.78 0.10 85 / 0.25)',
+              borderRadius: '3px',
+              color: 'oklch(0.88 0.01 85)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.82rem',
+              outline: 'none',
+            }}
+            placeholder={props.placeholder}
+          />
+          <button
+            type='submit'
+            style={{
+              padding: '0.6rem 1.2rem',
+              background: 'transparent',
+              border: '1px solid oklch(0.78 0.10 85 / 0.40)',
+              borderRadius: '3px',
+              color: 'oklch(0.78 0.10 85)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.75rem',
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {props.buttonText}
+          </button>
+        </form>
+        {props.disclaimer && (
+          <div style={{ marginTop: '0.6rem', fontSize: '0.75rem', color: 'oklch(0.45 0 0)' }}>
+            <TinaMarkdown content={props.disclaimer} />
+          </div>
+        )}
       </div>
     );
   },
