@@ -27,9 +27,9 @@ function richTextToPlain(value: unknown): string {
 
 const SWIPE_THRESHOLD = 80; // px to commit
 const VEL_THRESHOLD = 0.32; // px/ms to commit
-const STACK_SCALES = [1, 1, 1] as const;       // no scale — avoids promotion jank
-const STACK_TRANSLATE_Y = [0, 0, 0] as const;  // flat stack — no Y offset
-const STACK_OPACITY = [1, 1, 1] as const;      // all full opacity — flat stack
+const STACK_SCALES = [1, 1, 1] as const;        // no scale — avoids promotion jank
+const STACK_TRANSLATE_Y = [0, 0, 0] as const;   // flat stack — no Y offset
+const STACK_OPACITY = [1, 1, 1] as const;        // all opaque — flat stack, only top card visible
 
 // ─── Filigree corner bracket ──────────────────────────────────────────────────
 
@@ -306,7 +306,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
     const el = wrapperRef.current;
     if (!el) return;
     el.style.zIndex = String(10 - stackIndex);
-    el.style.transition = 'none';
+    el.style.transition = '';
     el.style.transform = '';
     el.style.opacity = '1';
   }, [stackIndex]);

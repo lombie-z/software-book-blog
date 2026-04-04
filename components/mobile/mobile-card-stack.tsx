@@ -22,7 +22,7 @@ const STACK_CSS = `
   }
   .mcs-card-region {
     position: relative;
-    height: 520px;
+    height: 560px;
     min-height: 380px;
     display: flex;
     flex-direction: column;
