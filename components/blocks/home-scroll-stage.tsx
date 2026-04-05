@@ -806,65 +806,13 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             padding: '0 24px',
           }}
         >
-          {/* Fin message */}
+          {/* That's all SVG */}
           <div style={{ textAlign: 'center' }}>
-            <p
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.65rem',
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase',
-                color: 'rgba(200, 180, 120, 0.55)',
-                marginBottom: '16px',
-                animation: 'end-panel-shimmer 4s ease-in-out infinite',
-              }}
-            >
-              fin.
-            </p>
-            <p
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.75rem',
-                color: 'rgba(255, 255, 255, 0.25)',
-                letterSpacing: '0.05em',
-              }}
-            >
-              That&rsquo;s all for now.
-            </p>
-          </div>
-
-          {/* Social links */}
-          <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
-            {[
-              { label: 'GitHub', href: 'https://github.com', icon: 'M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z' },
-              { label: 'LinkedIn', href: 'https://linkedin.com', icon: 'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z' },
-              { label: 'X / Twitter', href: 'https://x.com', icon: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z' },
-            ].map((s) => (
-              <a
-                key={s.label}
-                href={s.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '8px',
-                  color: 'rgba(255, 255, 255, 0.35)',
-                  textDecoration: 'none',
-                  transition: 'color 0.2s',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(200, 180, 120, 0.9)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255, 255, 255, 0.35)'; }}
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                  <path d={s.icon} />
-                </svg>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                  {s.label}
-                </span>
-              </a>
-            ))}
+            <img
+              src="/images/hand-drawn/thats-all.svg"
+              alt="That's all"
+              style={{ width: 'clamp(280px, 40vw, 480px)', display: 'block', margin: '0 auto' }}
+            />
           </div>
 
           {/* Divider */}
