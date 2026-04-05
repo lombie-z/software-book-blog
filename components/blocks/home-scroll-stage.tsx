@@ -33,6 +33,9 @@ const CARD_OVERLAYS = [
   { svg: '/images/hand-drawn/czech-it-out.svg', r: 255, g: 0, b: 0, name: 'red' },
 ];
 
+// Which glass panels each color group "owns" — hover tints only those panels, all the same color
+const GHOST_MAP: Record<number, number[]> = { 0: [0, 2], 1: [4, 5], 2: [1, 3] };
+
 // Stained glass parallax panels — card-shaped, depth-scaled, motion-blurred
 // depth: <1 = further back (smaller, more blur), >1 = closer (larger, more blur)
 const GLASS_PANELS = [
@@ -463,7 +466,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             transition: filter 0.35s ease;
           }
           .post-card-link:hover .card-img {
-            filter: grayscale(1) brightness(0.35);
+            filter: grayscale(1) brightness(0.15);
           }
           .card-color-tint {
             opacity: 0;
@@ -574,16 +577,21 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                 postCardRefs.current[i] = el;
               }}
               onMouseEnter={() => {
-                // Tint the first 3 glass panels each with a DIFFERENT color from the palette
-                glassTintRefs.current.slice(0, 3).forEach((el, ti) => {
+                // Tint only this color group's assigned panels, all the same color
+                const colorIdx = i % CARD_OVERLAYS.length;
+                const panelIndices = GHOST_MAP[colorIdx] ?? [];
+                panelIndices.forEach((pi) => {
+                  const el = glassTintRefs.current[pi];
                   if (!el) return;
-                  const tint = CARD_OVERLAYS[(i + ti) % CARD_OVERLAYS.length];
-                  el.style.background = `rgba(${tint.r},${tint.g},${tint.b},0.14)`;
+                  el.style.background = `rgba(${overlay.r},${overlay.g},${overlay.b},0.14)`;
                   el.style.opacity = '1';
                 });
               }}
               onMouseLeave={() => {
-                glassTintRefs.current.forEach((el) => {
+                const colorIdx = i % CARD_OVERLAYS.length;
+                const panelIndices = GHOST_MAP[colorIdx] ?? [];
+                panelIndices.forEach((pi) => {
+                  const el = glassTintRefs.current[pi];
                   if (!el) return;
                   el.style.opacity = '0';
                 });
