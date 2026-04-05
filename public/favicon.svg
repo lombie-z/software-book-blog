@@ -1,14 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <style>
+      @font-face {
+        font-family: 'LucidaBlackletter';
+        src: url('/fonts/LucidaBlackletter.ttf') format('truetype');
+      }
+    </style>
+  </defs>
   <rect width="32" height="32" rx="4" fill="#0a0a0a"/>
   <text
     x="16"
-    y="24"
+    y="25"
     text-anchor="middle"
-    font-family="'Palatino Linotype', 'Book Antiqua', Palatino, 'Times New Roman', serif"
+    font-family="LucidaBlackletter, 'Palatino Linotype', Palatino, serif"
     font-size="20"
-    font-weight="700"
-    letter-spacing="-1"
     fill="#e8e0d0"
-    style="font-variant-ligatures: common-ligatures;"
   >IL</text>
 </svg>
