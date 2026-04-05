@@ -272,7 +272,9 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             return;
           }
 
-          const virtualIdx = postCount - i;
+          // Hero occupies slot 0; post cards start one slot above it (slot -1, -2, …)
+          // so card i=0 enters center only after the hero has scrolled down one step.
+          const virtualIdx = postCount - i - 1;
           const screenTop = (virtualIdx - cardCount * (1 - totalCs)) * CARD_STEP + (viewH - CARD_H) / 2;
 
           card.style.opacity = String(cardFade);
