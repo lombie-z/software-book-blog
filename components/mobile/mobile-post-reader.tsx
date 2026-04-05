@@ -4,7 +4,7 @@
 // Full mobile reading experience: progress bar, auto-hide header,
 // queue-aware bottom nav, baroque typography, View Transition support.
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { format } from 'date-fns';
@@ -144,6 +144,20 @@ const CSS = `
     line-height: 1;
   }
   .mpr-hdr-back:active { background: oklch(0.78 0.10 85 / 0.16); }
+
+  .mpr-hdr-share {
+    width: 34px; height: 34px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1px solid oklch(0.78 0.10 85 / 0.24);
+    background: transparent;
+    color: oklch(0.78 0.10 85 / 0.70);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mpr-hdr-share:active { background: oklch(0.78 0.10 85 / 0.16); }
+  .mpr-hdr-share--copied { color: oklch(0.72 0.16 140 / 0.85); border-color: oklch(0.72 0.16 140 / 0.35); }
 
   .mpr-hdr-title {
     flex: 1; min-width: 0;
@@ -415,6 +429,7 @@ export default function MobilePostReader({ post }: { post: Post }) {
   const [progress, setProgress] = useState(0);
   const [headerHidden, setHeaderHidden] = useState(false);
   const [queue, setQueue] = useState<string[]>([]);
+  const [shareCopied, setShareCopied] = useState(false);
   const lastScrollY = useRef(0);
   const router = useRouter();
 
@@ -429,6 +444,18 @@ export default function MobilePostReader({ post }: { post: Post }) {
 
   // Hydrate queue from sessionStorage (client-only)
   useEffect(() => { setQueue(readBucket()); }, []);
+
+  const handleShare = useCallback(async () => {
+    const url = window.location.href;
+    const shareTitle = post.title ?? '';
+    if (navigator.share) {
+      await navigator.share({ title: shareTitle, url });
+    } else {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    }
+  }, [post.title]);
 
   const queueIndex = queue.indexOf(slug);
   const inQueue = queueIndex !== -1;
@@ -479,6 +506,22 @@ export default function MobilePostReader({ post }: { post: Post }) {
         {inQueue && (
           <span className="mpr-hdr-pos">{queueIndex + 1} / {queue.length}</span>
         )}
+        <button
+          className={`mpr-hdr-share${shareCopied ? ' mpr-hdr-share--copied' : ''}`}
+          onClick={handleShare}
+          aria-label={shareCopied ? 'Link copied' : 'Share this post'}
+        >
+          {shareCopied ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+            </svg>
+          )}
+        </button>
       </header>
 
       {/* Page content */}
