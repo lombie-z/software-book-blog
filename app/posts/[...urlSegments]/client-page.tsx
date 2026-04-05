@@ -8,6 +8,7 @@ import { TinaMarkdown } from 'tinacms/dist/rich-text';
 import { PostQuery } from '@/tina/__generated__/types';
 import { components } from '@/components/mdx-components';
 import ErrorBoundary from '@/components/error-boundary';
+import { SocialFooter } from '@/components/social-footer';
 
 interface ClientPostProps {
   data: PostQuery;
@@ -101,6 +102,7 @@ export default function PostClientPage(props: ClientPostProps) {
           </div>
         </div>
       </div>
+      <SocialFooter />
     </ErrorBoundary>
   );
 }

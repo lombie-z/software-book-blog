@@ -12,6 +12,7 @@ import { TinaMarkdown } from 'tinacms/dist/rich-text';
 import type { PostQuery } from '@/tina/__generated__/types';
 import { components } from '@/components/mdx-components';
 import ErrorBoundary from '@/components/error-boundary';
+import { SocialFooter } from '@/components/social-footer';
 
 const SESSION_KEY = 'iwrl-reading-bucket';
 
@@ -534,6 +535,9 @@ export default function MobilePostReader({ post }: { post: Post }) {
           </div>
         </div>
       </div>
+
+      {/* Social island — sits above the bottom nav bar (bottom: 80px clears the ~64px mpr-bnav) */}
+      <SocialFooter bottom="80px" />
 
       {/* Bottom navigation bar */}
       <nav className="mpr-bnav" aria-label="Post navigation">
