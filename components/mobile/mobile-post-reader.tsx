@@ -578,7 +578,7 @@ export default function MobilePostReader({ post }: { post: Post }) {
           >
             <TinaMarkdown content={post._body} components={{
               ...components,
-              code_block: (props) => {
+              code_block: (props: any) => {
                 if (!props) return <></>;
                 if (props.lang === 'mermaid') return <Mermaid value={props.value} />;
                 return <Prism lang={props.lang} value={props.value} theme="vsDark" />;
