@@ -263,7 +263,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
         }
 
         // ── Post cards — slide and fade in after reveal completes (p=0.78) ──
-        const cardFade = p <= 0.78 ? 0 : p <= 0.84 ? (p - 0.78) / 0.06 : 1;
+        const cardFade = p <= 0.78 ? 0 : p <= 0.80 ? (p - 0.78) / 0.02 : 1;
 
         postCardRefs.current.forEach((card, i) => {
           if (!card) return;
@@ -290,8 +290,8 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           let footerOpacity: number;
           if (p < 0.78) {
             footerOpacity = 0;
-          } else if (p < 0.84) {
-            footerOpacity = (p - 0.78) / 0.06;
+          } else if (p < 0.80) {
+            footerOpacity = (p - 0.78) / 0.02;
           } else {
             footerOpacity = 1;
           }
@@ -326,7 +326,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           }
 
           // Fade in after reveal
-          const glassFade = p <= 0.84 ? (p - 0.78) / 0.06 : 1;
+          const glassFade = p <= 0.80 ? (p - 0.78) / 0.02 : 1;
           // Fade out near the end
           const glassOut = p >= 0.95 ? Math.max(0, 1 - (p - 0.95) / 0.04) : 1;
 
