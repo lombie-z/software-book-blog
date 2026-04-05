@@ -811,7 +811,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             <img
               src="/images/hand-drawn/thats-all.svg"
               alt="That's all"
-              style={{ width: 'clamp(280px, 40vw, 480px)', display: 'block', margin: '0 auto' }}
+              style={{ width: 'clamp(280px, 40vw, 480px)', display: 'block', margin: '0 auto', transform: 'translateX(-10px)' }}
             />
           </div>
 
