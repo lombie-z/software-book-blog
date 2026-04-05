@@ -655,7 +655,7 @@ export const TopoHero = ({
                 key={card.slug}
                 className="topo-card-layer"
                 ref={(el) => { cardLayersRef.current[i + 1] = el!; }}
-                style={{ backgroundImage: `url(${card.heroImg})`, filter: 'brightness(0.7) saturate(0.6)' }}
+                style={{ backgroundImage: `url(${card.heroImg})`, filter: 'brightness(0.4) saturate(0.4)' }}
               />
             )).reverse()}
 
