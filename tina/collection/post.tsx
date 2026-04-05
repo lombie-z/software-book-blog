@@ -1,6 +1,4 @@
-import React from 'react';
 import { videoBlockSchema } from '@/components/blocks/video';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Collection } from 'tinacms';
 
 const Post: Collection = {
@@ -34,40 +32,6 @@ const Post: Collection = {
       name: 'excerpt',
       overrides: {
         toolbar: ['bold', 'italic', 'link'],
-      },
-    },
-    {
-      type: 'reference',
-      label: 'Author',
-      name: 'author',
-      collections: ['author'],
-      ui: {
-        //@ts-ignore
-        optionComponent: (
-          props: {
-            name?: string;
-            avatar: string;
-          },
-          _internalSys: { path: string }
-        ) => {
-          const { name, avatar } = props;
-          if (!name) return _internalSys.path;
-
-          return (
-            <p className='flex min-h-8 items-center gap-4'>
-              <Avatar>
-                {avatar && <AvatarImage src={avatar} alt={`${name} Profile`} />}
-                <AvatarFallback>
-                  {name
-                    .split(' ')
-                    .map((part) => part[0]?.toUpperCase() || '')
-                    .join('')}
-                </AvatarFallback>
-              </Avatar>
-              {name}
-            </p>
-          );
-        },
       },
     },
     {

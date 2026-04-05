@@ -655,12 +655,8 @@ export const TopoHero = ({
                 key={card.slug}
                 className="topo-card-layer"
                 ref={(el) => { cardLayersRef.current[i + 1] = el!; }}
-                style={{ backgroundImage: `url(${card.heroImg})` }}
-              >
-                <div className="topo-card-overlay">
-                  <p className="topo-card-title">{card.title}</p>
-                </div>
-              </div>
+                style={{ backgroundImage: `url(${card.heroImg})`, filter: 'brightness(0.4) saturate(0.4)' }}
+              />
             )).reverse()}
 
             <div className="topo-layer topo-layer-silhouette-warm" ref={(el) => { layersRef.current[0] = el!; }} />
