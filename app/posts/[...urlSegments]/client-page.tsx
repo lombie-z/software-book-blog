@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -21,25 +21,12 @@ interface ClientPostProps {
 export default function PostClientPage(props: ClientPostProps) {
   const { data } = useTina({ ...props });
   const post = data.post;
-  const [copied, setCopied] = useState(false);
 
   const date = new Date(post.date!);
   let formattedDate = '';
   if (!isNaN(date.getTime())) {
     formattedDate = format(date, 'MMM dd, yyyy');
   }
-
-  const handleShare = async () => {
-    const url = window.location.href;
-    const title = post.title ?? '';
-    if (navigator.share) {
-      await navigator.share({ title, url });
-    } else {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
 
   return (
     <ErrorBoundary>
@@ -58,24 +45,13 @@ export default function PostClientPage(props: ClientPostProps) {
             {post.title}
           </h1>
 
-          <div className="mb-16 flex items-center justify-between gap-4">
+          <div className="mb-16">
             <span
               data-tina-field={tinaField(post, 'date')}
               className="font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/50"
             >
               {formattedDate}
             </span>
-            <button
-              onClick={handleShare}
-              className="inline-flex items-center gap-2 rounded border border-[#e0e0e0]/15 bg-transparent px-3 py-1.5 font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/50 transition-colors hover:border-[#e0e0e0]/30 hover:text-[#e0e0e0]/80"
-              aria-label="Share this post"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-              </svg>
-              {copied ? 'Copied' : 'Share'}
-            </button>
           </div>
 
           {post.heroImg && (
