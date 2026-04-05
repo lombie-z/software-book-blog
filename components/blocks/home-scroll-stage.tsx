@@ -26,6 +26,13 @@ const CARD_H = 380;
 const CARD_GAP = 24;
 const CARD_STEP = CARD_H + CARD_GAP;
 
+// Hand-drawn SVG overlays for card hover effects — cycle through 3 per card
+const CARD_OVERLAYS = [
+  { svg: '/images/hand-drawn/brought-to-you-by.svg', r: 6, g: 255, b: 0, name: 'green' },
+  { svg: '/images/hand-drawn/read-this-one.svg', r: 0, g: 56, b: 255, name: 'blue' },
+  { svg: '/images/hand-drawn/czech-it-out.svg', r: 255, g: 0, b: 0, name: 'red' },
+];
+
 // Stained glass parallax panels — card-shaped, depth-scaled, motion-blurred
 // depth: <1 = further back (smaller, more blur), >1 = closer (larger, more blur)
 const GLASS_PANELS = [
@@ -68,6 +75,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
   const postCardRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const glassPanelRefs = useRef<(HTMLDivElement | null)[]>([]);
   const glassShineRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const glassTintRefs = useRef<(HTMLDivElement | null)[]>([]);
   const socialFooterRef = useRef<HTMLDivElement>(null);
   const bottomGradRef = useRef<HTMLDivElement>(null);
   const endPanelRef = useRef<HTMLDivElement>(null);
@@ -446,10 +454,36 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             }
           }
           .post-card-link {
-            transition: scale 0.2s ease !important;
+            transition: scale 0.2s ease, box-shadow 0.35s ease !important;
           }
           .post-card-link:hover {
             scale: 1.02 !important;
+          }
+          .card-img {
+            transition: filter 0.35s ease;
+          }
+          .post-card-link:hover .card-img {
+            filter: grayscale(1);
+          }
+          .card-svg-overlay {
+            opacity: 0;
+            transition: opacity 0.35s ease;
+            pointer-events: none;
+          }
+          .post-card-link:hover .card-svg-overlay {
+            opacity: 0.35;
+          }
+          .post-card-link[data-oc="green"]:hover {
+            box-shadow: 0 0 0 2px rgba(6,255,0,0.55), 0 0 40px rgba(6,255,0,0.18) !important;
+          }
+          .post-card-link[data-oc="blue"]:hover {
+            box-shadow: 0 0 0 2px rgba(0,56,255,0.55), 0 0 40px rgba(0,56,255,0.18) !important;
+          }
+          .post-card-link[data-oc="red"]:hover {
+            box-shadow: 0 0 0 2px rgba(255,0,0,0.55), 0 0 40px rgba(255,0,0,0.18) !important;
+          }
+          .glass-tint {
+            transition: opacity 0.4s ease, background 0.4s ease;
           }
         `}</style>
         <div
@@ -495,11 +529,16 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                 willChange: 'transform',
               }}
             />
-            {/* Edge highlight */}
+            {/* Hover tint overlay — activated by card mouseenter/mouseleave */}
             <div
+              ref={(el) => {
+                glassTintRefs.current[i] = el;
+              }}
+              className='glass-tint'
               style={{
                 position: 'absolute',
                 inset: 0,
+                opacity: 0,
                 pointerEvents: 'none',
               }}
             />
@@ -508,6 +547,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
 
         {/* Post cards — absolutely positioned, slide in from above during card scroll */}
         {postCards.map((post, i) => {
+          const overlay = CARD_OVERLAYS[i % CARD_OVERLAYS.length];
           const date = post.date
             ? new Date(post.date).toLocaleDateString('en-US', {
                 year: 'numeric',
@@ -520,8 +560,23 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
               href={`/posts/${post.slug}`}
               key={post.slug}
               className='post-card-link'
+              data-oc={overlay.name}
               ref={(el) => {
                 postCardRefs.current[i] = el;
+              }}
+              onMouseEnter={() => {
+                // Tint the first 3 glass panels with this card's SVG color
+                glassTintRefs.current.slice(0, 3).forEach((el) => {
+                  if (!el) return;
+                  el.style.background = `rgba(${overlay.r},${overlay.g},${overlay.b},0.14)`;
+                  el.style.opacity = '1';
+                });
+              }}
+              onMouseLeave={() => {
+                glassTintRefs.current.forEach((el) => {
+                  if (!el) return;
+                  el.style.opacity = '0';
+                });
               }}
               // onClick={(e) => {
               //   const el = e.currentTarget;
@@ -550,12 +605,27 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
               }}
             >
               <div
+                className='card-img'
                 style={{
                   position: 'absolute',
                   inset: 0,
                   backgroundImage: `url(${post.heroImg})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
+                }}
+              />
+              {/* Hand-drawn SVG overlay — fades in on hover */}
+              <img
+                src={overlay.svg}
+                alt=''
+                className='card-svg-overlay'
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  padding: '12px',
                 }}
               />
               <div
