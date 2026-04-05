@@ -463,7 +463,16 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             transition: filter 0.35s ease;
           }
           .post-card-link:hover .card-img {
-            filter: grayscale(1);
+            filter: grayscale(1) brightness(0.35);
+          }
+          .card-color-tint {
+            opacity: 0;
+            transition: opacity 0.35s ease;
+            pointer-events: none;
+            mix-blend-mode: color;
+          }
+          .post-card-link:hover .card-color-tint {
+            opacity: 1;
           }
           .card-svg-overlay {
             opacity: 0;
@@ -471,7 +480,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             pointer-events: none;
           }
           .post-card-link:hover .card-svg-overlay {
-            opacity: 0.35;
+            opacity: 1;
           }
           .post-card-link[data-oc="green"]:hover {
             box-shadow: 0 0 0 2px rgba(6,255,0,0.55), 0 0 40px rgba(6,255,0,0.18) !important;
@@ -565,10 +574,11 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                 postCardRefs.current[i] = el;
               }}
               onMouseEnter={() => {
-                // Tint the first 3 glass panels with this card's SVG color
-                glassTintRefs.current.slice(0, 3).forEach((el) => {
+                // Tint the first 3 glass panels each with a DIFFERENT color from the palette
+                glassTintRefs.current.slice(0, 3).forEach((el, ti) => {
                   if (!el) return;
-                  el.style.background = `rgba(${overlay.r},${overlay.g},${overlay.b},0.14)`;
+                  const tint = CARD_OVERLAYS[(i + ti) % CARD_OVERLAYS.length];
+                  el.style.background = `rgba(${tint.r},${tint.g},${tint.b},0.14)`;
                   el.style.opacity = '1';
                 });
               }}
@@ -612,6 +622,15 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                   backgroundImage: `url(${post.heroImg})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
+                }}
+              />
+              {/* Color tint overlay — mix-blend-mode:color turns greyscale image into monochrome hue */}
+              <div
+                className='card-color-tint'
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: `rgb(${overlay.r},${overlay.g},${overlay.b})`,
                 }}
               />
               {/* Hand-drawn SVG overlay — fades in on hover */}
