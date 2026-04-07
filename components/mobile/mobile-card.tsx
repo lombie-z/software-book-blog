@@ -256,16 +256,27 @@ const CARD_CSS = `
     padding-right: 18px;
   }
   .mc-glow-right .mc-glow-label {
+    position: relative;
     writing-mode: vertical-rl;
     text-orientation: mixed;
     font-family: var(--font-heading);
-    font-size: 2.2rem;
+    font-size: 2.4rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: oklch(0.92 0.16 85);
-    text-shadow: 0 0 24px oklch(0.78 0.16 85 / 0.6);
+    color: oklch(0.96 0.14 85);
+    text-shadow: 0 0 20px oklch(0.78 0.16 85 / 0.5);
     mix-blend-mode: screen;
+  }
+  .mc-glow-right .mc-glow-label::before {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    color: oklch(0.78 0.16 85 / 0.25);
+    text-shadow: 0 0 32px oklch(0.78 0.16 85 / 0.4);
+    transform: translate(3px, 3px);
+    z-index: -1;
+    filter: blur(0.5px);
   }
   .mc-glow-left {
     position: absolute;
@@ -282,16 +293,27 @@ const CARD_CSS = `
     padding-left: 18px;
   }
   .mc-glow-left .mc-glow-label {
+    position: relative;
     writing-mode: vertical-rl;
     text-orientation: mixed;
     font-family: var(--font-heading);
-    font-size: 2.2rem;
+    font-size: 2.4rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: oklch(0.72 0.14 240);
-    text-shadow: 0 0 24px oklch(0.45 0.14 240 / 0.6);
+    color: oklch(0.78 0.12 240);
+    text-shadow: 0 0 20px oklch(0.45 0.14 240 / 0.5);
     mix-blend-mode: screen;
+  }
+  .mc-glow-left .mc-glow-label::before {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    color: oklch(0.45 0.14 240 / 0.25);
+    text-shadow: 0 0 32px oklch(0.45 0.14 240 / 0.4);
+    transform: translate(-3px, 3px);
+    z-index: -1;
+    filter: blur(0.5px);
   }
 `;
 
@@ -511,10 +533,10 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
         {stackIndex === 0 && (
           <>
             <div ref={glowRightRef} className="mc-glow-right" aria-hidden="true">
-              <span className="mc-glow-label">Save</span>
+              <span className="mc-glow-label" data-text="Save">Save</span>
             </div>
             <div ref={glowLeftRef} className="mc-glow-left" aria-hidden="true">
-              <span className="mc-glow-label">Skip</span>
+              <span className="mc-glow-label" data-text="Skip">Skip</span>
             </div>
           </>
         )}
