@@ -284,7 +284,6 @@ const CARD_CSS = `
   .mc-glow-left .mc-glow-label {
     writing-mode: vertical-rl;
     text-orientation: mixed;
-    transform: rotate(180deg);
     font-family: var(--font-heading);
     font-size: 2.2rem;
     font-weight: 700;

@@ -18,7 +18,7 @@ const STACK_CSS = `
     position: relative;
     width: 100%;
     height: 100%;
-    padding: 0 24px;
+    padding: 0 32px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
