@@ -276,8 +276,8 @@ const CARD_CSS = `
     font-size: 3.2rem;
     font-weight: 400;
     letter-spacing: 0.2em;
-    color: oklch(0.78 0.16 85 / 0.18);
-    text-shadow: 0 0 40px oklch(0.78 0.16 85 / 0.3);
+    color: oklch(0.78 0.16 85 / 0.28);
+    text-shadow: 0 0 40px oklch(0.78 0.16 85 / 0.35);
     transform: translate(-10px, 2px);
     z-index: -1;
     filter: blur(0.3px);
@@ -317,8 +317,8 @@ const CARD_CSS = `
     font-size: 3.2rem;
     font-weight: 400;
     letter-spacing: 0.2em;
-    color: oklch(0.45 0.14 240 / 0.18);
-    text-shadow: 0 0 40px oklch(0.45 0.14 240 / 0.3);
+    color: oklch(0.45 0.14 240 / 0.28);
+    text-shadow: 0 0 40px oklch(0.45 0.14 240 / 0.35);
     transform: translate(10px, 2px);
     z-index: -1;
     filter: blur(0.3px);
