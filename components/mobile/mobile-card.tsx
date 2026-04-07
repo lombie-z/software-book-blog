@@ -255,8 +255,13 @@ const CARD_CSS = `
     justify-content: flex-end;
     padding-right: 18px;
   }
-  .mc-glow-right .mc-glow-label {
+  .mc-glow-right .mc-glow-label-wrap {
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mc-glow-right .mc-glow-front {
     writing-mode: vertical-rl;
     text-orientation: mixed;
     font-family: var(--font-heading);
@@ -267,19 +272,21 @@ const CARD_CSS = `
     color: oklch(0.96 0.14 85);
     text-shadow: 0 0 20px oklch(0.78 0.16 85 / 0.5);
     mix-blend-mode: screen;
+    position: relative;
+    z-index: 1;
   }
-  .mc-glow-right .mc-glow-label::before {
-    content: attr(data-text);
+  .mc-glow-right .mc-glow-echo {
     position: absolute;
-    inset: 0;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
     font-family: var(--font-display-block), Impact, sans-serif;
     font-size: 3.2rem;
     font-weight: 400;
     letter-spacing: 0.2em;
+    text-transform: uppercase;
     color: oklch(0.78 0.16 85 / 0.28);
     text-shadow: 0 0 40px oklch(0.78 0.16 85 / 0.35);
-    transform: translate(-10px, 2px);
-    z-index: -1;
+    transform: translateX(-10px);
     filter: blur(0.3px);
   }
   .mc-glow-left {
@@ -296,8 +303,13 @@ const CARD_CSS = `
     justify-content: flex-start;
     padding-left: 18px;
   }
-  .mc-glow-left .mc-glow-label {
+  .mc-glow-left .mc-glow-label-wrap {
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mc-glow-left .mc-glow-front {
     writing-mode: vertical-rl;
     text-orientation: mixed;
     font-family: var(--font-heading);
@@ -308,19 +320,21 @@ const CARD_CSS = `
     color: oklch(0.78 0.12 240);
     text-shadow: 0 0 20px oklch(0.45 0.14 240 / 0.5);
     mix-blend-mode: screen;
+    position: relative;
+    z-index: 1;
   }
-  .mc-glow-left .mc-glow-label::before {
-    content: attr(data-text);
+  .mc-glow-left .mc-glow-echo {
     position: absolute;
-    inset: 0;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
     font-family: var(--font-display-block), Impact, sans-serif;
     font-size: 3.2rem;
     font-weight: 400;
     letter-spacing: 0.2em;
+    text-transform: uppercase;
     color: oklch(0.45 0.14 240 / 0.28);
     text-shadow: 0 0 40px oklch(0.45 0.14 240 / 0.35);
-    transform: translate(10px, 2px);
-    z-index: -1;
+    transform: translateX(10px);
     filter: blur(0.3px);
   }
 `;
@@ -541,10 +555,16 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
         {stackIndex === 0 && (
           <>
             <div ref={glowRightRef} className="mc-glow-right" aria-hidden="true">
-              <span className="mc-glow-label" data-text="Save">Save</span>
+              <div className="mc-glow-label-wrap">
+                <span className="mc-glow-echo">Save</span>
+                <span className="mc-glow-front">Save</span>
+              </div>
             </div>
             <div ref={glowLeftRef} className="mc-glow-left" aria-hidden="true">
-              <span className="mc-glow-label" data-text="Skip">Skip</span>
+              <div className="mc-glow-label-wrap">
+                <span className="mc-glow-echo">Read</span>
+                <span className="mc-glow-front">Read</span>
+              </div>
             </div>
           </>
         )}
