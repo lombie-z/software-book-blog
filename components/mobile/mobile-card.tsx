@@ -556,14 +556,14 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
           <>
             <div ref={glowRightRef} className="mc-glow-right" aria-hidden="true">
               <div className="mc-glow-label-wrap">
-                <span className="mc-glow-echo">Save</span>
-                <span className="mc-glow-front">Save</span>
+                <span className="mc-glow-echo">Read</span>
+                <span className="mc-glow-front">Read</span>
               </div>
             </div>
             <div ref={glowLeftRef} className="mc-glow-left" aria-hidden="true">
               <div className="mc-glow-label-wrap">
-                <span className="mc-glow-echo">Read</span>
-                <span className="mc-glow-front">Read</span>
+                <span className="mc-glow-echo">Skip</span>
+                <span className="mc-glow-front">Skip</span>
               </div>
             </div>
           </>
