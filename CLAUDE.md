@@ -20,6 +20,108 @@ No test framework is configured.
 - `http://localhost:3002/admin` — TinaCMS visual editor
 - `http://localhost:4002/altair/` — GraphQL playground
 
+## File Map
+
+**Do not glob/explore to find files.** Use this map. If you need a file not listed here, it is likely in `tina/__generated__/` (auto-generated, never edit) or `node_modules/`.
+
+```
+app/
+  layout.tsx                          # Root layout, wraps everything in LayoutContext
+  page.tsx                            # Home page (server) — fetches page query
+  home-client-page.tsx                # Home page (client, desktop) — useTina + scroll orchestration
+  mobile-home-client-page.tsx         # Home page (client, mobile) — useTina + mobile layout
+  not-found.tsx                       # 404 page
+  manifest.ts                         # PWA manifest
+  posts/[...urlSegments]/
+    page.tsx                          # Post page (server) — fetches post query
+    client-page.tsx                   # Post page (client, desktop)
+    mobile-client-page.tsx            # Post page (client, mobile)
+
+components/
+  blocks/                             # Page-level block components
+    index.tsx                         # Block registry — maps block types to components
+    home-scroll-stage.tsx             # Desktop home scroll orchestrator (GSAP ScrollTrigger)
+    topo-hero.tsx                     # Desktop hero with 3D tilt + frame animation
+    recent-posts-slider.tsx           # Post card slider
+    blog-archive.tsx                  # Archive listing
+    mermaid.tsx                       # Mermaid diagram block
+    video.tsx                         # Video embed block
+  mobile/                             # Mobile-specific components
+    mobile-home.tsx                   # Mobile home page shell
+    mobile-hero.tsx                   # Mobile hero component
+    mobile-card.tsx                   # Single post card (mobile)
+    mobile-card-stack.tsx             # Stacked card layout
+    mobile-post-reader.tsx            # Mobile post reading view
+    reading-bucket.tsx                # Read-later bucket UI
+    reading-queue.tsx                 # Reading queue management
+    filigree-transitions.tsx          # Mobile page transition animations
+    baroque-loading.tsx               # Mobile loading skeleton
+  layout/
+    layout.tsx                        # Site shell (header + content + footer)
+    layout-context.tsx                # LayoutContext provider (global settings)
+    section.tsx                       # Section wrapper
+    nav/header.tsx                    # Site header + nav
+    nav/footer.tsx                    # Site footer
+  ui/                                 # shadcn/ui + custom UI primitives
+    avatar.tsx, button.tsx, card.tsx  # Standard shadcn components
+    tilt.tsx                          # 3D tilt effect wrapper
+    halide-topo-hero.tsx              # Topographic background SVG
+    full-screen-scroll-fx.tsx         # Scroll-driven fullscreen effect
+    argent-loop-infinite-slider.tsx   # Infinite horizontal slider
+    progressive-blur.tsx              # Blur gradient overlay
+    spotlight.tsx                     # Cursor spotlight effect
+    breakpoint-indicator.tsx          # Dev-only breakpoint label
+  mdx-components.tsx                  # MDX renderers (code blocks, blockquotes, mermaid, video)
+  mermaid-renderer.tsx                # Client-side mermaid rendering
+  error-boundary.tsx                  # React error boundary
+  icon.tsx                            # Icon component
+  raw-renderer.tsx                    # Raw HTML renderer
+  social-footer.tsx                   # Social links footer
+  shared/theme.ts                     # Theme utilities
+
+content/                              # CMS-managed content (TinaCMS edits these)
+  posts/*.mdx                         # Blog posts (MDX)
+  posts/june/*.mdx                    # Posts in subdirectories
+  pages/home.mdx                      # Home page block definitions
+  authors/*.md                        # Author profiles
+  tags/*.mdx                          # Tag definitions
+  global/index.json                   # Site-wide config (header, footer, theme)
+
+tina/
+  config.tsx                          # Main TinaCMS configuration
+  collection/post.tsx                 # Post collection schema
+  collection/page.ts                  # Page collection schema (block-based)
+  collection/author.ts                # Author collection schema
+  collection/tag.ts                   # Tag collection schema
+  collection/global.ts                # Global settings schema
+  fields/color.tsx                    # Custom color picker field
+  fields/icon.tsx                     # Custom icon picker field
+  queries/*.gql                       # GraphQL query/fragment definitions
+  __generated__/                      # AUTO-GENERATED — never edit
+
+lib/utils.ts                          # Utility functions (cn, etc.)
+middleware.ts                         # Next.js middleware
+styles.css                           # Global styles (Tailwind CSS 4)
+next.config.ts                        # Next.js config
+biome.json                            # Biome linter/formatter config
+```
+
+## Where to Look
+
+| Task | Start here |
+|------|-----------|
+| Change post rendering/layout | `app/posts/[...urlSegments]/client-page.tsx` (desktop), `mobile-client-page.tsx` (mobile) |
+| Change home page layout | `app/home-client-page.tsx` (desktop), `app/mobile-home-client-page.tsx` (mobile) |
+| Edit desktop scroll/hero animation | `components/blocks/home-scroll-stage.tsx`, `components/blocks/topo-hero.tsx` |
+| Edit mobile experience | `components/mobile/` directory |
+| Add/change an MDX component | `components/mdx-components.tsx` + template in `tina/collection/post.tsx` |
+| Add a page block type | `tina/collection/page.ts` (schema) + `components/blocks/` (renderer) + `components/blocks/index.tsx` (registry) |
+| Change header/footer/nav | `components/layout/nav/header.tsx` or `footer.tsx` |
+| Change site-wide settings | `content/global/index.json` (values), `tina/collection/global.ts` (schema) |
+| Change TinaCMS schema | `tina/collection/*.ts` — then run `pnpm dev` to regenerate types |
+| Add a new post | Create `.mdx` file in `content/posts/` |
+| Change styles/theme | `styles.css` (global), `components/shared/theme.ts` (theme utils) |
+
 ## Architecture
 
 **TinaCMS + Next.js 15 App Router** blog with server/client split pattern for visual editing.
@@ -30,13 +132,17 @@ Every page follows this structure:
 
 ```
 app/posts/[...urlSegments]/
-├── page.tsx           # Server component — fetches data via client.queries.xxx()
-└── client-page.tsx    # Client component — renders with useTina() hook
+  page.tsx           # Server component — fetches data via client.queries.xxx()
+  client-page.tsx    # Client component — renders with useTina() hook
 ```
 
 **Server component** (`page.tsx`): Calls `client.queries.xxx()`, destructures `{ query, data, variables }`, passes all three to the client component. Handle errors with `notFound()`.
 
 **Client component** (`client-page.tsx`): Marked `"use client"`. Uses `useTina({ query, data, variables })` for live editing. Add `data-tina-field={tinaField(obj, 'fieldName')}` to every editable element.
+
+### Desktop/Mobile Split
+
+The home page and post pages each have separate desktop and mobile client components. The server `page.tsx` passes data to both; the client components handle their own responsive concerns.
 
 ### TinaCMS Collections
 
@@ -55,34 +161,6 @@ Types are auto-generated in `tina/__generated__/` — never edit these files. Im
 ```typescript
 import { PostQuery, PostQueryVariables } from '@/tina/__generated__/types';
 ```
-
-### Key Directories
-
-- `components/blocks/` — Page block components (hero, features, stats, CTA, etc.)
-- `components/ui/` — shadcn/ui components
-- `components/layout/` — Header, footer, section wrappers
-- `components/mdx-components.tsx` — Custom MDX renderers (code blocks, blockquotes, mermaid diagrams, video)
-- `content/` — All CMS-managed content files
-- `tina/config.tsx` — Main TinaCMS configuration
-
-### Home Page Scroll System
-
-The home page uses a pinned scroll orchestrator (`components/blocks/home-scroll-stage.tsx`) with three stacked layers driven by scroll progress:
-
-**Scroll phases** (% of total scroll height = `650 + postCount * 100` vh):
-- **0%–28%**: Hero 3D tilt + layer separation (`progressRef.scroll` 0→1)
-- **20%–40%**: Card transition — bracket slide, untilt, expand to fullscreen (`progressRef.transition` 0→1)
-- **40%–70%**: Hold phase — WILLIAM→IRL collapse, frame sequence, IRL slide-up (`progressRef.hold` 0→1)
-- **70%–76%**: Reveal — hero `clip-path: inset()` crops from fullscreen to card dimensions (640×380), no crossfade
-- **76%–93%**: Card scroll — hero card (still the hero layer) slides down, 5 post cards enter from above as absolutely-positioned elements
-- **93%–100%**: Archive crossfade
-
-**Hero component** (`components/blocks/topo-hero.tsx`):
-- Uses `progressRef` (a shared mutable ref, no React re-renders) driven by GSAP ScrollTrigger
-- Title "I. WILLIAM. R. L" is hardcoded (not from TinaCMS)
-- Hold phase: WILLIAM letters slide up (staggered), width collapses to "I. R. L", then a 96-frame sequence (ornate circle zoom-out) plays via `<canvas>`, with "I. R. L" floating inside the circle before sliding up
-- Frame images in `public/images/irl-frames/` (ezgif-frame-001.jpg through 096.jpg)
-- All animation runs in a `requestAnimationFrame` loop reading directly from progressRef — avoids React re-renders for performance
 
 ### Content Rendering
 
