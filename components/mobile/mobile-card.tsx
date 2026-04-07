@@ -272,11 +272,15 @@ const CARD_CSS = `
     content: attr(data-text);
     position: absolute;
     inset: 0;
-    color: oklch(0.78 0.16 85 / 0.25);
-    text-shadow: 0 0 32px oklch(0.78 0.16 85 / 0.4);
-    transform: translate(3px, 3px);
+    font-family: var(--font-display-block), Impact, sans-serif;
+    font-size: 3rem;
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    color: oklch(0.78 0.16 85 / 0.18);
+    text-shadow: 0 0 40px oklch(0.78 0.16 85 / 0.3);
+    transform: translate(8px, 2px);
     z-index: -1;
-    filter: blur(0.5px);
+    filter: blur(0.3px);
   }
   .mc-glow-left {
     position: absolute;
@@ -309,11 +313,15 @@ const CARD_CSS = `
     content: attr(data-text);
     position: absolute;
     inset: 0;
-    color: oklch(0.45 0.14 240 / 0.25);
-    text-shadow: 0 0 32px oklch(0.45 0.14 240 / 0.4);
-    transform: translate(-3px, 3px);
+    font-family: var(--font-display-block), Impact, sans-serif;
+    font-size: 3rem;
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    color: oklch(0.45 0.14 240 / 0.18);
+    text-shadow: 0 0 40px oklch(0.45 0.14 240 / 0.3);
+    transform: translate(-8px, 2px);
     z-index: -1;
-    filter: blur(0.5px);
+    filter: blur(0.3px);
   }
 `;
 
