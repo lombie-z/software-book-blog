@@ -202,8 +202,8 @@ const CARD_CSS = `
   }
   .mc-back-footer {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 12px;
     padding-top: 12px;
     border-top: 1px solid oklch(0.60 0.10 255 / 0.18);
     margin-top: auto;
@@ -217,60 +217,126 @@ const CARD_CSS = `
   }
   .mc-read-link {
     font-family: var(--font-mono);
-    font-size: 0.56rem;
+    font-size: 0.68rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: oklch(0.65 0.12 255);
     text-decoration: none;
-    padding: 12px 22px;
-    min-height: 44px;
-    display: inline-flex;
+    padding: 14px 24px;
+    min-height: 52px;
+    width: 100%;
+    display: flex;
     align-items: center;
+    justify-content: center;
     border: 1px solid oklch(0.65 0.12 255 / 0.3);
-    border-radius: 2px;
+    border-radius: 4px;
     -webkit-tap-highlight-color: transparent;
-    background: transparent;
+    background: oklch(0.60 0.12 255 / 0.1);
     cursor: pointer;
+    position: relative;
+    z-index: 10;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .mc-read-link:active {
+    background: oklch(0.60 0.12 255 / 0.22);
+    border-color: oklch(0.65 0.12 255 / 0.55);
   }
   .mc-glow-right {
     position: absolute;
     inset: 0;
     border-radius: 16px;
-    background: radial-gradient(ellipse 80% 100% at 90% 50%, oklch(0.78 0.16 85 / 0.28) 0%, transparent 65%);
-    border: 1.5px solid oklch(0.78 0.16 85 / 0.38);
+    background: radial-gradient(ellipse 90% 100% at 88% 50%, oklch(0.78 0.16 85 / 0.45) 0%, transparent 60%);
+    border: 2px solid oklch(0.78 0.16 85 / 0.5);
     pointer-events: none;
     z-index: 5;
     opacity: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 18px;
+  }
+  .mc-glow-right .mc-glow-label-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mc-glow-right .mc-glow-front {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-family: var(--font-heading);
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: oklch(0.96 0.14 85);
+    text-shadow: 0 0 20px oklch(0.78 0.16 85 / 0.5);
+    mix-blend-mode: screen;
+    position: relative;
+    z-index: 1;
+  }
+  .mc-glow-right .mc-glow-echo {
+    position: absolute;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-family: var(--font-display-block), Impact, sans-serif;
+    font-size: 3.2rem;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: oklch(0.78 0.16 85 / 0.28);
+    text-shadow: 0 0 40px oklch(0.78 0.16 85 / 0.35);
+    transform: translateX(-10px);
+    filter: blur(0.3px);
   }
   .mc-glow-left {
     position: absolute;
     inset: 0;
     border-radius: 16px;
-    background: radial-gradient(ellipse 80% 100% at 10% 50%, oklch(0.45 0.12 240 / 0.22) 0%, transparent 65%);
-    border: 1.5px solid oklch(0.45 0.12 240 / 0.3);
+    background: radial-gradient(ellipse 90% 100% at 12% 50%, oklch(0.45 0.14 240 / 0.40) 0%, transparent 60%);
+    border: 2px solid oklch(0.45 0.14 240 / 0.45);
     pointer-events: none;
     z-index: 5;
     opacity: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding-left: 18px;
   }
-  .mc-label {
-    position: absolute;
-    top: auto;
-    bottom: -34px;
-    font-family: var(--font-mono);
-    font-size: 0.66rem;
+  .mc-glow-left .mc-glow-label-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mc-glow-left .mc-glow-front {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-family: var(--font-heading);
+    font-size: 2.4rem;
     font-weight: 700;
-    letter-spacing: 0.24em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    z-index: 6;
-    pointer-events: none;
-    opacity: 0;
-    padding: 4px 10px;
-    border-radius: 2px;
-    border-width: 1.5px;
-    border-style: solid;
+    color: oklch(0.78 0.12 240);
+    text-shadow: 0 0 20px oklch(0.45 0.14 240 / 0.5);
+    mix-blend-mode: screen;
+    position: relative;
+    z-index: 1;
   }
-  .mc-label-save { right: 22px; color: oklch(0.82 0.16 85); border-color: oklch(0.82 0.16 85 / 0.5); }
-  .mc-label-skip { left: 22px;  color: oklch(0.58 0.12 240); border-color: oklch(0.58 0.12 240 / 0.5); }
+  .mc-glow-left .mc-glow-echo {
+    position: absolute;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-family: var(--font-display-block), Impact, sans-serif;
+    font-size: 3.2rem;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: oklch(0.45 0.14 240 / 0.28);
+    text-shadow: 0 0 40px oklch(0.45 0.14 240 / 0.35);
+    transform: translateX(10px);
+    filter: blur(0.3px);
+  }
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -283,8 +349,6 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
   const frontFaceRef = useRef<HTMLDivElement>(null);
   const glowRightRef = useRef<HTMLDivElement>(null);
   const glowLeftRef = useRef<HTMLDivElement>(null);
-  const labelSaveRef = useRef<HTMLSpanElement>(null);
-  const labelSkipRef = useRef<HTMLSpanElement>(null);
 
   // Keep callbacks stable across effect closures
   const cbRef = useRef({ onSwipeRight, onSwipeLeft });
@@ -325,8 +389,6 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
       const left  = Math.max(0, Math.min(1, -dx / SWIPE_THRESHOLD));
       if (glowRightRef.current) glowRightRef.current.style.opacity = String(right);
       if (glowLeftRef.current)  glowLeftRef.current.style.opacity  = String(left);
-      if (labelSaveRef.current) labelSaveRef.current.style.opacity = String(Math.max(0, (dx - 20) / 60));
-      if (labelSkipRef.current) labelSkipRef.current.style.opacity = String(Math.max(0, (-dx - 20) / 60));
       // Interpolate filigree corner color to match the border glow direction
       if (frontFaceRef.current) {
         let color: string;
@@ -352,6 +414,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
 
     const onDown = (e: PointerEvent) => {
       if (state.committed) return;
+      if ((e.target as HTMLElement).closest('.mc-read-link')) return;
       try { el.setPointerCapture(e.pointerId); } catch {}
       state.startX = e.clientX;
       state.startY = e.clientY;
@@ -363,6 +426,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
 
     const onMove = (e: PointerEvent) => {
       if (!state.active) return;
+      if ((e.target as HTMLElement).closest('.mc-read-link')) return;
       state.curX = e.clientX;
       state.curY = e.clientY;
       const dx = e.clientX - state.startX;
@@ -490,10 +554,18 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
         {/* Swipe overlays (top card only) */}
         {stackIndex === 0 && (
           <>
-            <div ref={glowRightRef} className="mc-glow-right" aria-hidden="true" />
-            <div ref={glowLeftRef}  className="mc-glow-left"  aria-hidden="true" />
-            <span ref={labelSaveRef} className="mc-label mc-label-save" aria-hidden="true">SAVE</span>
-            <span ref={labelSkipRef} className="mc-label mc-label-skip" aria-hidden="true">SKIP</span>
+            <div ref={glowRightRef} className="mc-glow-right" aria-hidden="true">
+              <div className="mc-glow-label-wrap">
+                <span className="mc-glow-echo">Read</span>
+                <span className="mc-glow-front">Read</span>
+              </div>
+            </div>
+            <div ref={glowLeftRef} className="mc-glow-left" aria-hidden="true">
+              <div className="mc-glow-label-wrap">
+                <span className="mc-glow-echo">Skip</span>
+                <span className="mc-glow-front">Skip</span>
+              </div>
+            </div>
           </>
         )}
       </div>

@@ -1,6 +1,6 @@
 import React from "react";
 import { Metadata } from "next";
-import { Inter as FontSans, Lato, Nunito } from "next/font/google";
+import { Inter as FontSans, Lato, Nunito, Archivo_Black } from "next/font/google";
 import localFont from "next/font/local";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +20,12 @@ const nunito = Nunito({
 const lato = Lato({
   subsets: ["latin"],
   variable: "--font-lato",
+  weight: "400",
+});
+
+const archivoBlack = Archivo_Black({
+  subsets: ["latin"],
+  variable: "--font-display-block",
   weight: "400",
 });
 
@@ -66,7 +72,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn(fontSans.variable, nunito.variable, lato.variable, lucidaBlackletter.variable)}>
+    <html lang="en" className={cn(fontSans.variable, nunito.variable, lato.variable, lucidaBlackletter.variable, archivoBlack.variable)}>
       <body className="min-h-screen bg-background font-body antialiased">
         {children}
         <TailwindIndicator />

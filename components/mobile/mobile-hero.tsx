@@ -5,7 +5,7 @@ import type { CSSProperties } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type PermState = 'detecting' | 'ios-prompt' | 'requesting' | 'active' | 'touch-fallback';
+type PermState = 'static' | 'detecting' | 'ios-prompt' | 'requesting' | 'active' | 'touch-fallback';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -54,8 +54,12 @@ function FiligreeCorner({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function MobileHero() {
-  const [permState, setPermState] = useState<PermState>('detecting');
+interface MobileHeroProps {
+  onScrollToCards?: () => void;
+}
+
+export function MobileHero({ onScrollToCards }: MobileHeroProps) {
+  const [permState, setPermState] = useState<PermState>('static');
   const [showHint, setShowHint] = useState(false);
 
   const layerRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -64,18 +68,14 @@ export function MobileHero() {
   const currentRef = useRef({ x: 0, y: 0 });
   const gyroCleanupRef = useRef<(() => void) | null>(null);
 
-  // ── Permission detection on mount ─────────────────────────────────────────
-
+  // Detect whether iOS permission API is available (for the toggle button)
+  const [isIOS, setIsIOS] = useState(false);
   useEffect(() => {
-    if (typeof DeviceOrientationEvent === 'undefined') {
-      setPermState('touch-fallback');
-      return;
-    }
-    // iOS 13+ exposes requestPermission as a static method
-    if (typeof (DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission === 'function') {
-      setPermState('ios-prompt');
-    } else {
-      setPermState('active');
+    if (typeof DeviceOrientationEvent !== 'undefined') {
+      const doe = DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> };
+      if (typeof doe.requestPermission === 'function') {
+        setIsIOS(true);
+      }
     }
   }, []);
 
@@ -91,27 +91,35 @@ export function MobileHero() {
     return () => window.removeEventListener('deviceorientation', handler);
   }, []);
 
-  // ── iOS permission request ────────────────────────────────────────────────
+  // ── Enable tilt (toggle button handler) ──────────────────────────────────
 
-  const requestPermission = useCallback(async () => {
-    setPermState('requesting');
-    try {
-      const doe = DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> };
-      const result = await doe.requestPermission();
-      setPermState(result === 'granted' ? 'active' : 'touch-fallback');
-    } catch {
-      setPermState('touch-fallback');
+  const enableTilt = useCallback(async () => {
+    if (isIOS) {
+      setPermState('requesting');
+      try {
+        const doe = DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> };
+        const result = await doe.requestPermission();
+        setPermState(result === 'granted' ? 'active' : 'touch-fallback');
+      } catch {
+        setPermState('touch-fallback');
+      }
+    } else {
+      // Non-iOS: check if DeviceOrientationEvent exists
+      if (typeof DeviceOrientationEvent !== 'undefined') {
+        setPermState('active');
+      } else {
+        setPermState('touch-fallback');
+      }
     }
-  }, []);
+  }, [isIOS]);
 
-  // ── RAF animation loop ────────────────────────────────────────────────────
+  // ── RAF animation loop — only runs when active or touch-fallback ─────────
 
   useEffect(() => {
-    if (permState === 'detecting' || permState === 'ios-prompt' || permState === 'requesting') return;
+    if (permState !== 'active' && permState !== 'touch-fallback') return;
 
     if (permState === 'active') {
       gyroCleanupRef.current = attachGyro();
-      // Show tilt hint briefly
       setShowHint(true);
       const t = setTimeout(() => setShowHint(false), 4000);
       return () => clearTimeout(t);
@@ -124,7 +132,7 @@ export function MobileHero() {
   }, [permState, attachGyro]);
 
   useEffect(() => {
-    if (permState === 'detecting' || permState === 'ios-prompt' || permState === 'requesting') return;
+    if (permState !== 'active' && permState !== 'touch-fallback') return;
 
     const animate = () => {
       currentRef.current.x += (targetRef.current.x - currentRef.current.x) * LERP_ALPHA;
@@ -167,7 +175,7 @@ export function MobileHero() {
   // ── Hint text ─────────────────────────────────────────────────────────────
 
   const hintText = permState === 'touch-fallback' ? 'Drag to explore' : 'Tilt to explore';
-  const showPrompt = permState === 'ios-prompt' || permState === 'requesting';
+  const tiltEnabled = permState === 'active' || permState === 'touch-fallback';
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -313,86 +321,6 @@ export function MobileHero() {
           margin-top: 1.25rem;
         }
 
-        /* ── iOS prompt overlay ── */
-        .mh-prompt-overlay {
-          position: absolute;
-          inset: 0;
-          z-index: 10;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 0.75rem;
-          background: rgba(5, 5, 5, 0.72);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          animation: mh-overlay-in 0.4s ease-out both;
-        }
-
-        @keyframes mh-overlay-in {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-
-        .mh-awaken-wrap {
-          position: relative;
-          padding: 0.25rem;
-          display: inline-flex;
-        }
-
-        .mh-awaken-btn {
-          position: relative;
-          padding: 1.2rem 2.8rem;
-          font-family: var(--font-heading);
-          font-size: 1.05rem;
-          color: rgba(224, 224, 224, 0.88);
-          background: rgba(8, 8, 8, 0.7);
-          border: 1px solid rgba(224, 224, 224, 0.22);
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-          cursor: pointer;
-          outline: none;
-          -webkit-tap-highlight-color: transparent;
-          animation: mh-btn-pulse 3s ease-in-out infinite;
-          transition: border-color 0.2s, color 0.2s, background 0.2s;
-        }
-
-        .mh-awaken-btn:not(:disabled):active {
-          border-color: rgba(224, 224, 224, 0.55);
-          color: rgba(224, 224, 224, 1);
-          background: rgba(20, 20, 20, 0.8);
-        }
-
-        .mh-awaken-btn:disabled {
-          opacity: 0.6;
-          cursor: default;
-          animation: none;
-        }
-
-        @keyframes mh-btn-pulse {
-          0%, 100% {
-            border-color: rgba(224, 224, 224, 0.18);
-            box-shadow:
-              0 0 16px rgba(224, 224, 224, 0.04),
-              inset 0 0 12px rgba(224, 224, 224, 0.02);
-          }
-          50% {
-            border-color: rgba(224, 224, 224, 0.38);
-            box-shadow:
-              0 0 32px rgba(224, 224, 224, 0.08),
-              inset 0 0 20px rgba(224, 224, 224, 0.04);
-          }
-        }
-
-        .mh-prompt-sub {
-          font-family: var(--font-mono);
-          font-size: 0.6rem;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-          color: rgba(224, 224, 224, 0.28);
-          margin-top: 0.25rem;
-        }
-
         /* ── Interaction hint ── */
         .mh-hint {
           position: absolute;
@@ -431,6 +359,62 @@ export function MobileHero() {
           0%, 100% { border-color: rgba(224, 224, 224, 0.00); }
           50%      { border-color: rgba(224, 224, 224, 0.06); }
         }
+
+        /* ── Discover Posts button ── */
+        .mh-discover-btn {
+          position: absolute;
+          bottom: 3.5rem;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 7;
+          font-family: var(--font-mono);
+          font-size: 0.54rem;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          color: rgba(224, 224, 224, 0.5);
+          background: transparent;
+          border: 1px solid rgba(224, 224, 224, 0.15);
+          border-radius: 3px;
+          padding: 10px 20px;
+          cursor: pointer;
+          white-space: nowrap;
+          -webkit-tap-highlight-color: transparent;
+          transition: border-color 0.2s, color 0.2s;
+        }
+        .mh-discover-btn:active {
+          border-color: rgba(224, 224, 224, 0.4);
+          color: rgba(224, 224, 224, 0.8);
+        }
+
+        /* ── Tilt toggle ── */
+        .mh-tilt-toggle {
+          position: absolute;
+          bottom: 1.2rem;
+          right: 1.2rem;
+          z-index: 7;
+          font-family: var(--font-mono);
+          font-size: 0.48rem;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: rgba(224, 224, 224, 0.35);
+          background: rgba(224, 224, 224, 0.04);
+          border: 1px solid rgba(224, 224, 224, 0.10);
+          border-radius: 20px;
+          padding: 6px 14px;
+          cursor: pointer;
+          white-space: nowrap;
+          -webkit-tap-highlight-color: transparent;
+          transition: border-color 0.2s, color 0.2s, background 0.2s;
+        }
+        .mh-tilt-toggle:active {
+          border-color: rgba(224, 224, 224, 0.3);
+          color: rgba(224, 224, 224, 0.6);
+        }
+        .mh-tilt-toggle--active {
+          color: rgba(224, 224, 224, 0.55);
+          border-color: rgba(224, 224, 224, 0.2);
+          background: rgba(224, 224, 224, 0.08);
+        }
       `}</style>
 
       {/* Hidden grain filter */}
@@ -451,45 +435,43 @@ export function MobileHero() {
         <div className="mh-grain" aria-hidden="true" />
 
         {/* Parallax layers — order = paint order (first = furthest back) */}
-        <div className="mh-layer mh-layer-warm"    ref={el => { layerRefs.current[0] = el; }} aria-hidden="true" />
-        <div className="mh-layer mh-layer-portrait" ref={el => { layerRefs.current[1] = el; }} aria-hidden="true" />
-        <div className="mh-layer mh-layer-green"   ref={el => { layerRefs.current[2] = el; }} aria-hidden="true" />
-        <div className="mh-layer mh-layer-frame"   ref={el => { layerRefs.current[3] = el; }} aria-hidden="true" />
+        <div className="mh-layer mh-layer-warm" ref={(el) => { layerRefs.current[0] = el; }} aria-hidden="true" />
+        <div className="mh-layer mh-layer-portrait" ref={(el) => { layerRefs.current[1] = el; }} aria-hidden="true" />
+        <div className="mh-layer mh-layer-green" ref={(el) => { layerRefs.current[2] = el; }} aria-hidden="true" />
+        <div className="mh-layer mh-layer-frame" ref={(el) => { layerRefs.current[3] = el; }} aria-hidden="true" />
 
         {/* Radial vignette */}
         <div className="mh-vignette" aria-hidden="true" />
 
         {/* Title — floats on top with slight counter-parallax */}
-        <div className="mh-layer mh-layer-text" ref={el => { layerRefs.current[4] = el; }}>
+        <div className="mh-layer mh-layer-text" ref={(el) => { layerRefs.current[4] = el; }}>
           <div className="mh-title-block">
             <h1 className="mh-title">I.&thinsp;William.&thinsp;R.&thinsp;L</h1>
             <p className="mh-tagline">Software · Philosophy · Code</p>
           </div>
         </div>
 
-        {/* iOS permission prompt */}
-        {showPrompt && (
-          <div className="mh-prompt-overlay">
-            <div className="mh-awaken-wrap">
-              <FiligreeCorner pos="tl" />
-              <FiligreeCorner pos="tr" />
-              <FiligreeCorner pos="bl" />
-              <FiligreeCorner pos="br" />
-              <button
-                className="mh-awaken-btn"
-                onClick={requestPermission}
-                disabled={permState === 'requesting'}
-                aria-label="Request device orientation access"
-              >
-                {permState === 'requesting' ? 'Awakening\u2026' : '\u2756\u2009Tap to Awaken\u2009\u2756'}
-              </button>
-            </div>
-            <p className="mh-prompt-sub">Allow motion to explore the parallax</p>
-          </div>
+        {/* Discover Posts button */}
+        {onScrollToCards && (
+          <button className="mh-discover-btn" onClick={onScrollToCards}>
+            Discover Posts &darr;
+          </button>
         )}
 
-        {/* Interaction hint — fades automatically */}
-        {showHint && !showPrompt && (
+        {/* Tilt toggle — small pill at bottom-right */}
+        {!tiltEnabled && (
+          <button className="mh-tilt-toggle" onClick={enableTilt} disabled={permState === 'requesting'}>
+            {permState === 'requesting' ? 'Enabling...' : '\u2726 Enable Tilt'}
+          </button>
+        )}
+        {tiltEnabled && (
+          <span className="mh-tilt-toggle mh-tilt-toggle--active">
+            {permState === 'active' ? '\u2726 Tilt On' : '\u2726 Drag Mode'}
+          </span>
+        )}
+
+        {/* Interaction hint — fades automatically (only when tilt/touch is active) */}
+        {showHint && tiltEnabled && (
           <div className="mh-hint" aria-hidden="true">
             {hintText}
           </div>
