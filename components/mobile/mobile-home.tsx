@@ -1,7 +1,7 @@
 'use client';
 
-// MobileHome — Phase 3 update.
-// Wires MobileHero + MobileCardStack + ReadingBucket + ReadingQueue + Walkthrough.
+// MobileHome — Snap-scroll layout.
+// Hero and card sections are separate full-viewport screens.
 // Bucket state persists to sessionStorage for refresh resilience.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -10,7 +10,6 @@ import { MobileHero } from './mobile-hero';
 import { MobileCardStack } from './mobile-card-stack';
 import { ReadingBucket } from './reading-bucket';
 import { ReadingQueue } from './reading-queue';
-import { MobileWalkthrough, useWalkthrough } from './mobile-walkthrough';
 
 type PostEdges = NonNullable<PostConnectionQuery['postConnection']['edges']>;
 type PostEdge  = NonNullable<PostEdges[number]>;
@@ -36,13 +35,63 @@ function saveBucketSlugs(slugs: string[]) {
   try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(slugs)); } catch {}
 }
 
+const SNAP_CSS = `
+  .mh-snap-container {
+    height: 100dvh;
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+    background: oklch(0.145 0 0);
+    color: oklch(0.985 0 0);
+  }
+  .mh-snap-section {
+    scroll-snap-align: start;
+    height: 100svh;
+    min-height: 100svh;
+    position: relative;
+    overflow: hidden;
+  }
+  .mh-cards-screen {
+    display: flex;
+    flex-direction: column;
+    background: oklch(0.145 0 0);
+  }
+  .mh-cards-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 24px 16px;
+    flex-shrink: 0;
+  }
+  .mh-cards-divider-line {
+    flex: 1;
+    height: 1px;
+    background: oklch(0.22 0 0);
+  }
+  .mh-cards-divider-text {
+    font-family: var(--font-mono);
+    font-size: 0.54rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: oklch(0.38 0 0);
+    margin: 0;
+    white-space: nowrap;
+  }
+  .mh-cards-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+`;
+
 export function MobileHome({ posts }: MobileHomeProps) {
   const [bucketSlugs, setBucketSlugs] = useState<string[]>([]);
   const [queueOpen, setQueueOpen] = useState(false);
   const [lastAdded, setLastAdded] = useState(0);
 
+  const snapRef = useRef<HTMLDivElement>(null);
   const cardSectionRef = useRef<HTMLDivElement>(null);
-  const walkthrough = useWalkthrough();
 
   // Hydrate from sessionStorage after mount
   useEffect(() => { setBucketSlugs(loadBucketSlugs()); }, []);
@@ -76,63 +125,50 @@ export function MobileHome({ posts }: MobileHomeProps) {
 
   const handleScrollToCards = useCallback(() => {
     cardSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-    // After scroll settles, trigger walkthrough if not done
-    setTimeout(() => {
-      walkthrough.start();
-    }, 600);
-  }, [walkthrough]);
+  }, []);
 
   return (
-    <main style={{ minHeight: '100dvh', background: 'oklch(0.145 0 0)', color: 'oklch(0.985 0 0)', overflowX: 'hidden' }}>
-      {/* Phase 2: Gyroscope parallax hero */}
-      <MobileHero onScrollToCards={handleScrollToCards} />
+    <>
+      <style>{SNAP_CSS}</style>
+      <main ref={snapRef} className="mh-snap-container">
+        {/* Screen 1: Hero */}
+        <div className="mh-snap-section">
+          <MobileHero onScrollToCards={handleScrollToCards} />
+        </div>
 
-      {/* Section divider */}
-      <div ref={cardSectionRef} id="card-section" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '32px 24px 20px' }}>
-        <span style={{ flex: 1, height: '1px', background: 'oklch(0.22 0 0)' }} />
-        <p style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.54rem',
-          letterSpacing: '0.22em',
-          textTransform: 'uppercase',
-          color: 'oklch(0.38 0 0)',
-          margin: 0,
-          whiteSpace: 'nowrap',
-        }}>
-          {posts.length} Posts — Swipe to Curate
-        </p>
-        <span style={{ flex: 1, height: '1px', background: 'oklch(0.22 0 0)' }} />
-      </div>
+        {/* Screen 2: Card stack */}
+        <div ref={cardSectionRef} className="mh-snap-section mh-cards-screen">
+          {/* Section divider */}
+          <div className="mh-cards-divider">
+            <span className="mh-cards-divider-line" />
+            <p className="mh-cards-divider-text">
+              {posts.length} Posts — Swipe to Curate
+            </p>
+            <span className="mh-cards-divider-line" />
+          </div>
 
-      {/* Phase 3: Tinder-style card stack */}
-      <div style={{ paddingBottom: '40px' }}>
-        <MobileCardStack posts={posts} onSave={handleSave} />
-      </div>
+          {/* Card stack fills remaining space */}
+          <div className="mh-cards-body">
+            <MobileCardStack posts={posts} onSave={handleSave} />
+          </div>
+        </div>
 
-      {/* Floating reading bucket (fixed position, z-index 100) */}
-      <ReadingBucket
-        count={bucketSlugs.length}
-        onOpen={() => setQueueOpen(true)}
-        showHint={lastAdded > 0}
-      />
-
-      {/* Full-screen reading queue overlay */}
-      {queueOpen && (
-        <ReadingQueue
-          posts={bucketPosts}
-          onClose={() => setQueueOpen(false)}
-          onRemove={handleRemove}
+        {/* Floating reading bucket (fixed position, z-index 100) */}
+        <ReadingBucket
+          count={bucketSlugs.length}
+          onOpen={() => setQueueOpen(true)}
+          showHint={lastAdded > 0}
         />
-      )}
 
-      {/* Walkthrough overlay */}
-      {walkthrough.active && (
-        <MobileWalkthrough
-          step={walkthrough.step}
-          onNext={walkthrough.next}
-          onDismiss={walkthrough.dismiss}
-        />
-      )}
-    </main>
+        {/* Full-screen reading queue overlay */}
+        {queueOpen && (
+          <ReadingQueue
+            posts={bucketPosts}
+            onClose={() => setQueueOpen(false)}
+            onRemove={handleRemove}
+          />
+        )}
+      </main>
+    </>
   );
 }

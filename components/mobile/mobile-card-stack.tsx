@@ -17,13 +17,16 @@ const STACK_CSS = `
   .mcs-wrap {
     position: relative;
     width: 100%;
-    padding: 0 24px 80px;
+    height: 100%;
+    padding: 0 24px;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
   }
   .mcs-card-region {
     position: relative;
-    height: 560px;
-    min-height: 380px;
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
   }
@@ -32,24 +35,12 @@ const STACK_CSS = `
     width: 100%;
     flex: 1;
   }
-  .mcs-swipe-hint {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px 22px 0;
-    pointer-events: none;
-  }
-  .mcs-swipe-hint span {
-    font-family: var(--font-mono);
-    font-size: 0.5rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: oklch(0.38 0 0);
-  }
   .mcs-progress {
     display: flex;
     justify-content: center;
     gap: 6px;
-    padding-top: 12px;
+    padding: 12px 0 24px;
+    flex-shrink: 0;
   }
   .mcs-pip {
     width: 4px;
@@ -226,15 +217,6 @@ export function MobileCardStack({ posts, onSave }: MobileCardStackProps) {
           </div>
         </div>
 
-        {/* Hints and pips stay in DOM to avoid layout shift — fade out when done */}
-        <div
-          className="mcs-swipe-hint"
-          aria-hidden="true"
-          style={{ opacity: isEmpty ? 0 : 1, transition: 'opacity 0.3s ease', pointerEvents: 'none' }}
-        >
-          <span>← skip</span>
-          <span>save →</span>
-        </div>
         <div
           className="mcs-progress"
           aria-label={isEmpty ? undefined : `Post ${deckIndex + 1} of ${total}`}

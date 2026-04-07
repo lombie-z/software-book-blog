@@ -245,41 +245,55 @@ const CARD_CSS = `
     position: absolute;
     inset: 0;
     border-radius: 16px;
-    background: radial-gradient(ellipse 80% 100% at 90% 50%, oklch(0.78 0.16 85 / 0.28) 0%, transparent 65%);
-    border: 1.5px solid oklch(0.78 0.16 85 / 0.38);
+    background: radial-gradient(ellipse 90% 100% at 88% 50%, oklch(0.78 0.16 85 / 0.45) 0%, transparent 60%);
+    border: 2px solid oklch(0.78 0.16 85 / 0.5);
     pointer-events: none;
     z-index: 5;
     opacity: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 18px;
+  }
+  .mc-glow-right .mc-glow-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: oklch(0.92 0.16 85);
+    text-shadow: 0 0 24px oklch(0.78 0.16 85 / 0.6);
+    mix-blend-mode: screen;
   }
   .mc-glow-left {
     position: absolute;
     inset: 0;
     border-radius: 16px;
-    background: radial-gradient(ellipse 80% 100% at 10% 50%, oklch(0.45 0.12 240 / 0.22) 0%, transparent 65%);
-    border: 1.5px solid oklch(0.45 0.12 240 / 0.3);
+    background: radial-gradient(ellipse 90% 100% at 12% 50%, oklch(0.45 0.14 240 / 0.40) 0%, transparent 60%);
+    border: 2px solid oklch(0.45 0.14 240 / 0.45);
     pointer-events: none;
     z-index: 5;
     opacity: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding-left: 18px;
   }
-  .mc-label {
-    position: absolute;
-    top: auto;
-    bottom: -34px;
-    font-family: var(--font-mono);
-    font-size: 0.66rem;
+  .mc-glow-left .mc-glow-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
     font-weight: 700;
-    letter-spacing: 0.24em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    z-index: 6;
-    pointer-events: none;
-    opacity: 0;
-    padding: 4px 10px;
-    border-radius: 2px;
-    border-width: 1.5px;
-    border-style: solid;
+    color: oklch(0.72 0.14 240);
+    text-shadow: 0 0 24px oklch(0.45 0.14 240 / 0.6);
+    mix-blend-mode: screen;
   }
-  .mc-label-save { right: 22px; color: oklch(0.82 0.16 85); border-color: oklch(0.82 0.16 85 / 0.5); }
-  .mc-label-skip { left: 22px;  color: oklch(0.58 0.12 240); border-color: oklch(0.58 0.12 240 / 0.5); }
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -292,8 +306,6 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
   const frontFaceRef = useRef<HTMLDivElement>(null);
   const glowRightRef = useRef<HTMLDivElement>(null);
   const glowLeftRef = useRef<HTMLDivElement>(null);
-  const labelSaveRef = useRef<HTMLSpanElement>(null);
-  const labelSkipRef = useRef<HTMLSpanElement>(null);
 
   // Keep callbacks stable across effect closures
   const cbRef = useRef({ onSwipeRight, onSwipeLeft });
@@ -334,8 +346,6 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
       const left  = Math.max(0, Math.min(1, -dx / SWIPE_THRESHOLD));
       if (glowRightRef.current) glowRightRef.current.style.opacity = String(right);
       if (glowLeftRef.current)  glowLeftRef.current.style.opacity  = String(left);
-      if (labelSaveRef.current) labelSaveRef.current.style.opacity = String(Math.max(0, (dx - 20) / 60));
-      if (labelSkipRef.current) labelSkipRef.current.style.opacity = String(Math.max(0, (-dx - 20) / 60));
       // Interpolate filigree corner color to match the border glow direction
       if (frontFaceRef.current) {
         let color: string;
@@ -501,10 +511,12 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
         {/* Swipe overlays (top card only) */}
         {stackIndex === 0 && (
           <>
-            <div ref={glowRightRef} className="mc-glow-right" aria-hidden="true" />
-            <div ref={glowLeftRef}  className="mc-glow-left"  aria-hidden="true" />
-            <span ref={labelSaveRef} className="mc-label mc-label-save" aria-hidden="true">SAVE</span>
-            <span ref={labelSkipRef} className="mc-label mc-label-skip" aria-hidden="true">SKIP</span>
+            <div ref={glowRightRef} className="mc-glow-right" aria-hidden="true">
+              <span className="mc-glow-label">Save</span>
+            </div>
+            <div ref={glowLeftRef} className="mc-glow-left" aria-hidden="true">
+              <span className="mc-glow-label">Skip</span>
+            </div>
           </>
         )}
       </div>
