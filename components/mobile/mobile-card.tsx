@@ -202,8 +202,8 @@ const CARD_CSS = `
   }
   .mc-back-footer {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 12px;
     padding-top: 12px;
     border-top: 1px solid oklch(0.60 0.10 255 / 0.18);
     margin-top: auto;
@@ -217,20 +217,29 @@ const CARD_CSS = `
   }
   .mc-read-link {
     font-family: var(--font-mono);
-    font-size: 0.56rem;
+    font-size: 0.68rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: oklch(0.65 0.12 255);
     text-decoration: none;
-    padding: 12px 22px;
-    min-height: 44px;
-    display: inline-flex;
+    padding: 14px 24px;
+    min-height: 52px;
+    width: 100%;
+    display: flex;
     align-items: center;
+    justify-content: center;
     border: 1px solid oklch(0.65 0.12 255 / 0.3);
-    border-radius: 2px;
+    border-radius: 4px;
     -webkit-tap-highlight-color: transparent;
-    background: transparent;
+    background: oklch(0.60 0.12 255 / 0.1);
     cursor: pointer;
+    position: relative;
+    z-index: 10;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .mc-read-link:active {
+    background: oklch(0.60 0.12 255 / 0.22);
+    border-color: oklch(0.65 0.12 255 / 0.55);
   }
   .mc-glow-right {
     position: absolute;
@@ -352,6 +361,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
 
     const onDown = (e: PointerEvent) => {
       if (state.committed) return;
+      if ((e.target as HTMLElement).closest('.mc-read-link')) return;
       try { el.setPointerCapture(e.pointerId); } catch {}
       state.startX = e.clientX;
       state.startY = e.clientY;
@@ -363,6 +373,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
 
     const onMove = (e: PointerEvent) => {
       if (!state.active) return;
+      if ((e.target as HTMLElement).closest('.mc-read-link')) return;
       state.curX = e.clientX;
       state.curY = e.clientY;
       const dx = e.clientX - state.startX;

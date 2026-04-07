@@ -1,15 +1,16 @@
 'use client';
 
 // MobileHome — Phase 3 update.
-// Wires MobileHero + MobileCardStack + ReadingBucket + ReadingQueue.
+// Wires MobileHero + MobileCardStack + ReadingBucket + ReadingQueue + Walkthrough.
 // Bucket state persists to sessionStorage for refresh resilience.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PageQuery, PostConnectionQuery } from '@/tina/__generated__/types';
 import { MobileHero } from './mobile-hero';
 import { MobileCardStack } from './mobile-card-stack';
 import { ReadingBucket } from './reading-bucket';
 import { ReadingQueue } from './reading-queue';
+import { MobileWalkthrough, useWalkthrough } from './mobile-walkthrough';
 
 type PostEdges = NonNullable<PostConnectionQuery['postConnection']['edges']>;
 type PostEdge  = NonNullable<PostEdges[number]>;
@@ -39,6 +40,9 @@ export function MobileHome({ posts }: MobileHomeProps) {
   const [bucketSlugs, setBucketSlugs] = useState<string[]>([]);
   const [queueOpen, setQueueOpen] = useState(false);
   const [lastAdded, setLastAdded] = useState(0);
+
+  const cardSectionRef = useRef<HTMLDivElement>(null);
+  const walkthrough = useWalkthrough();
 
   // Hydrate from sessionStorage after mount
   useEffect(() => { setBucketSlugs(loadBucketSlugs()); }, []);
@@ -70,13 +74,21 @@ export function MobileHome({ posts }: MobileHomeProps) {
     });
   }, []);
 
+  const handleScrollToCards = useCallback(() => {
+    cardSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // After scroll settles, trigger walkthrough if not done
+    setTimeout(() => {
+      walkthrough.start();
+    }, 600);
+  }, [walkthrough]);
+
   return (
     <main style={{ minHeight: '100dvh', background: 'oklch(0.145 0 0)', color: 'oklch(0.985 0 0)', overflowX: 'hidden' }}>
       {/* Phase 2: Gyroscope parallax hero */}
-      <MobileHero />
+      <MobileHero onScrollToCards={handleScrollToCards} />
 
       {/* Section divider */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '32px 24px 20px' }}>
+      <div ref={cardSectionRef} id="card-section" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '32px 24px 20px' }}>
         <span style={{ flex: 1, height: '1px', background: 'oklch(0.22 0 0)' }} />
         <p style={{
           fontFamily: 'var(--font-mono)',
@@ -110,6 +122,15 @@ export function MobileHome({ posts }: MobileHomeProps) {
           posts={bucketPosts}
           onClose={() => setQueueOpen(false)}
           onRemove={handleRemove}
+        />
+      )}
+
+      {/* Walkthrough overlay */}
+      {walkthrough.active && (
+        <MobileWalkthrough
+          step={walkthrough.step}
+          onNext={walkthrough.next}
+          onDismiss={walkthrough.dismiss}
         />
       )}
     </main>
