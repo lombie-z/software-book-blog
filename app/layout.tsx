@@ -1,6 +1,6 @@
 import React from "react";
 import { Metadata } from "next";
-import { Inter as FontSans, Lato, Nunito, Bebas_Neue } from "next/font/google";
+import { Inter as FontSans, Lato, Nunito, Anton } from "next/font/google";
 import localFont from "next/font/local";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +23,7 @@ const lato = Lato({
   weight: "400",
 });
 
-const bebasNeue = Bebas_Neue({
+const anton = Anton({
   subsets: ["latin"],
   variable: "--font-display-block",
   weight: "400",
@@ -72,7 +72,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn(fontSans.variable, nunito.variable, lato.variable, lucidaBlackletter.variable, bebasNeue.variable)}>
+    <html lang="en" className={cn(fontSans.variable, nunito.variable, lato.variable, lucidaBlackletter.variable, anton.variable)}>
       <body className="min-h-screen bg-background font-body antialiased">
         {children}
         <TailwindIndicator />
