@@ -15,17 +15,26 @@ interface ClientPostProps {
     relativePath: string;
   };
   query: string;
+  titleIndex?: number;
 }
 
 export default function PostClientPage(props: ClientPostProps) {
-  const { data } = useTina({ ...props });
+  const { titleIndex = 0, ...tinaProps } = props;
+  const { data } = useTina({ ...tinaProps });
   const post = data.post;
+
+  // The primary title is index 0; alternate titles follow it.
+  const titles = [post.title, ...((post.alternateTitles ?? []).filter((t): t is string => !!t))];
+  const displayTitle = titles[titleIndex] ?? titles[0];
 
   const date = new Date(post.date!);
   let formattedDate = '';
   if (!isNaN(date.getTime())) {
     formattedDate = format(date, 'MMM dd, yyyy');
   }
+
+  const updated = post.updatedAt ? new Date(post.updatedAt) : null;
+  const formattedUpdated = updated && !isNaN(updated.getTime()) ? format(updated, 'MMM dd, yyyy') : '';
 
   return (
     <ErrorBoundary>
@@ -38,13 +47,13 @@ export default function PostClientPage(props: ClientPostProps) {
             <span aria-hidden="true">&larr;</span> Back to posts
           </Link>
           <h1
-            data-tina-field={tinaField(post, 'title')}
+            data-tina-field={tinaField(post, displayTitle === post.title ? 'title' : 'alternateTitles')}
             className="mb-8 font-heading text-5xl tracking-wide text-[#e0e0e0] md:text-6xl"
           >
-            {post.title}
+            {displayTitle}
           </h1>
 
-          <div data-tina-field={tinaField(post, 'author')} className="mb-16 flex items-center gap-4">
+          <div data-tina-field={tinaField(post, 'author')} className="mb-16 flex flex-wrap items-center gap-x-4 gap-y-2">
             {post.author && (
               <>
                 {post.author.avatar && (
@@ -73,6 +82,14 @@ export default function PostClientPage(props: ClientPostProps) {
             >
               {formattedDate}
             </span>
+            {formattedUpdated && formattedUpdated !== formattedDate && (
+              <>
+                <span className="text-[#e0e0e0]/30">—</span>
+                <span className="font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/50">
+                  Updated {formattedUpdated}
+                </span>
+              </>
+            )}
           </div>
 
           {post.heroImg && (

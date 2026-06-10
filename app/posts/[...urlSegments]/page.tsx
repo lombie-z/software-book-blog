@@ -7,10 +7,14 @@ export const revalidate = 300;
 
 export default async function PostPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ urlSegments: string[] }>;
+  searchParams: Promise<{ title?: string }>;
 }) {
   const resolvedParams = await params;
+  const { title } = await searchParams;
+  const titleIndex = Number.parseInt(title ?? '', 10);
   const filepath = resolvedParams.urlSegments.join('/');
   const data = await client.queries.post({
     relativePath: `${filepath}.mdx`,
@@ -18,13 +22,15 @@ export default async function PostPage({
 
   return (
     <Layout rawPageData={data}>
-      <PostClientPage {...data} />
+      <PostClientPage {...data} titleIndex={Number.isNaN(titleIndex) ? 0 : titleIndex} />
     </Layout>
   );
 }
 
 export async function generateStaticParams() {
-  let posts = await client.queries.postConnection();
+  let posts = await client.queries.postConnection({
+    filter: { draft: { eq: false } },
+  });
   const allPosts = posts;
 
   if (!allPosts.data.postConnection.edges) {
@@ -34,6 +40,7 @@ export async function generateStaticParams() {
   while (posts.data?.postConnection.pageInfo.hasNextPage) {
     posts = await client.queries.postConnection({
       after: posts.data.postConnection.pageInfo.endCursor,
+      filter: { draft: { eq: false } },
     });
 
     if (!posts.data.postConnection.edges) {

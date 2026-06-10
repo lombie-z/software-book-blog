@@ -1,25 +1,58 @@
 import React from 'react';
 import { videoBlockSchema } from '@/components/blocks/video';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import type { Collection } from 'tinacms';
+import type { Collection, Form, TinaCMS } from 'tinacms';
 
 const Post: Collection = {
   label: 'Blog Posts',
   name: 'post',
   path: 'content/posts',
   format: 'mdx',
+  // New posts default to a draft and stay hidden until unchecked.
+  defaultItem: () => ({ draft: true }),
   ui: {
     router: ({ document }) => {
       return `/posts/${document._sys.breadcrumbs.join('/')}`;
     },
+    // Stamp the last-updated time on every save.
+    beforeSubmit: async ({ values }: { form: Form; cms: TinaCMS; values: Record<string, any> }) => {
+      return {
+        ...values,
+        updatedAt: new Date().toISOString(),
+      };
+    },
   },
   fields: [
+    {
+      type: 'boolean',
+      label: 'Draft',
+      name: 'draft',
+      required: true,
+      description: 'When checked, this post is hidden from the live site.',
+    },
     {
       type: 'string',
       label: 'Title',
       name: 'title',
       isTitle: true,
       required: true,
+      description: 'The primary title (shown by default).',
+    },
+    {
+      type: 'string',
+      label: 'Alternate Titles',
+      name: 'alternateTitles',
+      list: true,
+      description: 'Optional extra titles. Append ?title=<index> to the post URL to show one (the primary title is index 0).',
+    },
+    {
+      type: 'datetime',
+      label: 'Last Updated',
+      name: 'updatedAt',
+      description: 'Set automatically on every save.',
+      ui: {
+        component: 'hidden',
+      },
     },
     {
       type: 'image',
