@@ -113,6 +113,10 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
     if (typeof window === 'undefined') return;
 
     const shouldScrollToPosts = window.location.hash === '#posts';
+    // When the hero runs its load-in intro it keeps scroll locked until done.
+    // Skip the lock when deep-linking to posts or reloading mid-scroll — the
+    // hero skips its intro in those cases too.
+    const skipIntroLock = shouldScrollToPosts || window.scrollY > 5;
 
     const lenis = new Lenis({
       lerp: 0.03,
@@ -120,6 +124,35 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
       wheelMultiplier: 5,
     });
     lenisRef.current = lenis;
+
+    // Lock scroll until the hero intro finishes (event name kept in sync with
+    // INTRO_EVENT in topo-hero; inlined to avoid a circular value import).
+    // lenis.stop() alone can't block Chromium's compositor-driven wheel scroll
+    // (preventDefault on wheel isn't a hard stop), so also make the document
+    // physically non-scrollable for the duration of the intro.
+    let unlockTimer: ReturnType<typeof setTimeout> | undefined;
+    let onIntroComplete: (() => void) | undefined;
+    let restoreOverflow: (() => void) | undefined;
+    if (skipIntroLock) {
+      lenis.start();
+    } else {
+      lenis.stop();
+      const html = document.documentElement;
+      const prevOverflow = html.style.overflow;
+      html.style.overflow = 'hidden';
+      restoreOverflow = () => { html.style.overflow = prevOverflow; };
+      let unlocked = false;
+      const unlock = () => {
+        if (unlocked) return;
+        unlocked = true;
+        html.style.overflow = prevOverflow;
+        lenis.start();
+      };
+      onIntroComplete = unlock;
+      window.addEventListener('hero-intro-complete', unlock);
+      // Safety net: never trap the user if the intro never signals.
+      unlockTimer = setTimeout(unlock, 8000);
+    }
 
     // Detect trackpad vs mouse wheel — trackpad sends many small deltas
     let smallDeltaCount = 0;
@@ -174,6 +207,9 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
 
     return () => {
       window.removeEventListener('wheel', detectInput);
+      if (onIntroComplete) window.removeEventListener('hero-intro-complete', onIntroComplete);
+      if (unlockTimer) clearTimeout(unlockTimer);
+      if (restoreOverflow) restoreOverflow();
       gsap.ticker.remove(tickerCallback);
       lenis.destroy();
       lenisRef.current = null;
@@ -806,13 +842,22 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             padding: '0 24px',
           }}
         >
-          {/* That's all SVG */}
+          {/* That's all — gothic blackletter */}
           <div style={{ textAlign: 'center' }}>
-            <img
-              src="/images/hand-drawn/thats-all.svg"
-              alt="That's all"
-              style={{ width: 'clamp(280px, 40vw, 480px)', display: 'block', margin: '0 auto', transform: 'translateX(-24px)' }}
-            />
+            <h2
+              style={{
+                fontFamily: 'var(--font-heading)',
+                fontSize: 'clamp(2.2rem, 6vw, 4.5rem)',
+                fontWeight: 400,
+                lineHeight: 1,
+                margin: 0,
+                color: 'rgba(245, 245, 245, 0.9)',
+                letterSpacing: '0.01em',
+                textShadow: '0 0 24px rgba(224, 224, 224, 0.15)',
+              }}
+            >
+              That&apos;s all
+            </h2>
           </div>
 
           {/* Divider */}
@@ -837,11 +882,8 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                   margin: '0 0 8px',
                 }}
               >
-                Stay in the loop
+                I&apos;ll email these to you?
               </h2>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'rgba(255,255,255,0.28)', letterSpacing: '0.06em' }}>
-                New essays, projects &amp; experiments — no noise.
-              </p>
             </div>
             <form
               onSubmit={(e) => e.preventDefault()}

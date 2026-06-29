@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
+import { gsap } from 'gsap';
 import type { Template } from 'tinacms';
 import { tinaField } from 'tinacms/dist/react';
 import type { PageBlocksTopoHero } from '@/tina/__generated__/types';
@@ -14,6 +15,30 @@ export type CardPost = {
 
 const FRAME_COUNT = 192;
 const FRAME_PATH = '/images/irl-frames/ezgif-frame-';
+
+// ── Load-in intro ──
+// Each hero layer starts hidden + slightly above its rest position, then falls
+// onto the stack (bottom→front) the moment its image loads, with a small
+// stagger. When the whole stack has landed the title fades in, then scroll
+// unlocks (home-scroll-stage keeps Lenis stopped until INTRO_EVENT fires).
+const INTRO_FALL_PX = 50;
+const INTRO_DUR = 0.75; // per-layer fall duration (higher = slower fall)
+const INTRO_STAGGER = 0.1; // spacing between the quick silhouette drops
+const INTRO_FRAME_GAP = 0.6; // pause before the filigree frame falls — its own window
+const INTRO_TEXT_GAP = 0.85; // pause after the frame before the title falls — its own window
+const INTRO_LOAD_TIMEOUT = 2500; // ms before a slow image is dropped anyway
+// Optional artificial extra delay (ms) per gated layer to preview how the
+// cascade looks on a slow connection. Ship with 0 (gated on real image loads).
+const INTRO_SIMULATED_LOAD_MS = 0;
+export const INTRO_EVENT = 'hero-intro-complete';
+// Rest opacities of the silhouette layers (warm, portrait, green, frame)
+const LAYER_REST_OPACITY = [0.6, 0.45, 0.7, 1.0];
+const SILHOUETTE_SRCS = [
+  '/images/hero-silhouette-warm.png',
+  '/images/hero-portrait-photo.png',
+  '/images/hero-silhouette-green.png',
+  '/images/hero-frame.png',
+];
 
 export const TopoHero = ({
   data,
@@ -44,6 +69,13 @@ export const TopoHero = ({
   const breatheStartRef = useRef(0); // timestamp when breathing zone was entered
   const breatheScaleRef = useRef(1); // current breathing scale for frame canvas
 
+  // Intro state — driven by GSAP, read by the animation loop (no re-renders).
+  // cardIntroRef[0] = dark panel, [1..5] = blog cards. layerIntroRef = silhouettes.
+  const introActiveRef = useRef(true);
+  const cardIntroRef = useRef<{ y: number; o: number }[]>([]);
+  const layerIntroRef = useRef<{ y: number; o: number }[]>([]);
+  const textIntroRef = useRef({ y: 0, o: 0 });
+
   // Preload all frame images
   useEffect(() => {
     const frames: HTMLImageElement[] = [];
@@ -70,6 +102,103 @@ export const TopoHero = ({
     return () => window.removeEventListener('resize', update);
   }, []);
 
+  // Initialise intro state before paint so layers start hidden (no flash).
+  // Skip the intro when the page loads mid-scroll or via the #posts deep-link.
+  useLayoutEffect(() => {
+    // No progressRef → no scroll orchestration (e.g. plain page block); show
+    // everything immediately rather than leaving layers stuck hidden.
+    const skip = !progressRef || window.scrollY > 5 || window.location.hash === '#posts';
+    const y = skip ? 0 : -INTRO_FALL_PX;
+    const o = skip ? 1 : 0;
+    cardIntroRef.current = Array.from({ length: 6 }, () => ({ y, o }));
+    layerIntroRef.current = Array.from({ length: 4 }, () => ({ y, o }));
+    textIntroRef.current = { y, o };
+    introActiveRef.current = !skip;
+    if (skip) window.dispatchEvent(new CustomEvent(INTRO_EVENT));
+  }, []);
+
+  // Drive the load-in: drop each layer bottom→front as its image loads, then
+  // reveal the title, then signal scroll-unlock via INTRO_EVENT.
+  useEffect(() => {
+    if (!introActiveRef.current) return; // skipped intro
+    const cardArr = cardPosts?.slice(0, 5) ?? [];
+
+    let cancelled = false;
+    const tweens: gsap.core.Tween[] = [];
+    const fall = (t: { y: number; o: number } | undefined) => {
+      if (t) tweens.push(gsap.to(t, { y: 0, o: 1, duration: INTRO_DUR, ease: 'power3.out' }));
+    };
+
+    // Blog cards sit behind the opaque dark panel and are never visible at
+    // landing, so they aren't gated on their (remote) images — drop them up
+    // front so the visible sequence starts immediately. Their images keep
+    // loading in the background for the later scroll reveal.
+    for (let j = cardArr.length; j >= 1; j--) fall(cardIntroRef.current[j]);
+
+    // Visible stack, bottom→front, each gated on its image load:
+    // dark panel (no image) → warm → portrait → green → frame (filigree).
+    // `gap` = pause (s) before that item drops, so the filigree gets its own window.
+    const lastSil = SILHOUETTE_SRCS.length - 1;
+    const order: { ref: typeof cardIntroRef | typeof layerIntroRef; idx: number; src: string | null; gap?: number }[] = [
+      { ref: cardIntroRef, idx: 0, src: null },
+      ...SILHOUETTE_SRCS.map((src, i) => ({ ref: layerIntroRef, idx: i, src, gap: i === lastSil ? INTRO_FRAME_GAP : undefined })),
+    ];
+
+    const drop = (item: (typeof order)[number]) => fall(item.ref.current[item.idx]);
+
+    const whenLoaded = (src: string | null, cb: () => void) => {
+      // DEBUG: add a fake delay so the cascade is visible even when images are cached.
+      const ready = INTRO_SIMULATED_LOAD_MS > 0 ? () => setTimeout(cb, INTRO_SIMULATED_LOAD_MS) : cb;
+      if (!src) { ready(); return; }
+      let done = false;
+      const finish = () => { if (!done) { done = true; ready(); } };
+      const img = new Image();
+      img.onload = finish;
+      img.onerror = finish;
+      img.src = src;
+      if (img.complete) finish();
+      else setTimeout(finish, INTRO_LOAD_TIMEOUT);
+    };
+
+    const revealText = () => {
+      if (cancelled) return;
+      tweens.push(
+        gsap.to(textIntroRef.current, {
+          y: 0,
+          o: 1,
+          duration: INTRO_DUR,
+          ease: 'power3.out',
+          onComplete: () => {
+            introActiveRef.current = false;
+            window.dispatchEvent(new CustomEvent(INTRO_EVENT));
+          },
+        }),
+      );
+    };
+
+    let i = 0;
+    const next = () => {
+      if (cancelled) return;
+      // Stack fully landed → pause, then the title falls in as its own window.
+      if (i >= order.length) { tweens.push(gsap.delayedCall(INTRO_TEXT_GAP, revealText)); return; }
+      const item = order[i++];
+      whenLoaded(item.src, () => {
+        if (cancelled) return;
+        drop(item);
+        const upcoming = order[i];
+        const lead = upcoming ? (upcoming.gap ?? INTRO_STAGGER) : 0;
+        tweens.push(gsap.delayedCall(lead, next));
+      });
+    };
+    next();
+
+    return () => {
+      cancelled = true;
+      tweens.forEach((t) => t.kill());
+    };
+    // Intro runs once on mount; cardPosts is present from the first render.
+  }, []);
+
   // Animation loop — reads directly from progressRef, no React re-renders
   useEffect(() => {
     if (!progressRef) return;
@@ -94,7 +223,7 @@ export const TopoHero = ({
       // Also keep animating when breathing is active (idle at end of frame sequence)
       const inActiveHold = holdProgress > 0.01 && holdProgress < 0.99;
       const mayBreathe = holdProgress > 0.50; // keep looping in breathing zone
-      if (scrollProgress === lastScroll && transitionProgress === lastTransition && holdProgress === lastHold && !inActiveHold && !mayBreathe) {
+      if (scrollProgress === lastScroll && transitionProgress === lastTransition && holdProgress === lastHold && !inActiveHold && !mayBreathe && !introActiveRef.current) {
         raf = requestAnimationFrame(animate);
         return;
       }
@@ -121,16 +250,26 @@ export const TopoHero = ({
         navSlotRef.current.style.transform = `scale(${invScale}) rotateZ(${-rotZ}deg) rotateX(${-rotX}deg)`;
       }
 
-      // Hero layers: Z separation only (5 layers, all above card stack at Z=-600)
+      // Hero layers: Z separation only (5 layers, all above card stack at Z=-600).
+      // Indices 0–3 are the silhouettes (fall + fade during intro); index 4 is the
+      // text layer, revealed only after the stack has landed (textIntro.o).
       const offsets = [-500, -250, 0, 250, 500];
       layersRef.current.forEach((layer, index) => {
         if (!layer) return;
-        layer.style.transform = `translateZ(${separateProgress * offsets[index]}px)`;
+        if (index < 4) {
+          const intro = layerIntroRef.current[index] ?? { y: 0, o: 1 };
+          layer.style.transform = `translateZ(${separateProgress * offsets[index]}px) translateY(${intro.y}px)`;
+          layer.style.opacity = String(LAYER_REST_OPACITY[index] * intro.o);
+        } else {
+          const tIntro = textIntroRef.current;
+          layer.style.transform = `translateZ(${separateProgress * offsets[index]}px) translateY(${tIntro.y}px)`;
+          layer.style.opacity = String(tIntro.o);
+        }
       });
 
-      // Interface opacity
+      // Interface opacity (held hidden until the intro reveals the title)
       if (interfaceRef.current) {
-        interfaceRef.current.style.opacity = String(1 - tp);
+        interfaceRef.current.style.opacity = String((1 - tp) * textIntroRef.current.o);
       }
 
       // Card layers — index 0 is the dark panel, 1+ are blog post cards
@@ -140,6 +279,8 @@ export const TopoHero = ({
         if (!card) return;
 
         const restZ = -index * 2;
+        const cIntro = cardIntroRef.current[index] ?? { y: 0, o: 1 };
+        card.style.opacity = String(cIntro.o);
 
         if (index === 0) {
           // Dark panel: slides out, comes forward, expands to fullscreen
@@ -165,17 +306,17 @@ export const TopoHero = ({
               borderR = 4 * (1 - p2e);
             }
 
-            card.style.transform = `translateZ(${cardZ}px) translateY(${slideY}px) scale(${cardScale})`;
+            card.style.transform = `translateZ(${cardZ}px) translateY(${slideY + cIntro.y}px) scale(${cardScale})`;
             card.style.borderRadius = `${borderR}px`;
           } else {
-            card.style.transform = `translateZ(${baseZ}px)`;
+            card.style.transform = `translateZ(${baseZ}px) translateY(${cIntro.y}px)`;
             card.style.borderRadius = '';
           }
         } else {
           // Blog post cards: parallax fan only
           const zOffset = restZ + separateProgress * cardOffsets[index];
           const yFan = cardVerticalOffsets[index] * (1 - separateProgress);
-          card.style.transform = `translateZ(${zOffset}px) translateY(${yFan}px)`;
+          card.style.transform = `translateZ(${zOffset}px) translateY(${yFan + cIntro.y}px)`;
         }
       });
 
@@ -646,7 +787,7 @@ export const TopoHero = ({
             <div
               className="topo-card-layer topo-dark-panel"
               ref={(el) => { cardLayersRef.current[0] = el!; }}
-              style={{ background: '#050505' }}
+              style={{ background: '#050505', opacity: progressRef ? 0 : undefined }}
             />
 
             {/* Background blog post cards (parallax only, no expansion) */}
@@ -655,20 +796,20 @@ export const TopoHero = ({
                 key={card.slug}
                 className="topo-card-layer"
                 ref={(el) => { cardLayersRef.current[i + 1] = el!; }}
-                style={{ backgroundImage: `url(${card.heroImg})`, filter: 'brightness(0.4) saturate(0.4)' }}
+                style={{ backgroundImage: `url(${card.heroImg})`, filter: 'brightness(0.4) saturate(0.4)', opacity: progressRef ? 0 : undefined }}
               />
             )).reverse()}
 
-            <div className="topo-layer topo-layer-silhouette-warm" ref={(el) => { layersRef.current[0] = el!; }} />
-            <div className="topo-layer topo-layer-portrait" ref={(el) => { layersRef.current[1] = el!; }} />
-            <div className="topo-layer topo-layer-silhouette-green" ref={(el) => { layersRef.current[2] = el!; }} />
-            <div className="topo-layer topo-layer-frame" ref={(el) => { layersRef.current[3] = el!; }} />
+            <div className="topo-layer topo-layer-silhouette-warm" style={{ opacity: progressRef ? 0 : undefined }} ref={(el) => { layersRef.current[0] = el!; }} />
+            <div className="topo-layer topo-layer-portrait" style={{ opacity: progressRef ? 0 : undefined }} ref={(el) => { layersRef.current[1] = el!; }} />
+            <div className="topo-layer topo-layer-silhouette-green" style={{ opacity: progressRef ? 0 : undefined }} ref={(el) => { layersRef.current[2] = el!; }} />
+            <div className="topo-layer topo-layer-frame" style={{ opacity: progressRef ? 0 : undefined }} ref={(el) => { layersRef.current[3] = el!; }} />
 
             {/* Frame canvas — inside the 3D scene so text layer naturally renders in front via Z-sorting */}
             <canvas ref={frameCanvasRef} className="topo-frame-canvas" />
             <div ref={frameVignetteRef} className="topo-frame-vignette" />
 
-            <div className="topo-layer topo-layer-text" ref={(el) => { layersRef.current[4] = el!; }}>
+            <div className="topo-layer topo-layer-text" style={{ opacity: progressRef ? 0 : undefined }} ref={(el) => { layersRef.current[4] = el!; }}>
               <div className="topo-frame-text">
                 <h1 className="topo-frame-title">
                   <span style={{ whiteSpace: 'pre' }}>{'I. '}</span>
