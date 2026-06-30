@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { Metadata } from 'next';
 import client from '@/tina/__generated__/client';
 import Layout from '@/components/layout/layout';
+import { ResponsiveSwitch } from '@/components/responsive-switch';
 import PostClientPage from './client-page';
 import MobilePostClientPage from './mobile-client-page';
 
@@ -57,16 +58,18 @@ export default async function PostPage({
   });
 
   const headersList = await headers();
-  const isMobile = headersList.get('x-device-type') === 'mobile';
-
-  if (isMobile) {
-    return <MobilePostClientPage {...data} />;
-  }
+  const initialDevice = headersList.get('x-device-type') === 'mobile' ? 'mobile' : 'desktop';
 
   return (
-    <Layout rawPageData={data}>
-      <PostClientPage {...data} />
-    </Layout>
+    <ResponsiveSwitch
+      initialDevice={initialDevice}
+      desktop={
+        <Layout rawPageData={data}>
+          <PostClientPage {...data} />
+        </Layout>
+      }
+      mobile={<MobilePostClientPage {...data} />}
+    />
   );
 }
 
