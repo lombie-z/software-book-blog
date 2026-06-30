@@ -29,11 +29,15 @@ const STACK_CSS = `
     min-height: 0;
     display: flex;
     flex-direction: column;
+    justify-content: center;
   }
   .mcs-stage {
     position: relative;
     width: 100%;
     flex: 1;
+    /* Cap card height on larger phones so cards don't stretch full-screen.
+       Scales with width (keeps a card-like shape) but never exceeds 600px. */
+    max-height: min(600px, calc((100vw - 64px) * 1.55));
   }
   .mcs-progress {
     display: flex;
