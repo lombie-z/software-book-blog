@@ -16,9 +16,12 @@ interface ClientPostProps {
     relativePath: string;
   };
   query: string;
+  // Rendered inside the desktop post overlay (intercepting route): drop the
+  // full-page chrome (back link, min-h-screen, footer) so it sits in the panel.
+  overlay?: boolean;
 }
 
-export default function PostClientPage(props: ClientPostProps) {
+export default function PostClientPage({ overlay, ...props }: ClientPostProps) {
   const { data } = useTina({ ...props });
   const post = data.post;
   const [copied, setCopied] = useState(false);
@@ -43,14 +46,16 @@ export default function PostClientPage(props: ClientPostProps) {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-[#0a0a0a]" style={{ viewTransitionName: 'blog-card' }}>
-        <div className="mx-auto max-w-3xl px-6 pb-28 pt-28">
-          <Link
-            href="/#posts"
-            className="mb-10 inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/50 transition-colors hover:text-[#e0e0e0]"
-          >
-            <span aria-hidden="true">&larr;</span> Back to posts
-          </Link>
+      <div className={overlay ? 'bg-[#0a0a0a]' : 'min-h-screen bg-[#0a0a0a]'}>
+        <div className={`mx-auto max-w-3xl px-6 ${overlay ? 'pb-16 pt-14' : 'pb-28 pt-28'}`}>
+          {!overlay && (
+            <Link
+              href="/#posts"
+              className="mb-10 inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/50 transition-colors hover:text-[#e0e0e0]"
+            >
+              <span aria-hidden="true">&larr;</span> Back to posts
+            </Link>
+          )}
           <h1
             data-tina-field={tinaField(post, 'title')}
             className="mb-8 font-heading text-5xl tracking-wide text-[#e0e0e0] md:text-6xl"
@@ -104,7 +109,7 @@ export default function PostClientPage(props: ClientPostProps) {
           </div>
         </div>
       </div>
-      <SocialFooter />
+      {!overlay && <SocialFooter />}
     </ErrorBoundary>
   );
 }

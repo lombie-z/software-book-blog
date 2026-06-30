@@ -607,6 +607,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             <Link
               href={`/posts/${post.slug}`}
               key={post.slug}
+              scroll={false}
               className='post-card-link'
               data-oc={overlay.name}
               ref={(el) => {

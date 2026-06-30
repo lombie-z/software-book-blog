@@ -68,13 +68,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
+  modal,
 }: {
   children: React.ReactNode;
+  modal: React.ReactNode;
 }) {
   return (
     <html lang="en" className={cn(fontSans.variable, nunito.variable, lato.variable, lucidaBlackletter.variable, archivoBlack.variable)}>
       <body className="min-h-screen bg-background font-body antialiased">
         {children}
+        {modal}
         <TailwindIndicator />
       </body>
     </html>
