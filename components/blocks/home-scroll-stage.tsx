@@ -278,7 +278,9 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
         const earlyCs = reveal > 0 ? Math.pow(reveal, 3) * 0.08 : 0;
         const totalCs = earlyCs + cs;
 
-        const heroTranslateY = cardCount * totalCs * CARD_STEP;
+        // Cards scroll UP as you scroll down (like a normal list and the post
+        // overlay), so the hero exits upward and post cards rise from below.
+        const heroTranslateY = -cardCount * totalCs * CARD_STEP;
 
         // Hero opacity: subtle fade during reveal, stronger fade as it exits
         let heroOpacity = 1;
@@ -320,10 +322,10 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             return;
           }
 
-          // Hero occupies slot 0; post cards start one slot above it (slot -1, -2, …)
-          // so card i=0 enters center only after the hero has scrolled down one step.
+          // Hero occupies slot 0; post cards start one slot below it (slot +1, +2, …)
+          // so card i=0 rises to center only after the hero has scrolled up one step.
           const virtualIdx = postCount - i - 1;
-          const screenTop = (virtualIdx - cardCount * (1 - totalCs)) * CARD_STEP + (viewH - CARD_H) / 2;
+          const screenTop = (cardCount * (1 - totalCs) - virtualIdx) * CARD_STEP + (viewH - CARD_H) / 2;
 
           card.style.opacity = String(cardFade);
           card.style.width = `${cardW}px`;
