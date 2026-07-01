@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
+import Image from 'next/image';
 import Link from 'next/link';
 import { Blocks } from '@/components/blocks';
 import { SocialFooter } from '@/components/social-footer';
@@ -661,15 +662,14 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                 willChange: 'transform, opacity',
               }}
             >
-              <div
+              <Image
+                src={post.heroImg}
+                alt={post.title}
+                fill
+                sizes="640px"
+                loading="eager"
                 className='card-img'
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  backgroundImage: `url(${post.heroImg})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
+                style={{ objectFit: 'cover', objectPosition: 'center' }}
               />
               {/* Color tint overlay — mix-blend-mode:color turns greyscale image into monochrome hue */}
               <div

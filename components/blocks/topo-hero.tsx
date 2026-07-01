@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import NextImage from 'next/image';
 import { gsap } from 'gsap';
 import type { Template } from 'tinacms';
 import { tinaField } from 'tinacms/dist/react';
@@ -796,8 +797,10 @@ export const TopoHero = ({
                 key={card.slug}
                 className="topo-card-layer"
                 ref={(el) => { cardLayersRef.current[i + 1] = el!; }}
-                style={{ backgroundImage: `url(${card.heroImg})`, filter: 'brightness(0.4) saturate(0.4)', opacity: progressRef ? 0 : undefined }}
-              />
+                style={{ filter: 'brightness(0.4) saturate(0.4)', opacity: progressRef ? 0 : undefined }}
+              >
+                <NextImage src={card.heroImg} alt="" fill sizes="800px" loading="eager" style={{ objectFit: 'cover' }} />
+              </div>
             )).reverse()}
 
             <div className="topo-layer topo-layer-silhouette-warm" style={{ opacity: progressRef ? 0 : undefined }} ref={(el) => { layersRef.current[0] = el!; }} />
@@ -830,10 +833,6 @@ export const TopoHero = ({
         </div>
 
       </div>
-
-      {cards.length > 0 && (
-        <link rel="preload" as="image" href={cards[0].heroImg} />
-      )}
     </>
   );
 };
