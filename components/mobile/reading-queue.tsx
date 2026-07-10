@@ -286,7 +286,7 @@ function QueueItem({ post, index, total, onNavigate, onRemove }: QueueItemProps)
   const title = node.title ?? '';
   const heroImg = node.heroImg ?? '';
   const date = node.date
-    ? new Date(node.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? new Date(node.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
     : '';
   const excerptText = richTextToPlain(node.excerpt);
   const readingTime = Math.max(1, Math.ceil(excerptText.split(/\s+/).filter(Boolean).length / 200));

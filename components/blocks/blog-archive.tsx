@@ -89,7 +89,7 @@ export function BlogArchive({ posts, tags }: { posts: PostEdges; tags: TagEdges 
               const node = post?.node;
               if (!node) return null;
               const slug = node._sys.breadcrumbs.join('/');
-              const date = node.date ? new Date(node.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+              const date = node.date ? new Date(node.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }) : '';
               const postTags = node.tags?.map((t) => t?.tag?.name).filter(Boolean) || [];
 
               const cardClip = 'polygon(0 0, 100% 0, 100% calc(100% - 24px), calc(100% - 32px) 100%, 0 100%)';

@@ -358,7 +358,7 @@ export function MobileCard({ post, stackIndex, onSwipeRight, onSwipeLeft }: Mobi
   const title = node.title ?? '';
   const heroImg = node.heroImg ?? '';
   const date = node.date
-    ? new Date(node.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? new Date(node.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
     : '';
   const excerpt = richTextToPlain(node.excerpt);
   const category = node.tags?.[0]?.tag?.name ?? '';

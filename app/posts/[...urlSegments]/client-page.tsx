@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { format } from 'date-fns';
 import { tinaField, useTina } from 'tinacms/dist/react';
 import { TinaMarkdown } from 'tinacms/dist/rich-text';
 import { PostQuery } from '@/tina/__generated__/types';
@@ -29,7 +28,9 @@ export default function PostClientPage({ overlay, ...props }: ClientPostProps) {
   const date = new Date(post.date!);
   let formattedDate = '';
   if (!isNaN(date.getTime())) {
-    formattedDate = format(date, 'MMM dd, yyyy');
+    // Format in UTC so SSR (server TZ) and client (browser TZ) agree — otherwise
+    // the publish date differs across the date boundary and hydration mismatches.
+    formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric', timeZone: 'UTC' });
   }
 
   const handleShare = async () => {

@@ -604,6 +604,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
+                timeZone: 'UTC', // format in UTC so SSR and client agree (no hydration mismatch)
               })
             : '';
           return (

@@ -7,7 +7,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { format } from 'date-fns';
 import { TinaMarkdown } from 'tinacms/dist/rich-text';
 import { Prism } from 'tinacms/dist/rich-text/prism';
 import type { PostQuery } from '@/tina/__generated__/types';
@@ -437,7 +436,7 @@ export default function MobilePostReader({ post }: { post: Post }) {
   const slug = post._sys.breadcrumbs.join('/');
   const title = post.title ?? '';
   const date = post.date && !isNaN(new Date(post.date).getTime())
-    ? format(new Date(post.date), 'MMM dd, yyyy')
+    ? new Date(post.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric', timeZone: 'UTC' })
     : '';
   const category = post.tags?.[0]?.tag?.name ?? '';
   const wordCount = countWords(post._body);
