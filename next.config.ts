@@ -45,6 +45,18 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      // Posts were flattened to single-segment slugs so intercepting-route
+      // modals work on Vercel (catch-all interceptors break in production).
+      // Keep old nested URLs alive.
+      {
+        source: '/posts/june/:slug',
+        destination: '/posts/:slug',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig

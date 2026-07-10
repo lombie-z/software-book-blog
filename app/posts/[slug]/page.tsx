@@ -17,11 +17,10 @@ function extractText(node: any): string {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ urlSegments: string[] }>;
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const resolvedParams = await params;
-  const filepath = resolvedParams.urlSegments.join('/');
-  const { data } = await client.queries.post({ relativePath: `${filepath}.mdx` });
+  const { slug } = await params;
+  const { data } = await client.queries.post({ relativePath: `${slug}.mdx` });
   const post = data.post;
   const description = post.excerpt ? extractText(post.excerpt).slice(0, 160).trim() : undefined;
   const ogImage = post.heroImg || '/images/hero-portrait.png';
@@ -49,12 +48,11 @@ export const revalidate = 300;
 export default async function PostPage({
   params,
 }: {
-  params: Promise<{ urlSegments: string[] }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const resolvedParams = await params;
-  const filepath = resolvedParams.urlSegments.join('/');
+  const { slug } = await params;
   const data = await client.queries.post({
-    relativePath: `${filepath}.mdx`,
+    relativePath: `${slug}.mdx`,
   });
 
   const headersList = await headers();
@@ -95,7 +93,7 @@ export async function generateStaticParams() {
 
   const params =
     allPosts.data?.postConnection.edges.map((edge) => ({
-      urlSegments: edge?.node?._sys.breadcrumbs,
+      slug: edge?.node?._sys.breadcrumbs.join('/'),
     })) || [];
 
   return params;

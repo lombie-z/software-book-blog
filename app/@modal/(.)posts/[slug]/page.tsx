@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import client from '@/tina/__generated__/client';
-import PostClientPage from '@/app/posts/[...urlSegments]/client-page';
-import MobilePostClientPage from '@/app/posts/[...urlSegments]/mobile-client-page';
+import PostClientPage from '@/app/posts/[slug]/client-page';
+import MobilePostClientPage from '@/app/posts/[slug]/mobile-client-page';
 import { PostOverlay } from '@/components/post-overlay';
 
 // Intercepts in-app navigations to /posts/* and renders the post in the @modal
@@ -10,11 +10,10 @@ import { PostOverlay } from '@/components/post-overlay';
 export default async function InterceptedPost({
   params,
 }: {
-  params: Promise<{ urlSegments: string[] }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { urlSegments } = await params;
-  const filepath = urlSegments.join('/');
-  const data = await client.queries.post({ relativePath: `${filepath}.mdx` });
+  const { slug } = await params;
+  const data = await client.queries.post({ relativePath: `${slug}.mdx` });
 
   const isMobile = (await headers()).get('x-device-type') === 'mobile';
 
