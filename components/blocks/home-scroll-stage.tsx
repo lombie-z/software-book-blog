@@ -1,11 +1,12 @@
 'use client';
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Blocks } from '@/components/blocks';
+import { PostOverlay } from '@/components/post-overlay';
 import { SocialFooter } from '@/components/social-footer';
 import type { Page, PostConnectionQuery } from '@/tina/__generated__/types';
 import type { CardPost } from './topo-hero';
@@ -108,6 +109,35 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
       date: p!.node!.date ?? '',
       tag: p!.node!.tags?.[0]?.tag?.name ?? '',
     }));
+
+  // Desktop post overlay — open a post in a client-side modal (no intercepting
+  // routes; those crash the router on Vercel). The URL is synced via the history
+  // API so the modal is shareable and the browser back button closes it; a
+  // direct visit / refresh loads the real /posts/[slug] page instead.
+  const [modalSlug, setModalSlug] = useState<string | null>(null);
+
+  const syncModalToUrl = useCallback(() => {
+    const m = window.location.pathname.match(/^\/posts\/([^/?#]+)/);
+    setModalSlug(m ? decodeURIComponent(m[1]) : null);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('popstate', syncModalToUrl);
+    return () => window.removeEventListener('popstate', syncModalToUrl);
+  }, [syncModalToUrl]);
+
+  const openPost = useCallback((slug: string) => {
+    window.history.pushState({ postModal: slug }, '', `/posts/${slug}`);
+    setModalSlug(slug);
+  }, []);
+
+  const closePost = useCallback(() => {
+    // Undo our pushState so the browser back-stack stays clean and the home
+    // scroll position is preserved; fall back to replacing the URL.
+    if (window.history.state?.postModal) window.history.back();
+    else window.history.replaceState(null, '', '/');
+    setModalSlug(null);
+  }, []);
 
   // Lenis smooth scroll
   useLayoutEffect(() => {
@@ -611,11 +641,17 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
             <Link
               href={`/posts/${post.slug}`}
               key={post.slug}
-              scroll={false}
               className='post-card-link'
               data-oc={overlay.name}
               ref={(el) => {
                 postCardRefs.current[i] = el;
+              }}
+              onClick={(e) => {
+                // Let modified clicks (new tab, etc.) and non-primary buttons
+                // fall through to a normal navigation; otherwise open the overlay.
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                e.preventDefault();
+                openPost(post.slug);
               }}
               onMouseEnter={() => {
                 // Tint only this color group's assigned panels, all the same color
@@ -637,19 +673,6 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                   el.style.opacity = '0';
                 });
               }}
-              // onClick={(e) => {
-              //   const el = e.currentTarget;
-              //   if (!document.startViewTransition) return;
-              //   e.preventDefault();
-              //   el.style.viewTransitionName = 'blog-card';
-              //   const transition = document.startViewTransition(() => {
-              //     el.style.viewTransitionName = '';
-              //     return router.push(`/posts/${post.slug}`) as unknown as Promise<void>;
-              //   });
-              //   transition.finished.then(() => {
-              //     el.style.viewTransitionName = '';
-              //   });
-              // }
               style={{
                 position: 'absolute',
                 top: 0,
@@ -934,6 +957,9 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
           </div>
         </div>
       </div>
+
+      {/* Desktop post overlay — client-side modal, no intercepting routes */}
+      {modalSlug && <PostOverlay key={modalSlug} slug={modalSlug} onRequestClose={closePost} />}
     </div>
   );
 }

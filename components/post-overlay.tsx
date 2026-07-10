@@ -1,12 +1,14 @@
 'use client';
 
-import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import PostClientPage from '@/app/posts/[slug]/client-page';
+import type { PostQuery } from '@/tina/__generated__/types';
 
-// Desktop post overlay. Rendered in the @modal parallel-route slot by the
-// intercepting route, so the home stays mounted underneath and closing
-// (router.back) returns to the exact scroll position. `data-lenis-prevent`
-// lets the panel scroll natively while the home's Lenis ignores it.
+// Desktop post overlay. Rendered directly on the home page (not via a parallel/
+// intercepting route — those crash the router on Vercel). It fetches the post's
+// Tina query result from /api/post and renders it in a centred panel while the
+// home stays mounted underneath. `data-lenis-prevent` lets the panel scroll
+// natively while the home's Lenis ignores it.
 const CSS = `
   .po-root {
     position: fixed;
@@ -109,9 +111,14 @@ const CSS = `
 
 const EXIT_MS = 360;
 
-export function PostOverlay({ children }: { children: ReactNode }) {
-  const router = useRouter();
+type PostProps = { data: PostQuery; query: string; variables: { relativePath: string } };
+
+// `onRequestClose` is called after the exit animation finishes — the parent
+// then restores the URL (history.back) and unmounts this.
+export function PostOverlay({ slug, onRequestClose }: { slug: string; onRequestClose: () => void }) {
   const [open, setOpen] = useState(false);
+  const [post, setPost] = useState<PostProps | null>(null);
+  const [failed, setFailed] = useState(false);
   const closingRef = useRef(false);
 
   // Animate in on mount.
@@ -120,12 +127,30 @@ export function PostOverlay({ children }: { children: ReactNode }) {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // Fetch the post for this slug.
+  useEffect(() => {
+    let cancelled = false;
+    setPost(null);
+    setFailed(false);
+    fetch(`/api/post?slug=${encodeURIComponent(slug)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d) => {
+        if (!cancelled) setPost(d);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
   const close = useCallback(() => {
     if (closingRef.current) return;
     closingRef.current = true;
     setOpen(false); // play the exit transition
-    window.setTimeout(() => router.back(), EXIT_MS);
-  }, [router]);
+    window.setTimeout(onRequestClose, EXIT_MS);
+  }, [onRequestClose]);
 
   // Esc closes.
   useEffect(() => {
@@ -144,7 +169,15 @@ export function PostOverlay({ children }: { children: ReactNode }) {
         <button type="button" className="po-close" aria-label="Close post" onClick={close}>
           ✕
         </button>
-        <div className="po-scroll">{children}</div>
+        <div className="po-scroll">
+          {post ? (
+            <PostClientPage {...post} overlay />
+          ) : (
+            <div style={{ display: 'flex', minHeight: '40vh', alignItems: 'center', justifyContent: 'center', color: 'rgba(224,224,224,0.5)', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', letterSpacing: '0.1em' }}>
+              {failed ? 'Failed to load post.' : 'Loading…'}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
