@@ -107,7 +107,50 @@ const CSS = `
   @media (prefers-reduced-motion: reduce) {
     .po-panel, .po-backdrop { transition-duration: 0.01s; }
   }
+
+  /* Loading skeleton — mirrors the post layout, gold sheen sweep. Fades out
+     when the real content mounts so the swap reads as a reveal, not a pop. */
+  .po-skel {
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: 56px 24px 64px;
+  }
+
+  /* Loaded content fades/rises in so the skeleton→post swap reads as a reveal. */
+  .po-content-in { animation: po-fade-in 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+  @keyframes po-fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .po-skel-block {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    background: oklch(0.78 0.10 85 / 0.055);
+  }
+  .po-skel-block::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent 0%, oklch(0.86 0.08 85 / 0.11) 50%, transparent 100%);
+    animation: po-sheen 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  @keyframes po-sheen { to { transform: translateX(100%); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .po-skel-block::after { animation: none; }
+    .po-content-in { animation: none; }
+  }
 `;
+
+const SKELETON_LINES = [
+  { w: '100%', h: 15 },
+  { w: '96%', h: 15 },
+  { w: '88%', h: 15 },
+  { w: '40%', h: 15 },
+];
 
 const EXIT_MS = 360;
 
@@ -170,11 +213,27 @@ export function PostOverlay({ slug, onRequestClose }: { slug: string; onRequestC
           ✕
         </button>
         <div className="po-scroll">
-          {post ? (
-            <PostClientPage {...post} overlay />
+          {failed ? (
+            <div style={{ display: 'flex', minHeight: '40vh', alignItems: 'center', justifyContent: 'center', color: 'oklch(0.85 0.04 85 / 0.6)', fontFamily: 'var(--font-heading)', fontSize: '1.1rem', letterSpacing: '0.03em' }}>
+              This post could not be summoned.
+            </div>
+          ) : post ? (
+            <div className="po-content-in">
+              <PostClientPage {...post} overlay />
+            </div>
           ) : (
-            <div style={{ display: 'flex', minHeight: '40vh', alignItems: 'center', justifyContent: 'center', color: 'rgba(224,224,224,0.5)', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', letterSpacing: '0.1em' }}>
-              {failed ? 'Failed to load post.' : 'Loading…'}
+            <div className="po-skel" aria-hidden="true">
+              {/* title */}
+              <div className="po-skel-block" style={{ width: '82%', height: 44, marginBottom: 14 }} />
+              <div className="po-skel-block" style={{ width: '55%', height: 44, marginBottom: 32 }} />
+              {/* meta row */}
+              <div className="po-skel-block" style={{ width: '30%', height: 12, marginBottom: 40 }} />
+              {/* hero image */}
+              <div className="po-skel-block" style={{ width: '100%', aspectRatio: '16 / 9', marginBottom: 40, borderRadius: 12 }} />
+              {/* body lines */}
+              {SKELETON_LINES.map((l, i) => (
+                <div key={i} className="po-skel-block" style={{ width: l.w, height: l.h, marginBottom: 16 }} />
+              ))}
             </div>
           )}
         </div>
