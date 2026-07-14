@@ -101,7 +101,7 @@ export function MobileHero({ onScrollToCards }: MobileHeroProps) {
 
         <div className="mh-title-block">
           <h1 className="mh-title">I.&thinsp;William.&thinsp;R.&thinsp;L.</h1>
-          <p className="mh-tagline">Software · Philosophy · Code</p>
+          <p className="mh-tagline">Thinking, and thinking about software</p>
         </div>
 
         {onScrollToCards && (
