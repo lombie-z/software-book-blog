@@ -16,7 +16,11 @@ const CSS = `
     inset: 0;
     z-index: 1000;
     display: flex;
-    align-items: center;
+    /* Top-anchored (not centred): posts vary a lot in length, so the panel
+       height changes between the skeleton and the loaded post. Centring made
+       that change expand symmetrically and shift the header; anchoring to the
+       top pins the reading position so any height change extends downward. */
+    align-items: flex-start;
     justify-content: center;
     padding: 4vh 16px;
   }
@@ -152,12 +156,10 @@ const CSS = `
   }
 `;
 
-const SKELETON_LINES = [
-  { w: '100%', h: 15 },
-  { w: '96%', h: 15 },
-  { w: '88%', h: 15 },
-  { w: '40%', h: 15 },
-];
+// Enough lines (in paragraph-ish groups) to roughly fill the reading pane, so
+// the panel opens close to a real post's height and barely grows on load. A
+// group-ending short line gets a larger gap after it to read as a paragraph.
+const SKELETON_LINES = ['100%', '96%', '92%', '40%', '100%', '98%', '88%', '55%', '100%', '94%', '90%', '38%', '100%', '96%', '84%', '48%'];
 
 const EXIT_MS = 360;
 
@@ -275,8 +277,8 @@ export function PostOverlay({ slug, title, heroImg, date, onRequestClose }: { sl
                     ) : (
                       <div className="po-skel-block" style={{ width: '100%', aspectRatio: '16 / 9', marginBottom: 64, borderRadius: 8 }} />
                     )}
-                    {SKELETON_LINES.map((l, i) => (
-                      <div key={i} className="po-skel-block" style={{ width: l.w, height: l.h, marginBottom: 16 }} />
+                    {SKELETON_LINES.map((w, i) => (
+                      <div key={i} className="po-skel-block" style={{ width: w, height: 15, marginBottom: Number.parseInt(w, 10) < 65 ? 30 : 16 }} />
                     ))}
                   </div>
                 </div>
