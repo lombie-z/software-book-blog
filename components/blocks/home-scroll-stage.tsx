@@ -119,11 +119,16 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
   // in its final position (no shift on load). Null when opened via back/forward,
   // where only the slug is known — the skeleton falls back to a title bar.
   const [modalTitle, setModalTitle] = useState<string | null>(null);
+  // Hero of the clicked card. Its 640px next/image variant is already cached
+  // (the card rendered it), so the overlay can show it instantly as a low-res
+  // base while the full-res hero loads. Null on back/forward (slug-only).
+  const [modalHero, setModalHero] = useState<string | null>(null);
 
   const syncModalToUrl = useCallback(() => {
     const m = window.location.pathname.match(/^\/posts\/([^/?#]+)/);
     setModalSlug(m ? decodeURIComponent(m[1]) : null);
     setModalTitle(null);
+    setModalHero(null);
   }, []);
 
   useEffect(() => {
@@ -131,10 +136,11 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
     return () => window.removeEventListener('popstate', syncModalToUrl);
   }, [syncModalToUrl]);
 
-  const openPost = useCallback((slug: string, title: string) => {
+  const openPost = useCallback((slug: string, title: string, heroImg: string) => {
     window.history.pushState({ postModal: slug }, '', `/posts/${slug}`);
     setModalSlug(slug);
     setModalTitle(title);
+    setModalHero(heroImg);
   }, []);
 
   const closePost = useCallback(() => {
@@ -657,7 +663,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                 // fall through to a normal navigation; otherwise open the overlay.
                 if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
                 e.preventDefault();
-                openPost(post.slug, post.title);
+                openPost(post.slug, post.title, post.heroImg);
               }}
               onMouseEnter={() => {
                 // Tint only this color group's assigned panels, all the same color
@@ -965,7 +971,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
       </div>
 
       {/* Desktop post overlay — client-side modal, no intercepting routes */}
-      {modalSlug && <PostOverlay key={modalSlug} slug={modalSlug} title={modalTitle} onRequestClose={closePost} />}
+      {modalSlug && <PostOverlay key={modalSlug} slug={modalSlug} title={modalTitle} heroImg={modalHero} onRequestClose={closePost} />}
     </div>
   );
 }

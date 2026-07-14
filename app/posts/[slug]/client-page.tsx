@@ -93,7 +93,19 @@ export default function PostClientPage({ overlay, ...props }: ClientPostProps) {
           </div>
 
           {post.heroImg && (
-            <div data-tina-field={tinaField(post, 'heroImg')} className="mb-16">
+            <div data-tina-field={tinaField(post, 'heroImg')} className="relative mb-16">
+              {/* Low-res base (matches the home card's 640px variant, so it's
+                  already cached and paints instantly). The full-res layer fades
+                  in over it on load — no blank box, no pop. Doubles as a blur-up
+                  on the full post page where the card image isn't cached. */}
+              <Image
+                src={post.heroImg}
+                alt=""
+                aria-hidden
+                fill
+                sizes="640px"
+                className="rounded-lg object-cover"
+              />
               <Image
                 ref={heroRef}
                 priority={true}
@@ -102,7 +114,7 @@ export default function PostClientPage({ overlay, ...props }: ClientPostProps) {
                 width={1200}
                 height={675}
                 onLoad={() => setHeroLoaded(true)}
-                className="w-full rounded-lg object-cover transition-opacity duration-500 ease-out"
+                className="relative w-full rounded-lg object-cover transition-opacity duration-500 ease-out"
                 style={{ opacity: heroLoaded ? 1 : 0 }}
               />
             </div>

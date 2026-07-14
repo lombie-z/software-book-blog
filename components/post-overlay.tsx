@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import PostClientPage from '@/app/posts/[slug]/client-page';
 import type { PostQuery } from '@/tina/__generated__/types';
@@ -144,7 +145,7 @@ type PostProps = { data: PostQuery; query: string; variables: { relativePath: st
 // then restores the URL (history.back) and unmounts this. `title` is the
 // clicked card's title (null when opened via back/forward): when present the
 // skeleton renders it in its final position so the title never shifts on load.
-export function PostOverlay({ slug, title, onRequestClose }: { slug: string; title?: string | null; onRequestClose: () => void }) {
+export function PostOverlay({ slug, title, heroImg, onRequestClose }: { slug: string; title?: string | null; heroImg?: string | null; onRequestClose: () => void }) {
   const [open, setOpen] = useState(false);
   const [post, setPost] = useState<PostProps | null>(null);
   const [failed, setFailed] = useState(false);
@@ -222,8 +223,15 @@ export function PostOverlay({ slug, title, onRequestClose }: { slug: string; tit
               )}
               {/* meta row — matches the real row's ~30px height + mb-16 */}
               <div className="po-skel-block" style={{ width: '40%', height: 30, marginBottom: 64 }} />
-              {/* hero image — mb-16 */}
-              <div className="po-skel-block" style={{ width: '100%', aspectRatio: '16 / 9', marginBottom: 64, borderRadius: 12 }} />
+              {/* hero image — the card's 640px variant is cached, so it paints
+                  instantly instead of a gray block; mb-16 */}
+              {heroImg ? (
+                <div style={{ position: 'relative', width: '100%', aspectRatio: '16 / 9', marginBottom: 64, borderRadius: 12, overflow: 'hidden' }}>
+                  <Image src={heroImg} alt="" fill sizes="640px" style={{ objectFit: 'cover' }} />
+                </div>
+              ) : (
+                <div className="po-skel-block" style={{ width: '100%', aspectRatio: '16 / 9', marginBottom: 64, borderRadius: 12 }} />
+              )}
               {/* body lines */}
               {SKELETON_LINES.map((l, i) => (
                 <div key={i} className="po-skel-block" style={{ width: l.w, height: l.h, marginBottom: 16 }} />
