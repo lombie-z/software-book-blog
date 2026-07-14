@@ -54,10 +54,14 @@ const CSS = `
 
   .po-scroll {
     max-height: 92vh;
-    overflow-y: auto;
+    /* overflow-y: scroll (not auto) so the styled scrollbar's 9px lane is
+       ALWAYS reserved. With auto, the classic scrollbar (forced by styling
+       ::-webkit-scrollbar) only appears once the loaded post overflows, which
+       shrinks the content area and shifts the centred header sideways — the
+       shift you see on skeleton→content. scrollbar-gutter covers browsers that
+       honour it (Safari <18.2 didn't); scroll covers the rest. */
+    overflow-y: scroll;
     overscroll-behavior: contain;
-    /* Reserve a gutter so the scrollbar gets its own lane (content + close
-       button never sit under it), and keep it thin/themed. */
     scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: oklch(0.78 0.10 85 / 0.35) transparent;

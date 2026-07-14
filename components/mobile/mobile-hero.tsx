@@ -446,7 +446,7 @@ export function MobileHero({ onScrollToCards }: MobileHeroProps) {
         {/* Title — floats on top with slight counter-parallax */}
         <div className="mh-layer mh-layer-text" ref={(el) => { layerRefs.current[4] = el; }}>
           <div className="mh-title-block">
-            <h1 className="mh-title">I.&thinsp;William.&thinsp;R.&thinsp;L</h1>
+            <h1 className="mh-title">I.&thinsp;William.&thinsp;R.&thinsp;L.</h1>
             <p className="mh-tagline">Software · Philosophy · Code</p>
           </div>
         </div>

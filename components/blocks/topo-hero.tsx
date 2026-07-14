@@ -822,7 +822,7 @@ export const TopoHero = ({
                     ))}
                     <span className="topo-william-tail">{'. '}</span>
                   </span>
-                  <span style={{ whiteSpace: 'pre' }}>{'R. L'}</span>
+                  <span style={{ whiteSpace: 'pre' }}>{'R. L.'}</span>
                 </h1>
                 {data.tagline && (
                   <p className="topo-frame-tagline">{data.tagline}</p>
