@@ -132,6 +132,24 @@ const CSS = `
   @media (prefers-reduced-motion: reduce) {
     .po-skel-block::after { animation: none; }
   }
+
+  /* Skeleton→content cross-dissolve. The content is stacked ABOVE the skeleton
+     and fades in while the skeleton stays fully opaque underneath, then the
+     skeleton unmounts. The header (title/meta/hero) is pixel-identical in both
+     — and the hero is the same cached image — so the overlap reads as solid;
+     the content's opaque background occludes the skeleton once it's at full
+     opacity. This avoids the 1-frame blank from tearing down the hero <img>. */
+  .po-stack { position: relative; }
+  .po-skel-layer.po-skel-abs { position: absolute; inset: 0; z-index: 0; }
+  .po-content-fade {
+    position: relative;
+    z-index: 1;
+    animation: po-fade-in 0.45s ease-out;
+  }
+  @keyframes po-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .po-content-fade { animation: none; }
+  }
 `;
 
 const SKELETON_LINES = [
@@ -153,6 +171,8 @@ export function PostOverlay({ slug, title, heroImg, date, onRequestClose }: { sl
   const [open, setOpen] = useState(false);
   const [post, setPost] = useState<PostProps | null>(null);
   const [failed, setFailed] = useState(false);
+  // Keep the skeleton mounted (behind the content) until the cross-fade finishes.
+  const [showSkel, setShowSkel] = useState(true);
   const closingRef = useRef(false);
 
   // Animate in on mount.
@@ -160,6 +180,13 @@ export function PostOverlay({ slug, title, heroImg, date, onRequestClose }: { sl
     const raf = requestAnimationFrame(() => setOpen(true));
     return () => cancelAnimationFrame(raf);
   }, []);
+
+  // Once the post is in and has cross-faded over the skeleton, drop the skeleton.
+  useEffect(() => {
+    if (!post) return;
+    const t = window.setTimeout(() => setShowSkel(false), 500);
+    return () => window.clearTimeout(t);
+  }, [post]);
 
   // Fetch the post for this slug.
   useEffect(() => {
@@ -213,51 +240,52 @@ export function PostOverlay({ slug, title, heroImg, date, onRequestClose }: { sl
             <div style={{ display: 'flex', minHeight: '40vh', alignItems: 'center', justifyContent: 'center', color: 'oklch(0.85 0.04 85 / 0.6)', fontFamily: 'var(--font-heading)', fontSize: '1.1rem', letterSpacing: '0.03em' }}>
               This post could not be summoned.
             </div>
-          ) : post ? (
-            // No wrapper fade: the title is already in place from the skeleton,
-            // so re-fading it would flash. The hero fades on its own load and
-            // the body/meta resolve in place from the skeleton bars.
-            <PostClientPage {...post} overlay />
           ) : (
-            // Mirrors PostClientPage's overlay layout exactly (same container,
-            // same h1 classes/margins) so the swap to real content doesn't shift.
-            <div className="mx-auto max-w-3xl px-6 pb-16 pt-14" aria-hidden={title ? undefined : true}>
-              {title ? (
-                <h1 className="mb-8 font-heading text-5xl tracking-wide text-[#e0e0e0] md:text-6xl">{title}</h1>
-              ) : (
-                <>
-                  <div className="po-skel-block" style={{ width: '82%', height: 44, marginBottom: 14 }} />
-                  <div className="po-skel-block" style={{ width: '55%', height: 44, marginBottom: 32 }} />
-                </>
-              )}
-              {/* meta row — real date + share button, identical markup to
-                  PostClientPage so it doesn't shift when the post loads */}
-              <div className="mb-16 flex items-center justify-between gap-4">
-                <span className="font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/50">{formattedDate}</span>
-                <span
-                  className="inline-flex items-center gap-2 rounded border border-[#e0e0e0]/15 bg-transparent px-3 py-1.5 font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/50"
-                  aria-hidden="true"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-                  </svg>
-                  Share
-                </span>
-              </div>
-              {/* hero image — the card's 640px variant is cached, so it paints
-                  instantly instead of a gray block; mb-16 */}
-              {heroImg ? (
-                <div style={{ position: 'relative', width: '100%', aspectRatio: '16 / 9', marginBottom: 64, borderRadius: 8, overflow: 'hidden' }}>
-                  <Image src={heroImg} alt="" fill sizes="640px" style={{ objectFit: 'cover' }} />
+            <div className="po-stack">
+              {/* Skeleton layer — stays mounted (and, once content is in, sits
+                  absolutely behind it) until the cross-fade finishes. Mirrors
+                  PostClientPage's overlay layout exactly (same container, h1
+                  classes/margins, meta row, 16:9 hero) so it aligns pixel-for-
+                  pixel under the content. */}
+              {showSkel && (
+                <div className={`po-skel-layer ${post ? 'po-skel-abs' : ''}`} aria-hidden={post || !title ? true : undefined}>
+                  <div className="mx-auto max-w-3xl px-6 pb-16 pt-14">
+                    {title ? (
+                      <h1 className="mb-8 font-heading text-5xl tracking-wide text-[#e0e0e0] md:text-6xl">{title}</h1>
+                    ) : (
+                      <>
+                        <div className="po-skel-block" style={{ width: '82%', height: 44, marginBottom: 14 }} />
+                        <div className="po-skel-block" style={{ width: '55%', height: 44, marginBottom: 32 }} />
+                      </>
+                    )}
+                    <div className="mb-16 flex items-center justify-between gap-4">
+                      <span className="font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/50">{formattedDate}</span>
+                      <span className="inline-flex items-center gap-2 rounded border border-[#e0e0e0]/15 bg-transparent px-3 py-1.5 font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/50">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                        </svg>
+                        Share
+                      </span>
+                    </div>
+                    {heroImg ? (
+                      <div style={{ position: 'relative', width: '100%', aspectRatio: '16 / 9', marginBottom: 64, borderRadius: 8, overflow: 'hidden' }}>
+                        <Image src={heroImg} alt="" fill sizes="640px" style={{ objectFit: 'cover' }} />
+                      </div>
+                    ) : (
+                      <div className="po-skel-block" style={{ width: '100%', aspectRatio: '16 / 9', marginBottom: 64, borderRadius: 8 }} />
+                    )}
+                    {SKELETON_LINES.map((l, i) => (
+                      <div key={i} className="po-skel-block" style={{ width: l.w, height: l.h, marginBottom: 16 }} />
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                <div className="po-skel-block" style={{ width: '100%', aspectRatio: '16 / 9', marginBottom: 64, borderRadius: 12 }} />
               )}
-              {/* body lines */}
-              {SKELETON_LINES.map((l, i) => (
-                <div key={i} className="po-skel-block" style={{ width: l.w, height: l.h, marginBottom: 16 }} />
-              ))}
+              {post && (
+                <div className="po-content-fade">
+                  <PostClientPage {...post} overlay />
+                </div>
+              )}
             </div>
           )}
         </div>
