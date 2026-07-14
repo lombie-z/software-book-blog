@@ -114,7 +114,7 @@ export default function PostClientPage({ overlay, ...props }: ClientPostProps) {
                 width={1200}
                 height={675}
                 onLoad={() => setHeroLoaded(true)}
-                className="relative w-full rounded-lg object-cover transition-opacity duration-500 ease-out"
+                className="relative h-auto w-full rounded-lg object-cover transition-opacity duration-500 ease-out"
                 style={{ opacity: heroLoaded ? 1 : 0 }}
               />
             </div>
