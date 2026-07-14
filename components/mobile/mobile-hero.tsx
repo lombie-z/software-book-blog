@@ -1,184 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type PermState = 'static' | 'detecting' | 'ios-prompt' | 'requesting' | 'active' | 'touch-fallback';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-// How far (px) each layer moves at full tilt (normalized ±1).
-// Positive = moves in tilt direction (foreground feel).
-// Negative = moves opposite to tilt (background feel).
-// Layer order: warm-silhouette, portrait, green-silhouette, frame, text
-const LAYER_DEPTHS = [50, 32, 18, 0, -18] as const;
-
-// Natural phone-hold pitch offset — beta ≈ 70° when upright
-const BETA_OFFSET = 70;
-
-// LERP smoothing factor (lower = smoother/more lag)
-const LERP_ALPHA = 0.07;
-
-// ─── SVG Filigree Corner ─────────────────────────────────────────────────────
-
-function FiligreeCorner({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
-  const flipX = pos === 'tr' || pos === 'br';
-  const flipY = pos === 'bl' || pos === 'br';
-  const style: CSSProperties = {
-    position: 'absolute',
-    color: 'rgba(224, 224, 224, 0.55)',
-    ...(pos.includes('t') ? { top: -1 } : { bottom: -1 }),
-    ...(pos.includes('l') ? { left: -1 } : { right: -1 }),
-    transform: `scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})`,
-  };
-
-  return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={style}>
-      {/* L-bracket arms */}
-      <path d="M 4 24 L 4 4 L 24 4" stroke="currentColor" strokeWidth="1" strokeLinecap="square" />
-      {/* Inner corner accent */}
-      <path d="M 8 24 L 8 8 L 24 8" stroke="currentColor" strokeWidth="0.5" strokeLinecap="square" opacity="0.4" />
-      {/* Corner jewel */}
-      <circle cx="4" cy="4" r="1.5" fill="currentColor" />
-      {/* Mid-arm dots */}
-      <circle cx="4" cy="14" r="0.8" fill="currentColor" opacity="0.5" />
-      <circle cx="14" cy="4" r="0.8" fill="currentColor" opacity="0.5" />
-      {/* Outer serif ticks */}
-      <path d="M 1 4 L 4 4" stroke="currentColor" strokeWidth="0.8" opacity="0.6" />
-      <path d="M 4 1 L 4 4" stroke="currentColor" strokeWidth="0.8" opacity="0.6" />
-    </svg>
-  );
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
+// Mobile landing hero. Deliberately calm: a solid near-black field with grain,
+// the title, and a scroll cue. No parallax layers or tilt — those read as busy
+// and awkward on a phone.
 
 interface MobileHeroProps {
   onScrollToCards?: () => void;
 }
 
 export function MobileHero({ onScrollToCards }: MobileHeroProps) {
-  const [permState, setPermState] = useState<PermState>('static');
-  const [showHint, setShowHint] = useState(false);
-
-  const layerRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const rafRef = useRef<number>(0);
-  const targetRef = useRef({ x: 0, y: 0 });
-  const currentRef = useRef({ x: 0, y: 0 });
-  const gyroCleanupRef = useRef<(() => void) | null>(null);
-
-  // Detect whether iOS permission API is available (for the toggle button)
-  const [isIOS, setIsIOS] = useState(false);
-  useEffect(() => {
-    if (typeof DeviceOrientationEvent !== 'undefined') {
-      const doe = DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> };
-      if (typeof doe.requestPermission === 'function') {
-        setIsIOS(true);
-      }
-    }
-  }, []);
-
-  // ── Gyroscope listener ────────────────────────────────────────────────────
-
-  const attachGyro = useCallback(() => {
-    const handler = (e: DeviceOrientationEvent) => {
-      const x = Math.max(-1, Math.min(1, (e.gamma ?? 0) / 45));
-      const y = Math.max(-1, Math.min(1, ((e.beta ?? BETA_OFFSET) - BETA_OFFSET) / 45));
-      targetRef.current = { x, y };
-    };
-    window.addEventListener('deviceorientation', handler, { passive: true });
-    return () => window.removeEventListener('deviceorientation', handler);
-  }, []);
-
-  // ── Enable tilt (toggle button handler) ──────────────────────────────────
-
-  const enableTilt = useCallback(async () => {
-    if (isIOS) {
-      setPermState('requesting');
-      try {
-        const doe = DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> };
-        const result = await doe.requestPermission();
-        setPermState(result === 'granted' ? 'active' : 'touch-fallback');
-      } catch {
-        setPermState('touch-fallback');
-      }
-    } else {
-      // Non-iOS: check if DeviceOrientationEvent exists
-      if (typeof DeviceOrientationEvent !== 'undefined') {
-        setPermState('active');
-      } else {
-        setPermState('touch-fallback');
-      }
-    }
-  }, [isIOS]);
-
-  // ── RAF animation loop — only runs when active or touch-fallback ─────────
-
-  useEffect(() => {
-    if (permState !== 'active' && permState !== 'touch-fallback') return;
-
-    if (permState === 'active') {
-      gyroCleanupRef.current = attachGyro();
-      setShowHint(true);
-      const t = setTimeout(() => setShowHint(false), 4000);
-      return () => clearTimeout(t);
-    }
-
-    // touch-fallback: show drag hint
-    setShowHint(true);
-    const t = setTimeout(() => setShowHint(false), 5000);
-    return () => clearTimeout(t);
-  }, [permState, attachGyro]);
-
-  useEffect(() => {
-    if (permState !== 'active' && permState !== 'touch-fallback') return;
-
-    const animate = () => {
-      currentRef.current.x += (targetRef.current.x - currentRef.current.x) * LERP_ALPHA;
-      currentRef.current.y += (targetRef.current.y - currentRef.current.y) * LERP_ALPHA;
-
-      const { x, y } = currentRef.current;
-      layerRefs.current.forEach((el, i) => {
-        if (!el) return;
-        const d = LAYER_DEPTHS[i] ?? 0;
-        el.style.transform = `translateX(${(x * d).toFixed(2)}px) translateY(${(y * d).toFixed(2)}px)`;
-      });
-
-      rafRef.current = requestAnimationFrame(animate);
-    };
-
-    rafRef.current = requestAnimationFrame(animate);
-    return () => {
-      cancelAnimationFrame(rafRef.current);
-      gyroCleanupRef.current?.();
-      gyroCleanupRef.current = null;
-    };
-  }, [permState]);
-
-  // ── Touch / pointer fallback ──────────────────────────────────────────────
-
-  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLElement>) => {
-    if (permState !== 'touch-fallback') return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
-    const y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
-    targetRef.current = { x: Math.max(-1, Math.min(1, x)), y: Math.max(-1, Math.min(1, y)) };
-  }, [permState]);
-
-  // Gently return to center when pointer leaves (touch-fallback only)
-  const handlePointerLeave = useCallback(() => {
-    if (permState !== 'touch-fallback') return;
-    targetRef.current = { x: 0, y: 0 };
-  }, [permState]);
-
-  // ── Hint text ─────────────────────────────────────────────────────────────
-
-  const hintText = permState === 'touch-fallback' ? 'Drag to explore' : 'Tilt to explore';
-  const tiltEnabled = permState === 'active' || permState === 'touch-fallback';
-
-  // ── Render ─────────────────────────────────────────────────────────────────
-
   return (
     <>
       <style>{`
@@ -187,102 +17,27 @@ export function MobileHero({ onScrollToCards }: MobileHeroProps) {
           width: 100%;
           height: 100svh;
           overflow: hidden;
-          background: #050505;
+          background: #060606;
           display: flex;
           align-items: center;
           justify-content: center;
-          touch-action: pan-y;
           -webkit-user-select: none;
           user-select: none;
         }
 
-        /* ── Grain ── */
+        /* Grain over the solid field — the only texture. */
         .mh-grain {
           position: absolute;
           inset: 0;
-          z-index: 5;
-          opacity: 0.10;
+          z-index: 1;
+          opacity: 0.09;
           pointer-events: none;
           filter: url(#mh-grain-filter);
         }
 
-        /* ── Parallax layers ── */
-        /* inset: -70px makes each layer 140px wider/taller than the viewport,
-           so 70px of parallax travel is available before edges show. */
-        .mh-layer {
-          position: absolute;
-          inset: -70px;
-          background-size: cover;
-          background-position: center;
-          will-change: transform;
-          backface-visibility: hidden;
-        }
-
-        .mh-layer-warm {
-          background-image: url('/images/hero-silhouette-warm.png');
-          background-position: left top;
-          opacity: 0.45;
-        }
-
-        .mh-layer-portrait {
-          background-image: url('/images/hero-portrait-photo.png');
-          background-position: center top;
-          opacity: 0.30;
-          filter: brightness(0.6);
-        }
-
-        .mh-layer-green {
-          background-image: url('/images/hero-silhouette-green.png');
-          background-position: left top;
-          opacity: 0.50;
-        }
-
-        .mh-layer-frame {
-          background-image: url('/images/hero-frame.png');
-          background-size: contain;
-          background-repeat: no-repeat;
-          background-position: center;
-          opacity: 0.80;
-          animation: mh-frame-breathe 4s ease-in-out infinite;
-        }
-
-        @keyframes mh-frame-breathe {
-          0%, 100% {
-            opacity: 0.65;
-            filter: drop-shadow(0 0 8px rgba(224, 224, 224, 0.04));
-          }
-          50% {
-            opacity: 0.88;
-            filter: drop-shadow(0 0 24px rgba(224, 224, 224, 0.10));
-          }
-        }
-
-        /* ── Text layer ── */
-        .mh-layer-text {
-          inset: 0;             /* text layer is viewport-sized — no parallax bleed needed */
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 4;
-          pointer-events: none;
-        }
-
-        /* ── Radial vignette ── */
-        .mh-vignette {
-          position: absolute;
-          inset: 0;
-          z-index: 3;
-          background: radial-gradient(
-            ellipse 80% 80% at center,
-            transparent 25%,
-            rgba(0, 0, 0, 0.28) 60%,
-            rgba(0, 0, 0, 0.88) 100%
-          );
-          pointer-events: none;
-        }
-
-        /* ── Title block ── */
         .mh-title-block {
+          position: relative;
+          z-index: 2;
           text-align: center;
           padding: 0 1.5rem;
         }
@@ -295,21 +50,7 @@ export function MobileHero({ onScrollToCards }: MobileHeroProps) {
           letter-spacing: 0.04em;
           line-height: 1;
           margin: 0;
-          animation: mh-title-glow 4s ease-in-out infinite;
-        }
-
-        @keyframes mh-title-glow {
-          0%, 100% {
-            text-shadow:
-              0 0 12px rgba(224, 224, 224, 0.12),
-              0 2px 40px rgba(0, 0, 0, 0.8);
-          }
-          50% {
-            text-shadow:
-              0 0 28px rgba(224, 224, 224, 0.22),
-              0 0 60px rgba(200, 210, 220, 0.08),
-              0 2px 40px rgba(0, 0, 0, 0.8);
-          }
+          text-shadow: 0 0 18px rgba(224, 224, 224, 0.12), 0 2px 40px rgba(0, 0, 0, 0.8);
         }
 
         .mh-tagline {
@@ -321,52 +62,12 @@ export function MobileHero({ onScrollToCards }: MobileHeroProps) {
           margin-top: 1.25rem;
         }
 
-        /* ── Interaction hint ── */
-        .mh-hint {
-          position: absolute;
-          bottom: 2.5rem;
-          left: 50%;
-          transform: translateX(-50%);
-          z-index: 6;
-          font-family: var(--font-mono);
-          font-size: 0.58rem;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-          color: rgba(224, 224, 224, 0.28);
-          white-space: nowrap;
-          pointer-events: none;
-          animation: mh-hint-fade 4s ease-out forwards;
-        }
-
-        @keyframes mh-hint-fade {
-          0%   { opacity: 1; }
-          60%  { opacity: 1; }
-          100% { opacity: 0; }
-        }
-
-        /* ── Shimmer border on the entire hero (ambient interactive cue) ── */
-        .mh-hero::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          z-index: 2;
-          pointer-events: none;
-          border: 1px solid rgba(224, 224, 224, 0);
-          animation: mh-border-shimmer 5s ease-in-out infinite;
-        }
-
-        @keyframes mh-border-shimmer {
-          0%, 100% { border-color: rgba(224, 224, 224, 0.00); }
-          50%      { border-color: rgba(224, 224, 224, 0.06); }
-        }
-
-        /* ── Discover Posts button ── */
         .mh-discover-btn {
           position: absolute;
-          bottom: 3.5rem;
+          bottom: 3rem;
           left: 50%;
           transform: translateX(-50%);
-          z-index: 7;
+          z-index: 3;
           font-family: var(--font-mono);
           font-size: 0.54rem;
           letter-spacing: 0.2em;
@@ -385,36 +86,6 @@ export function MobileHero({ onScrollToCards }: MobileHeroProps) {
           border-color: rgba(224, 224, 224, 0.4);
           color: rgba(224, 224, 224, 0.8);
         }
-
-        /* ── Tilt toggle ── */
-        .mh-tilt-toggle {
-          position: absolute;
-          bottom: 1.2rem;
-          right: 1.2rem;
-          z-index: 7;
-          font-family: var(--font-mono);
-          font-size: 0.48rem;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-          color: rgba(224, 224, 224, 0.35);
-          background: rgba(224, 224, 224, 0.04);
-          border: 1px solid rgba(224, 224, 224, 0.10);
-          border-radius: 20px;
-          padding: 6px 14px;
-          cursor: pointer;
-          white-space: nowrap;
-          -webkit-tap-highlight-color: transparent;
-          transition: border-color 0.2s, color 0.2s, background 0.2s;
-        }
-        .mh-tilt-toggle:active {
-          border-color: rgba(224, 224, 224, 0.3);
-          color: rgba(224, 224, 224, 0.6);
-        }
-        .mh-tilt-toggle--active {
-          color: rgba(224, 224, 224, 0.55);
-          border-color: rgba(224, 224, 224, 0.2);
-          background: rgba(224, 224, 224, 0.08);
-        }
       `}</style>
 
       {/* Hidden grain filter */}
@@ -425,56 +96,18 @@ export function MobileHero({ onScrollToCards }: MobileHeroProps) {
         </filter>
       </svg>
 
-      <section
-        className="mh-hero"
-        onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
-        aria-label="Hero — tilt to explore"
-      >
-        {/* Grain overlay */}
+      <section className="mh-hero" aria-label="Hero">
         <div className="mh-grain" aria-hidden="true" />
 
-        {/* Parallax layers — order = paint order (first = furthest back) */}
-        <div className="mh-layer mh-layer-warm" ref={(el) => { layerRefs.current[0] = el; }} aria-hidden="true" />
-        <div className="mh-layer mh-layer-portrait" ref={(el) => { layerRefs.current[1] = el; }} aria-hidden="true" />
-        <div className="mh-layer mh-layer-green" ref={(el) => { layerRefs.current[2] = el; }} aria-hidden="true" />
-        <div className="mh-layer mh-layer-frame" ref={(el) => { layerRefs.current[3] = el; }} aria-hidden="true" />
-
-        {/* Radial vignette */}
-        <div className="mh-vignette" aria-hidden="true" />
-
-        {/* Title — floats on top with slight counter-parallax */}
-        <div className="mh-layer mh-layer-text" ref={(el) => { layerRefs.current[4] = el; }}>
-          <div className="mh-title-block">
-            <h1 className="mh-title">I.&thinsp;William.&thinsp;R.&thinsp;L.</h1>
-            <p className="mh-tagline">Software · Philosophy · Code</p>
-          </div>
+        <div className="mh-title-block">
+          <h1 className="mh-title">I.&thinsp;William.&thinsp;R.&thinsp;L.</h1>
+          <p className="mh-tagline">Software · Philosophy · Code</p>
         </div>
 
-        {/* Discover Posts button */}
         {onScrollToCards && (
-          <button className="mh-discover-btn" onClick={onScrollToCards}>
+          <button type="button" className="mh-discover-btn" onClick={onScrollToCards}>
             Discover Posts &darr;
           </button>
-        )}
-
-        {/* Tilt toggle — small pill at bottom-right */}
-        {!tiltEnabled && (
-          <button className="mh-tilt-toggle" onClick={enableTilt} disabled={permState === 'requesting'}>
-            {permState === 'requesting' ? 'Enabling...' : '\u2726 Enable Tilt'}
-          </button>
-        )}
-        {tiltEnabled && (
-          <span className="mh-tilt-toggle mh-tilt-toggle--active">
-            {permState === 'active' ? '\u2726 Tilt On' : '\u2726 Drag Mode'}
-          </span>
-        )}
-
-        {/* Interaction hint — fades automatically (only when tilt/touch is active) */}
-        {showHint && tiltEnabled && (
-          <div className="mh-hint" aria-hidden="true">
-            {hintText}
-          </div>
         )}
       </section>
     </>
