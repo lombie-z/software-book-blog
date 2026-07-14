@@ -57,7 +57,11 @@ const CSS = `
   }
 
   .po-scroll {
-    max-height: 92vh;
+    /* Fixed height (not max-height): posts vary from a few paragraphs to very
+       long, so a content-sized panel resizes between the skeleton and the
+       loaded post — grows for long posts, shrinks for short ones. A fixed pane
+       never resizes; long posts scroll, short posts get dark space below. */
+    height: 92vh;
     /* overflow-y: scroll (not auto) so the styled scrollbar's 9px lane is
        ALWAYS reserved. With auto, the classic scrollbar (forced by styling
        ::-webkit-scrollbar) only appears once the loaded post overflows, which
@@ -148,6 +152,11 @@ const CSS = `
   .po-content-fade {
     position: relative;
     z-index: 1;
+    /* Fill the fixed pane and carry the post background, so a short post's
+       content fully covers the skeleton behind it (no leftover skeleton lines
+       below the text during the cross-fade). */
+    min-height: 92vh;
+    background: #0a0a0a;
     animation: po-fade-in 0.45s ease-out;
   }
   @keyframes po-fade-in { from { opacity: 0; } to { opacity: 1; } }
