@@ -55,10 +55,9 @@ export function MobileHero({ onScrollToCards }: MobileHeroProps) {
 
         .mh-tagline {
           font-family: var(--font-mono);
-          font-size: 0.6rem;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-          color: rgba(224, 224, 224, 0.35);
+          font-size: 0.72rem;
+          letter-spacing: 0.08em;
+          color: rgba(224, 224, 224, 0.4);
           margin-top: 1.25rem;
         }
 
