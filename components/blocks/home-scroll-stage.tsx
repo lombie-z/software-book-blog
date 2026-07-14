@@ -115,10 +115,15 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
   // API so the modal is shareable and the browser back button closes it; a
   // direct visit / refresh loads the real /posts/[slug] page instead.
   const [modalSlug, setModalSlug] = useState<string | null>(null);
+  // Title of the clicked card, so the overlay skeleton can show the real title
+  // in its final position (no shift on load). Null when opened via back/forward,
+  // where only the slug is known — the skeleton falls back to a title bar.
+  const [modalTitle, setModalTitle] = useState<string | null>(null);
 
   const syncModalToUrl = useCallback(() => {
     const m = window.location.pathname.match(/^\/posts\/([^/?#]+)/);
     setModalSlug(m ? decodeURIComponent(m[1]) : null);
+    setModalTitle(null);
   }, []);
 
   useEffect(() => {
@@ -126,9 +131,10 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
     return () => window.removeEventListener('popstate', syncModalToUrl);
   }, [syncModalToUrl]);
 
-  const openPost = useCallback((slug: string) => {
+  const openPost = useCallback((slug: string, title: string) => {
     window.history.pushState({ postModal: slug }, '', `/posts/${slug}`);
     setModalSlug(slug);
+    setModalTitle(title);
   }, []);
 
   const closePost = useCallback(() => {
@@ -651,7 +657,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                 // fall through to a normal navigation; otherwise open the overlay.
                 if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
                 e.preventDefault();
-                openPost(post.slug);
+                openPost(post.slug, post.title);
               }}
               onMouseEnter={() => {
                 // Tint only this color group's assigned panels, all the same color
@@ -959,7 +965,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
       </div>
 
       {/* Desktop post overlay — client-side modal, no intercepting routes */}
-      {modalSlug && <PostOverlay key={modalSlug} slug={modalSlug} onRequestClose={closePost} />}
+      {modalSlug && <PostOverlay key={modalSlug} slug={modalSlug} title={modalTitle} onRequestClose={closePost} />}
     </div>
   );
 }

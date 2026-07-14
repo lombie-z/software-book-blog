@@ -108,21 +108,6 @@ const CSS = `
     .po-panel, .po-backdrop { transition-duration: 0.01s; }
   }
 
-  /* Loading skeleton — mirrors the post layout, gold sheen sweep. Fades out
-     when the real content mounts so the swap reads as a reveal, not a pop. */
-  .po-skel {
-    max-width: 48rem;
-    margin: 0 auto;
-    padding: 56px 24px 64px;
-  }
-
-  /* Loaded content fades/rises in so the skeleton→post swap reads as a reveal. */
-  .po-content-in { animation: po-fade-in 0.5s ease-out; }
-  @keyframes po-fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
   .po-skel-block {
     position: relative;
     overflow: hidden;
@@ -141,7 +126,6 @@ const CSS = `
 
   @media (prefers-reduced-motion: reduce) {
     .po-skel-block::after { animation: none; }
-    .po-content-in { animation: none; }
   }
 `;
 
@@ -157,8 +141,10 @@ const EXIT_MS = 360;
 type PostProps = { data: PostQuery; query: string; variables: { relativePath: string } };
 
 // `onRequestClose` is called after the exit animation finishes — the parent
-// then restores the URL (history.back) and unmounts this.
-export function PostOverlay({ slug, onRequestClose }: { slug: string; onRequestClose: () => void }) {
+// then restores the URL (history.back) and unmounts this. `title` is the
+// clicked card's title (null when opened via back/forward): when present the
+// skeleton renders it in its final position so the title never shifts on load.
+export function PostOverlay({ slug, title, onRequestClose }: { slug: string; title?: string | null; onRequestClose: () => void }) {
   const [open, setOpen] = useState(false);
   const [post, setPost] = useState<PostProps | null>(null);
   const [failed, setFailed] = useState(false);
@@ -218,18 +204,26 @@ export function PostOverlay({ slug, onRequestClose }: { slug: string; onRequestC
               This post could not be summoned.
             </div>
           ) : post ? (
-            <div className="po-content-in">
-              <PostClientPage {...post} overlay />
-            </div>
+            // No wrapper fade: the title is already in place from the skeleton,
+            // so re-fading it would flash. The hero fades on its own load and
+            // the body/meta resolve in place from the skeleton bars.
+            <PostClientPage {...post} overlay />
           ) : (
-            <div className="po-skel" aria-hidden="true">
-              {/* title */}
-              <div className="po-skel-block" style={{ width: '82%', height: 44, marginBottom: 14 }} />
-              <div className="po-skel-block" style={{ width: '55%', height: 44, marginBottom: 32 }} />
-              {/* meta row */}
-              <div className="po-skel-block" style={{ width: '30%', height: 12, marginBottom: 40 }} />
-              {/* hero image */}
-              <div className="po-skel-block" style={{ width: '100%', aspectRatio: '16 / 9', marginBottom: 40, borderRadius: 12 }} />
+            // Mirrors PostClientPage's overlay layout exactly (same container,
+            // same h1 classes/margins) so the swap to real content doesn't shift.
+            <div className="mx-auto max-w-3xl px-6 pb-16 pt-14" aria-hidden={title ? undefined : true}>
+              {title ? (
+                <h1 className="mb-8 font-heading text-5xl tracking-wide text-[#e0e0e0] md:text-6xl">{title}</h1>
+              ) : (
+                <>
+                  <div className="po-skel-block" style={{ width: '82%', height: 44, marginBottom: 14 }} />
+                  <div className="po-skel-block" style={{ width: '55%', height: 44, marginBottom: 32 }} />
+                </>
+              )}
+              {/* meta row — matches the real row's ~30px height + mb-16 */}
+              <div className="po-skel-block" style={{ width: '40%', height: 30, marginBottom: 64 }} />
+              {/* hero image — mb-16 */}
+              <div className="po-skel-block" style={{ width: '100%', aspectRatio: '16 / 9', marginBottom: 64, borderRadius: 12 }} />
               {/* body lines */}
               {SKELETON_LINES.map((l, i) => (
                 <div key={i} className="po-skel-block" style={{ width: l.w, height: l.h, marginBottom: 16 }} />
