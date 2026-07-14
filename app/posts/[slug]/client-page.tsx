@@ -93,28 +93,23 @@ export default function PostClientPage({ overlay, ...props }: ClientPostProps) {
           </div>
 
           {post.heroImg && (
-            <div data-tina-field={tinaField(post, 'heroImg')} className="relative mb-16">
-              {/* Low-res base (matches the home card's 640px variant, so it's
-                  already cached and paints instantly). The full-res layer fades
-                  in over it on load — no blank box, no pop. Doubles as a blur-up
-                  on the full post page where the card image isn't cached. */}
-              <Image
-                src={post.heroImg}
-                alt=""
-                aria-hidden
-                fill
-                sizes="640px"
-                className="rounded-lg object-cover"
-              />
+            // Fixed 16:9 box (matches the overlay skeleton exactly). Both layers
+            // are `fill` (absolute), so nothing in normal flow can grow the box
+            // when the image loads — the height is locked by aspect-ratio from
+            // the first paint.
+            <div data-tina-field={tinaField(post, 'heroImg')} className="relative mb-16 aspect-[16/9] overflow-hidden rounded-lg">
+              {/* Low-res base — the home card's cached 640px variant, so it
+                  paints instantly; the full-res layer fades in over it on load. */}
+              <Image src={post.heroImg} alt="" aria-hidden fill sizes="640px" className="object-cover" />
               <Image
                 ref={heroRef}
                 priority={true}
                 src={post.heroImg}
                 alt={post.title}
-                width={1200}
-                height={675}
+                fill
+                sizes="(max-width: 820px) 100vw, 768px"
                 onLoad={() => setHeroLoaded(true)}
-                className="relative h-auto w-full rounded-lg object-cover transition-opacity duration-500 ease-out"
+                className="object-cover transition-opacity duration-500 ease-out"
                 style={{ opacity: heroLoaded ? 1 : 0 }}
               />
             </div>

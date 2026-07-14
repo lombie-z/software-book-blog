@@ -248,7 +248,7 @@ export function PostOverlay({ slug, title, heroImg, date, onRequestClose }: { sl
               {/* hero image — the card's 640px variant is cached, so it paints
                   instantly instead of a gray block; mb-16 */}
               {heroImg ? (
-                <div style={{ position: 'relative', width: '100%', aspectRatio: '16 / 9', marginBottom: 64, borderRadius: 12, overflow: 'hidden' }}>
+                <div style={{ position: 'relative', width: '100%', aspectRatio: '16 / 9', marginBottom: 64, borderRadius: 8, overflow: 'hidden' }}>
                   <Image src={heroImg} alt="" fill sizes="640px" style={{ objectFit: 'cover' }} />
                 </div>
               ) : (
