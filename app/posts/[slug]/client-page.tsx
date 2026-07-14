@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { tinaField, useTina } from 'tinacms/dist/react';
@@ -24,6 +24,14 @@ export default function PostClientPage({ overlay, ...props }: ClientPostProps) {
   const { data } = useTina({ ...props });
   const post = data.post;
   const [copied, setCopied] = useState(false);
+  const [heroLoaded, setHeroLoaded] = useState(false);
+  const heroRef = useRef<HTMLImageElement>(null);
+
+  // A cached/priority hero can finish loading before React attaches onLoad,
+  // which would leave it stuck at opacity 0. Reveal it if it's already complete.
+  useEffect(() => {
+    if (heroRef.current?.complete) setHeroLoaded(true);
+  }, []);
 
   const date = new Date(post.date!);
   let formattedDate = '';
@@ -87,12 +95,15 @@ export default function PostClientPage({ overlay, ...props }: ClientPostProps) {
           {post.heroImg && (
             <div data-tina-field={tinaField(post, 'heroImg')} className="mb-16">
               <Image
+                ref={heroRef}
                 priority={true}
                 src={post.heroImg}
                 alt={post.title}
                 width={1200}
                 height={675}
-                className="w-full rounded-lg object-cover"
+                onLoad={() => setHeroLoaded(true)}
+                className="w-full rounded-lg object-cover transition-opacity duration-500 ease-out"
+                style={{ opacity: heroLoaded ? 1 : 0 }}
               />
             </div>
           )}

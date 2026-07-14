@@ -117,10 +117,10 @@ const CSS = `
   }
 
   /* Loaded content fades/rises in so the skeleton→post swap reads as a reveal. */
-  .po-content-in { animation: po-fade-in 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+  .po-content-in { animation: po-fade-in 0.5s ease-out; }
   @keyframes po-fade-in {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   .po-skel-block {
