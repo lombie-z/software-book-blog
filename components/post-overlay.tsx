@@ -145,7 +145,7 @@ type PostProps = { data: PostQuery; query: string; variables: { relativePath: st
 // then restores the URL (history.back) and unmounts this. `title` is the
 // clicked card's title (null when opened via back/forward): when present the
 // skeleton renders it in its final position so the title never shifts on load.
-export function PostOverlay({ slug, title, heroImg, onRequestClose }: { slug: string; title?: string | null; heroImg?: string | null; onRequestClose: () => void }) {
+export function PostOverlay({ slug, title, heroImg, date, onRequestClose }: { slug: string; title?: string | null; heroImg?: string | null; date?: string | null; onRequestClose: () => void }) {
   const [open, setOpen] = useState(false);
   const [post, setPost] = useState<PostProps | null>(null);
   const [failed, setFailed] = useState(false);
@@ -191,6 +191,11 @@ export function PostOverlay({ slug, title, heroImg, onRequestClose }: { slug: st
     return () => window.removeEventListener('keydown', onKey);
   }, [close]);
 
+  // Format the card's date exactly like PostClientPage (UTC) so the meta row
+  // shown in the skeleton is byte-identical to the loaded post — no shift.
+  const d = date ? new Date(date) : null;
+  const formattedDate = d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric', timeZone: 'UTC' }) : '';
+
   return (
     <div className="po-root" data-open={open} data-lenis-prevent role="dialog" aria-modal="true">
       <style>{CSS}</style>
@@ -221,8 +226,21 @@ export function PostOverlay({ slug, title, heroImg, onRequestClose }: { slug: st
                   <div className="po-skel-block" style={{ width: '55%', height: 44, marginBottom: 32 }} />
                 </>
               )}
-              {/* meta row — matches the real row's ~30px height + mb-16 */}
-              <div className="po-skel-block" style={{ width: '40%', height: 30, marginBottom: 64 }} />
+              {/* meta row — real date + share button, identical markup to
+                  PostClientPage so it doesn't shift when the post loads */}
+              <div className="mb-16 flex items-center justify-between gap-4">
+                <span className="font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/50">{formattedDate}</span>
+                <span
+                  className="inline-flex items-center gap-2 rounded border border-[#e0e0e0]/15 bg-transparent px-3 py-1.5 font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/50"
+                  aria-hidden="true"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                  </svg>
+                  Share
+                </span>
+              </div>
               {/* hero image — the card's 640px variant is cached, so it paints
                   instantly instead of a gray block; mb-16 */}
               {heroImg ? (

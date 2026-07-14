@@ -123,12 +123,14 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
   // (the card rendered it), so the overlay can show it instantly as a low-res
   // base while the full-res hero loads. Null on back/forward (slug-only).
   const [modalHero, setModalHero] = useState<string | null>(null);
+  const [modalDate, setModalDate] = useState<string | null>(null);
 
   const syncModalToUrl = useCallback(() => {
     const m = window.location.pathname.match(/^\/posts\/([^/?#]+)/);
     setModalSlug(m ? decodeURIComponent(m[1]) : null);
     setModalTitle(null);
     setModalHero(null);
+    setModalDate(null);
   }, []);
 
   useEffect(() => {
@@ -136,11 +138,12 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
     return () => window.removeEventListener('popstate', syncModalToUrl);
   }, [syncModalToUrl]);
 
-  const openPost = useCallback((slug: string, title: string, heroImg: string) => {
+  const openPost = useCallback((slug: string, title: string, heroImg: string, date: string) => {
     window.history.pushState({ postModal: slug }, '', `/posts/${slug}`);
     setModalSlug(slug);
     setModalTitle(title);
     setModalHero(heroImg);
+    setModalDate(date);
   }, []);
 
   const closePost = useCallback(() => {
@@ -663,7 +666,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
                 // fall through to a normal navigation; otherwise open the overlay.
                 if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
                 e.preventDefault();
-                openPost(post.slug, post.title, post.heroImg);
+                openPost(post.slug, post.title, post.heroImg, post.date ?? '');
               }}
               onMouseEnter={() => {
                 // Tint only this color group's assigned panels, all the same color
@@ -971,7 +974,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
       </div>
 
       {/* Desktop post overlay — client-side modal, no intercepting routes */}
-      {modalSlug && <PostOverlay key={modalSlug} slug={modalSlug} title={modalTitle} heroImg={modalHero} onRequestClose={closePost} />}
+      {modalSlug && <PostOverlay key={modalSlug} slug={modalSlug} title={modalTitle} heroImg={modalHero} date={modalDate} onRequestClose={closePost} />}
     </div>
   );
 }
