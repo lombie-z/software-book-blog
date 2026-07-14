@@ -2,7 +2,7 @@ import React from "react";
 import { Metadata } from "next";
 import { Inter as FontSans, Lato, Nunito, Archivo_Black } from "next/font/google";
 import localFont from "next/font/local";
-import { cn } from "@/lib/utils";
+import { cn, SITE_URL } from "@/lib/utils";
 
 import "@/styles.css";
 import { TailwindIndicator } from "@/components/ui/breakpoint-indicator";
@@ -35,25 +35,24 @@ const lucidaBlackletter = localFont({
   display: "swap",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://iwrl.net';
-
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(SITE_URL),
+  alternates: { canonical: '/' },
   title: {
-    default: 'I. William R. L',
-    template: '%s — I. William R. L',
+    default: 'I. William R. L.',
+    template: '%s — I. William R. L.',
   },
   description: 'Software engineering, culture, and craft. Essays on building software, thinking clearly, and the world around it.',
   openGraph: {
     type: 'website',
-    siteName: 'I. William R. L',
-    title: 'I. William R. L',
+    siteName: 'I. William R. L.',
+    title: 'I. William R. L.',
     description: 'Software engineering, culture, and craft. Essays on building software, thinking clearly, and the world around it.',
-    images: [{ url: '/images/hero-portrait.png', width: 1200, height: 630, alt: 'I. William R. L' }],
+    images: [{ url: '/images/hero-portrait.png', width: 1200, height: 630, alt: 'I. William R. L.' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'I. William R. L',
+    title: 'I. William R. L.',
     description: 'Software engineering, culture, and craft. Essays on building software, thinking clearly, and the world around it.',
     images: ['/images/hero-portrait.png'],
   },
