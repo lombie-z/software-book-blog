@@ -19,7 +19,11 @@ export default async function Home() {
 
   const [pageData, postsData] = await Promise.all([
     client.queries.page({ relativePath: 'home.mdx' }),
-    client.queries.postConnection({ sort: 'date', last: 100 }),
+    client.queries.postConnection({
+      sort: 'date',
+      last: 100,
+      filter: { published: { eq: true } },
+    }),
   ]);
 
   const posts = [...(postsData.data.postConnection.edges || [])].reverse();

@@ -27,6 +27,7 @@ interface HomeScrollStageProps {
 const CARD_H = 380;
 const CARD_GAP = 24;
 const CARD_STEP = CARD_H + CARD_GAP;
+const MIN_POST_CARDS = 6;
 
 // Hand-drawn SVG overlays for card hover effects — cycle through 3 per card
 const CARD_OVERLAYS = [
@@ -66,7 +67,23 @@ const GLASS_PANELS = [
  *   82%–97%    Card scroll: hero card slides down, all post cards enter from above
  */
 export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps) {
-  const postCount = recentPosts.filter((p) => p?.node).length;
+  const realPostCards = recentPosts
+    .filter((p) => p?.node?.heroImg)
+    .map((p) => ({
+      heroImg: p!.node!.heroImg!,
+      title: p!.node!.title ?? '',
+      slug: p!.node!._sys.breadcrumbs.join('/'),
+      date: p!.node!.date ?? '',
+      tag: p!.node!.tags?.[0]?.tag?.name ?? '',
+    }));
+  const postCards = [
+    ...realPostCards,
+    ...Array.from({ length: Math.max(0, MIN_POST_CARDS - realPostCards.length) }, (_, i) => ({
+      placeholder: true as const,
+      slot: realPostCards.length + i + 1,
+    })),
+  ];
+  const postCount = postCards.length;
   const cardCount = postCount;
   const cardScrollVh = 650 + cardCount * 130;
   const endVh = 120; // extra scroll for end panel
@@ -77,7 +94,7 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
   const pinnedRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const heroBorderRef = useRef<HTMLDivElement>(null);
-  const postCardRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const postCardRefs = useRef<(HTMLElement | null)[]>([]);
   const glassPanelRefs = useRef<(HTMLDivElement | null)[]>([]);
   const glassShineRefs = useRef<(HTMLDivElement | null)[]>([]);
   const glassTintRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -97,17 +114,6 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
       heroImg: p!.node!.heroImg!,
       title: p!.node!.title ?? '',
       slug: p!.node!._sys.breadcrumbs.join('/'),
-    }));
-
-  // Extended post data for card display — ALL posts with hero images
-  const postCards = recentPosts
-    .filter((p) => p?.node?.heroImg)
-    .map((p) => ({
-      heroImg: p!.node!.heroImg!,
-      title: p!.node!.title ?? '',
-      slug: p!.node!._sys.breadcrumbs.join('/'),
-      date: p!.node!.date ?? '',
-      tag: p!.node!.tags?.[0]?.tag?.name ?? '',
     }));
 
   // Desktop post overlay — open a post in a client-side modal (no intercepting
@@ -643,6 +649,31 @@ export function HomeScrollStage({ pageData, recentPosts }: HomeScrollStageProps)
 
         {/* Post cards — absolutely positioned, slide in from above during card scroll */}
         {postCards.map((post, i) => {
+          if ('placeholder' in post) {
+            return (
+              <div
+                key={`placeholder-${post.slot}`}
+                ref={(el) => { postCardRefs.current[i] = el; }}
+                aria-label={`Future blog post ${post.slot}`}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  height: `${CARD_H}px`,
+                  overflow: 'hidden',
+                  zIndex: 3,
+                  opacity: 0,
+                  border: '1px solid rgba(224,224,224,0.12)',
+                  background: 'linear-gradient(145deg, #242424, #111)',
+                  boxShadow: '0 0 20px rgba(224,224,224,0.03)',
+                  willChange: 'transform, opacity',
+                }}
+              >
+                <p style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', margin: 0, fontFamily: 'var(--font-heading)', fontSize: 34, color: 'rgba(224,224,224,0.35)' }}>
+                  Coming soon
+                </p>
+              </div>
+            );
+          }
           const overlay = CARD_OVERLAYS[i % CARD_OVERLAYS.length];
           const date = post.date
             ? new Date(post.date).toLocaleDateString('en-US', {

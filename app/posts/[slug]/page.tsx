@@ -98,7 +98,7 @@ export default async function PostPage({
 }
 
 export async function generateStaticParams() {
-  let posts = await client.queries.postConnection();
+  let posts = await client.queries.postConnection({ filter: { published: { eq: true } } });
   const allPosts = posts;
 
   if (!allPosts.data.postConnection.edges) {
@@ -108,6 +108,7 @@ export async function generateStaticParams() {
   while (posts.data?.postConnection.pageInfo.hasNextPage) {
     posts = await client.queries.postConnection({
       after: posts.data.postConnection.pageInfo.endCursor,
+      filter: { published: { eq: true } },
     });
 
     if (!posts.data.postConnection.edges) {

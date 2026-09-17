@@ -20,6 +20,12 @@ const Post: Collection = {
       required: true,
     },
     {
+      type: 'boolean',
+      label: 'Ready for release',
+      name: 'published',
+      description: 'Show this post on the site.',
+    },
+    {
       type: 'image',
       name: 'heroImg',
       label: 'Hero Image',

@@ -7,10 +7,13 @@ export const revalidate = 3600;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Page through every post (postConnection is paginated).
   const edges: Array<{ node?: { _sys: { breadcrumbs: string[] }; date?: string | null } | null } | null> = [];
-  let page = await client.queries.postConnection();
+  let page = await client.queries.postConnection({ filter: { published: { eq: true } } });
   edges.push(...(page.data.postConnection.edges ?? []));
   while (page.data.postConnection.pageInfo.hasNextPage) {
-    page = await client.queries.postConnection({ after: page.data.postConnection.pageInfo.endCursor });
+    page = await client.queries.postConnection({
+      after: page.data.postConnection.pageInfo.endCursor,
+      filter: { published: { eq: true } },
+    });
     edges.push(...(page.data.postConnection.edges ?? []));
   }
 

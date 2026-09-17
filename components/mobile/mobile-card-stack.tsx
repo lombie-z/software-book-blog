@@ -5,6 +5,7 @@ import type { PostConnectionQuery } from '@/tina/__generated__/types';
 import { MobileCard } from './mobile-card';
 
 type PostEdges = NonNullable<PostConnectionQuery['postConnection']['edges']>;
+const MIN_CARDS = 6;
 
 interface MobileCardStackProps {
   posts: PostEdges;
@@ -150,6 +151,21 @@ const STACK_CSS = `
     display: flex;
     gap: 12px;
   }
+  .mcs-placeholder {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    border: 1px solid oklch(0.65 0 0 / 0.18);
+    border-radius: 16px;
+    background: linear-gradient(145deg, oklch(0.20 0 0), oklch(0.11 0 0));
+    color: oklch(0.65 0 0 / 0.55);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-size: 1.7rem;
+  }
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -158,7 +174,9 @@ export function MobileCardStack({ posts, onSave }: MobileCardStackProps) {
   const [deckIndex, setDeckIndex] = useState(0);
 
   const validPosts = posts.filter(p => p?.node);
-  const isEmpty = deckIndex >= validPosts.length;
+  const total = Math.max(validPosts.length, MIN_CARDS);
+  const isPlaceholder = deckIndex >= validPosts.length && deckIndex < total;
+  const isEmpty = deckIndex >= total;
 
   const visiblePosts = validPosts.slice(deckIndex, deckIndex + 3);
 
@@ -179,7 +197,6 @@ export function MobileCardStack({ posts, onSave }: MobileCardStackProps) {
   }, []);
 
   // Progress pips (max 10 visible at once around current position)
-  const total = validPosts.length;
   const pipStart = Math.max(0, Math.min(deckIndex - 2, total - 10));
   const pips = Array.from({ length: Math.min(10, total) }, (_, i) => pipStart + i);
 
@@ -203,6 +220,12 @@ export function MobileCardStack({ posts, onSave }: MobileCardStackProps) {
                 </button>
               </div>
             </div>
+
+            {isPlaceholder && (
+              <button className="mcs-placeholder" onClick={() => setDeckIndex(i => i + 1)}>
+                Coming soon
+              </button>
+            )}
 
             {/* Cards render on top (z-index 10–8 via inline style) */}
             {[...visiblePosts].reverse().map((post, revIdx) => {
