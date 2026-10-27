@@ -65,13 +65,13 @@ export const components: Components<{
   NewsletterSignup: (props) => {
     return (
       <div style={{
-        background: 'oklch(0.13 0.01 85)',
-        border: '1px solid oklch(0.78 0.10 85 / 0.20)',
+        background: 'var(--plaster-shade)',
+        border: '1px solid var(--rule)',
         borderRadius: '4px',
         padding: '1.25rem 1.5rem 1.75rem',
         margin: '1.5rem 0',
       }}>
-        <div style={{ marginBottom: '1rem', color: 'oklch(0.88 0.01 85)' }}>
+        <div style={{ marginBottom: '1rem', color: 'var(--ink)' }}>
           <TinaMarkdown content={props.children} />
         </div>
         <form style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -87,10 +87,10 @@ export const components: Components<{
             style={{
               flex: '1 1 200px',
               padding: '0.6rem 0.9rem',
-              background: 'oklch(0.09 0 0)',
-              border: '1px solid oklch(0.78 0.10 85 / 0.25)',
+              background: 'var(--plaster)',
+              border: '1px solid var(--rule)',
               borderRadius: '3px',
-              color: 'oklch(0.88 0.01 85)',
+              color: 'var(--ink)',
               fontFamily: 'var(--font-mono)',
               fontSize: '0.82rem',
               outline: 'none',
@@ -102,9 +102,9 @@ export const components: Components<{
             style={{
               padding: '0.6rem 1.2rem',
               background: 'transparent',
-              border: '1px solid oklch(0.78 0.10 85 / 0.40)',
+              border: '1px solid var(--ink)',
               borderRadius: '3px',
-              color: 'oklch(0.78 0.10 85)',
+              color: 'var(--ink)',
               fontFamily: 'var(--font-mono)',
               fontSize: '0.75rem',
               letterSpacing: '0.14em',
@@ -117,7 +117,7 @@ export const components: Components<{
           </button>
         </form>
         {props.disclaimer && (
-          <div style={{ marginTop: '0.6rem', fontSize: '0.75rem', color: 'oklch(0.45 0 0)' }}>
+          <div style={{ marginTop: '0.6rem', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
             <TinaMarkdown content={props.disclaimer} />
           </div>
         )}

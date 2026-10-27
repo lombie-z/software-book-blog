@@ -1,5 +1,7 @@
 import type { Collection } from 'tinacms';
-import { topoHeroBlockSchema } from '@/components/blocks/topo-hero';
+import { inlayHeroBlockSchema } from '@/components/blocks/inlay-hero';
+import { microBiomeBlockSchema } from '@/components/blocks/micro-biome';
+import { postIndexBlockSchema } from '@/components/blocks/post-index';
 
 const Page: Collection = {
   label: 'Pages',
@@ -25,7 +27,9 @@ const Page: Collection = {
         visualSelector: true,
       },
       templates: [
-        topoHeroBlockSchema,
+        inlayHeroBlockSchema,
+        microBiomeBlockSchema,
+        postIndexBlockSchema,
       ],
     },
   ],

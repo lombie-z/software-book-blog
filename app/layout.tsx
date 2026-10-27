@@ -1,38 +1,21 @@
 import React from "react";
 import { Metadata } from "next";
-import { Inter as FontSans, Lato, Nunito, Archivo_Black } from "next/font/google";
-import localFont from "next/font/local";
+import { Instrument_Sans, Newsreader } from "next/font/google";
 import { cn, SITE_URL } from "@/lib/utils";
 
 import "@/styles.css";
 import { TailwindIndicator } from "@/components/ui/breakpoint-indicator";
 
-const fontSans = FontSans({
+const fontSans = Instrument_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
 });
 
-const nunito = Nunito({
+const newsreader = Newsreader({
   subsets: ["latin"],
-  variable: "--font-nunito",
-});
-
-const lato = Lato({
-  subsets: ["latin"],
-  variable: "--font-lato",
-  weight: "400",
-});
-
-const archivoBlack = Archivo_Black({
-  subsets: ["latin"],
-  variable: "--font-display-block",
-  weight: "400",
-});
-
-const lucidaBlackletter = localFont({
-  src: "../public/fonts/LucidaBlackletter.ttf",
-  variable: "--font-lucida-bl",
-  display: "swap",
+  variable: "--font-newsreader",
+  style: ["normal", "italic"],
+  axes: ["opsz"],
 });
 
 export const metadata: Metadata = {
@@ -71,8 +54,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn(fontSans.variable, nunito.variable, lato.variable, lucidaBlackletter.variable, archivoBlack.variable)}>
-      <body className="min-h-screen bg-background font-body antialiased">
+    <html lang="en" className={cn(fontSans.variable, newsreader.variable)}>
+      <body className="min-h-screen bg-background font-body text-foreground antialiased">
         {children}
         <TailwindIndicator />
       </body>

@@ -1,9 +1,8 @@
 'use client';
 import { useTina } from 'tinacms/dist/react';
-import { HomeScrollStage } from '@/components/blocks/home-scroll-stage';
-import type { PageQuery, PostConnectionQuery } from '@/tina/__generated__/types';
-
-type PostEdges = NonNullable<PostConnectionQuery['postConnection']['edges']>;
+import { Blocks } from '@/components/blocks';
+import type { PostEdges } from '@/components/blocks/post-index';
+import type { PageQuery } from '@/tina/__generated__/types';
 
 interface HomeClientPageProps {
   pageProps: {
@@ -16,11 +15,5 @@ interface HomeClientPageProps {
 
 export default function HomeClientPage({ pageProps, posts }: HomeClientPageProps) {
   const { data } = useTina({ ...pageProps });
-
-  return (
-    <HomeScrollStage
-      pageData={data?.page}
-      recentPosts={posts}
-    />
-  );
+  return <Blocks {...data.page} posts={posts} />;
 }

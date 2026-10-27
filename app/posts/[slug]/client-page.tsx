@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { tinaField, useTina } from 'tinacms/dist/react';
@@ -7,7 +7,6 @@ import { TinaMarkdown } from 'tinacms/dist/rich-text';
 import { PostQuery } from '@/tina/__generated__/types';
 import { components } from '@/components/mdx-components';
 import ErrorBoundary from '@/components/error-boundary';
-import { SocialFooter } from '@/components/social-footer';
 
 interface ClientPostProps {
   data: PostQuery;
@@ -15,30 +14,19 @@ interface ClientPostProps {
     relativePath: string;
   };
   query: string;
-  // Rendered inside the desktop post overlay (intercepting route): drop the
-  // full-page chrome (back link, min-h-screen, footer) so it sits in the panel.
-  overlay?: boolean;
 }
 
-export default function PostClientPage({ overlay, ...props }: ClientPostProps) {
+export default function PostClientPage(props: ClientPostProps) {
   const { data } = useTina({ ...props });
   const post = data.post;
   const [copied, setCopied] = useState(false);
-  const [heroLoaded, setHeroLoaded] = useState(false);
-  const heroRef = useRef<HTMLImageElement>(null);
-
-  // A cached/priority hero can finish loading before React attaches onLoad,
-  // which would leave it stuck at opacity 0. Reveal it if it's already complete.
-  useEffect(() => {
-    if (heroRef.current?.complete) setHeroLoaded(true);
-  }, []);
 
   const date = new Date(post.date!);
   let formattedDate = '';
   if (!isNaN(date.getTime())) {
     // Format in UTC so SSR (server TZ) and client (browser TZ) agree — otherwise
     // the publish date differs across the date boundary and hydration mismatches.
-    formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric', timeZone: 'UTC' });
+    formattedDate = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' });
   }
 
   const handleShare = async () => {
@@ -55,80 +43,40 @@ export default function PostClientPage({ overlay, ...props }: ClientPostProps) {
 
   return (
     <ErrorBoundary>
-      <div className={overlay ? 'bg-[#0a0a0a]' : 'min-h-screen bg-[#0a0a0a]'}>
-        <div className={`mx-auto max-w-3xl px-6 ${overlay ? 'pb-16 pt-14' : 'pb-28 pt-28'}`}>
-          {!overlay && (
-            <Link
-              href="/#posts"
-              className="mb-10 inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/50 transition-colors hover:text-[#e0e0e0]"
-            >
-              <span aria-hidden="true">&larr;</span> Back to posts
-            </Link>
-          )}
-          <h1
-            data-tina-field={tinaField(post, 'title')}
-            className="mb-8 font-heading text-5xl tracking-wide text-[#e0e0e0] md:text-6xl"
-          >
+      <article className="mx-auto max-w-3xl px-6 pt-16 md:pt-24">
+        <header className="mx-auto max-w-[65ch]">
+          <h1 data-tina-field={tinaField(post, 'title')} className="text-balance font-serif text-4xl leading-[1.1] text-ink md:text-6xl">
             {post.title}
           </h1>
-
-          <div className="mb-16 flex items-center justify-between gap-4">
-            <span
-              data-tina-field={tinaField(post, 'date')}
-              className="font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/50"
-            >
+          <div className="mt-6 flex items-center justify-between gap-4 border-b border-rule pb-6 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            <time data-tina-field={tinaField(post, 'date')} dateTime={post.date ?? undefined}>
               {formattedDate}
-            </span>
-            <button
-              onClick={handleShare}
-              className="inline-flex items-center gap-2 rounded border border-[#e0e0e0]/15 bg-transparent px-3 py-1.5 font-mono text-xs uppercase tracking-widest text-[#e0e0e0]/50 transition-colors hover:border-[#e0e0e0]/30 hover:text-[#e0e0e0]/80"
-              aria-label="Share this post"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-              </svg>
-              {copied ? 'Copied' : 'Share'}
+            </time>
+            <button onClick={handleShare} className="uppercase tracking-[0.18em] transition-colors hover:text-ink" aria-label="Share this post">
+              {copied ? 'Link copied' : 'Share'}
             </button>
           </div>
+        </header>
 
-          {post.heroImg && (
-            // Fixed 16:9 box (matches the overlay skeleton exactly). Both layers
-            // are `fill` (absolute), so nothing in normal flow can grow the box
-            // when the image loads — the height is locked by aspect-ratio from
-            // the first paint.
-            <div data-tina-field={tinaField(post, 'heroImg')} className="relative mb-16 aspect-[16/9] overflow-hidden rounded-lg">
-              {/* Low-res base — the home card's cached 640px variant, so it
-                  paints instantly; the full-res layer fades in over it on load. */}
-              <Image src={post.heroImg} alt="" aria-hidden fill sizes="640px" className="object-cover" />
-              <Image
-                ref={heroRef}
-                priority={true}
-                src={post.heroImg}
-                alt={post.title}
-                fill
-                sizes="(max-width: 820px) 100vw, 768px"
-                onLoad={() => setHeroLoaded(true)}
-                className="object-cover transition-opacity duration-500 ease-out"
-                style={{ opacity: heroLoaded ? 1 : 0 }}
-              />
-            </div>
-          )}
-
-          <div
-            data-tina-field={tinaField(post, '_body')}
-            className="prose prose-invert max-w-none prose-headings:font-heading prose-headings:tracking-wide prose-headings:text-[#e0e0e0] prose-p:text-[#e0e0e0]/80 prose-a:text-[#e0e0e0] prose-a:underline prose-strong:text-[#e0e0e0] prose-code:text-[#e0e0e0]/90 prose-blockquote:border-[#e0e0e0]/20 prose-blockquote:text-[#e0e0e0]/60"
-          >
-            <TinaMarkdown
-              content={post._body}
-              components={{
-                ...components,
-              }}
-            />
+        {post.heroImg && (
+          <div data-tina-field={tinaField(post, 'heroImg')} className="relative mt-12 aspect-[16/9] overflow-hidden bg-plaster-shade">
+            <Image priority src={post.heroImg} alt={post.title} fill sizes="(max-width: 820px) 100vw, 768px" className="object-cover" />
           </div>
+        )}
+
+        <div
+          data-tina-field={tinaField(post, '_body')}
+          className="prose prose-lg mx-auto mt-12 max-w-[65ch] font-serif prose-headings:font-serif prose-headings:font-normal prose-headings:text-ink prose-p:text-ink/85 prose-a:text-ink prose-a:decoration-1 prose-a:underline-offset-4 prose-strong:text-ink prose-blockquote:border-rule prose-blockquote:font-normal prose-blockquote:italic prose-blockquote:text-ink/70 prose-code:font-mono prose-li:text-ink/85"
+        >
+          <TinaMarkdown content={post._body} components={components} />
         </div>
-      </div>
-      {!overlay && <SocialFooter />}
+
+        <div className="mx-auto mt-20 max-w-[65ch]">
+          <Link href="/#posts" className="text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-ink">
+            <span aria-hidden="true">&larr;</span> All writing
+          </Link>
+        </div>
+      </article>
     </ErrorBoundary>
   );
 }

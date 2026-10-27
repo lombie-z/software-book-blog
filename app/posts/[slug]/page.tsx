@@ -1,12 +1,9 @@
 import React from 'react';
-import { headers } from 'next/headers';
 import { Metadata } from 'next';
 import client from '@/tina/__generated__/client';
 import Layout from '@/components/layout/layout';
-import { ResponsiveSwitch } from '@/components/responsive-switch';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/utils';
 import PostClientPage from './client-page';
-import MobilePostClientPage from './mobile-client-page';
 
 function extractText(node: any): string {
   if (!node) return '';
@@ -65,9 +62,6 @@ export default async function PostPage({
     relativePath: `${slug}.mdx`,
   });
 
-  const headersList = await headers();
-  const initialDevice = headersList.get('x-device-type') === 'mobile' ? 'mobile' : 'desktop';
-
   const post = data.data.post;
   const absImg = post.heroImg?.startsWith('http') ? post.heroImg : `${SITE_URL}${post.heroImg ?? '/images/hero-portrait.png'}`;
   const jsonLd = {
@@ -84,15 +78,9 @@ export default async function PostPage({
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <ResponsiveSwitch
-        initialDevice={initialDevice}
-        desktop={
-          <Layout rawPageData={data}>
-            <PostClientPage {...data} />
-          </Layout>
-        }
-        mobile={<MobilePostClientPage {...data} />}
-      />
+      <Layout rawPageData={data}>
+        <PostClientPage {...data} />
+      </Layout>
     </>
   );
 }
