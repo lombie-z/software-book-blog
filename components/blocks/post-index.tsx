@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import type { Template } from 'tinacms';
 import { tinaField } from 'tinacms/dist/react';
 import type { PageBlocksPostIndex, PostConnectionQuery } from '@/tina/__generated__/types';
 
@@ -55,18 +54,3 @@ export function PostIndex({ data, posts }: { data: PageBlocksPostIndex; posts: P
     </section>
   );
 }
-
-export const postIndexBlockSchema: Template = {
-  name: 'postIndex',
-  label: 'Post Index',
-  ui: {
-    defaultItem: { heading: 'Writing' },
-  },
-  fields: [
-    {
-      type: 'string',
-      label: 'Heading',
-      name: 'heading',
-    },
-  ],
-};

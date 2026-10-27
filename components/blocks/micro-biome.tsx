@@ -3,7 +3,6 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { View } from '@react-three/drei';
-import type { Template } from 'tinacms';
 import { tinaField } from 'tinacms/dist/react';
 import type { DragState } from '@/components/three/micro-biome-scene';
 import { useSceneAvailable } from '@/components/three/scene-context';
@@ -87,24 +86,9 @@ export function MicroBiome({ data }: { data: PageBlocksMicroBiome }) {
       {data.caption && (
         <p data-tina-field={tinaField(data, 'caption')} className="mt-4 text-center text-xs uppercase tracking-[0.18em] text-muted-foreground">
           {data.caption}
-          {ready && <span className="normal-case tracking-normal"> · drag to turn</span>}
+          {ready && <span className="mt-1 block normal-case tracking-normal">Drag to turn it</span>}
         </p>
       )}
     </section>
   );
 }
-
-export const microBiomeBlockSchema: Template = {
-  name: 'microBiome',
-  label: 'Micro Biome',
-  ui: {
-    defaultItem: { caption: 'Modelled in Blender by Claude' },
-  },
-  fields: [
-    {
-      type: 'string',
-      label: 'Caption',
-      name: 'caption',
-    },
-  ],
-};

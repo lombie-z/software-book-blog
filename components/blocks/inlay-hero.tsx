@@ -2,7 +2,6 @@
 
 import { Suspense, useRef } from 'react';
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
-import type { Template } from 'tinacms';
 import { Cactus } from '@/components/three/cactus';
 import { PlasterNiche } from '@/components/three/plaster-niche';
 import { useLayout } from '@/components/layout/layout-context';
@@ -70,22 +69,11 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
           </div>
         ))}
       </div>
+      {/* The vertical side texts need gutters; on phones they sit under the niches instead. */}
+      <p className="mt-8 flex flex-wrap justify-between gap-x-4 gap-y-1 text-[0.7rem] uppercase tracking-[0.24em] text-ink md:hidden" aria-hidden="true">
+        <span>{site?.name}</span>
+        <span className="text-muted-foreground">{site?.tagline}</span>
+      </p>
     </section>
   );
 }
-
-export const inlayHeroBlockSchema: Template = {
-  name: 'inlayHero',
-  label: 'Inlay Hero',
-  ui: {
-    defaultItem: { showCactus: true },
-  },
-  fields: [
-    {
-      type: 'boolean',
-      label: 'Show cactus',
-      name: 'showCactus',
-      description: 'The clay cactus in the lowest niche.',
-    },
-  ],
-};

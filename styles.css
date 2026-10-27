@@ -115,3 +115,12 @@
     animation-duration: 0.01ms !important;
   }
 }
+
+/* Lenis owns smooth scrolling when active. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
