@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef } from 'react';
+import { Suspense, useRef } from 'react';
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
 import type { Template } from 'tinacms';
+import { Cactus } from '@/components/three/cactus';
 import { PlasterNiche } from '@/components/three/plaster-niche';
 import { useLayout } from '@/components/layout/layout-context';
 import { Signature } from '@/components/ui/signature';
@@ -58,11 +59,17 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
               'shadow-[inset_18px_22px_28px_-6px_oklch(0.55_0.02_70/0.55),inset_-2px_-2px_0_oklch(1_0_0/0.6)]'
             )}
           >
-            <PlasterNiche />
+            <PlasterNiche>
+              {niche.id === 'bottom' && data.showCactus && (
+                <Suspense fallback={null}>
+                  {/* Back-left of the floor, as in the sketch. */}
+                  <Cactus position={[-0.5, 0, -0.16]} rotation-y={0.5} />
+                </Suspense>
+              )}
+            </PlasterNiche>
           </div>
         ))}
       </div>
-      <p className="sr-only">{data.showCactus ? 'A small potted cactus sits in the lowest niche.' : ''}</p>
     </section>
   );
 }
