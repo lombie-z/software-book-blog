@@ -41,6 +41,8 @@ function NicheScene({ trackRef, depth, children }: { trackRef: React.RefObject<H
   const floor = useRef<Group>(null);
   const sun = useRef<DirectionalLight>(null);
   const material = useMemo(() => new MeshStandardMaterial({ color: PLASTER, roughness: 1, metalness: 0 }), []);
+  // Smaller shadow maps on phones; the niches are smaller there anyway.
+  const shadowSize = useMemo(() => (window.innerWidth < 768 ? 1024 : 2048), []);
 
   // Runs before drei's View render (priority 1): fit the room to the DOM box and aim an off-axis camera through it.
   useFrame(() => {
@@ -109,7 +111,7 @@ function NicheScene({ trackRef, depth, children }: { trackRef: React.RefObject<H
         color="#fff8ee"
         intensity={1.6}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[shadowSize, shadowSize]}
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
       />

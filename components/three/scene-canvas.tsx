@@ -42,7 +42,7 @@ export default function SceneCanvas() {
       eventSource={document.body}
       shadows
       flat
-      dpr={[1, 2]}
+      dpr={[1, 1.75]}
       gl={{ antialias: true, alpha: true }}
       style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}
     >
