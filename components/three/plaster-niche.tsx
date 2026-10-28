@@ -3,13 +3,23 @@
 import { type ReactNode, useMemo, useRef } from 'react';
 import { PerspectiveCamera, View } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { Color, type DirectionalLight, type Group, type Mesh, MeshStandardMaterial, type PerspectiveCamera as PerspectiveCameraImpl } from 'three';
+import { Color, LinearSRGBColorSpace, type DirectionalLight, type Group, type Mesh, MeshLambertMaterial, type PerspectiveCamera as PerspectiveCameraImpl } from 'three';
 import { cn } from '@/lib/utils';
 import { sceneState } from './scene-state';
 
 // CSS pixels → world units.
 const PX = 0.01;
-const PLASTER = new Color('#f1ece4');
+// Same as --plaster in styles.css: the niche is the page itself, only shadow sets it apart.
+const PLASTER = new Color('#f5f2ed');
+// Lambert output = albedo * irradiance / π. Sun (×0.8, its fixed tilt toward the wall) plus sky light
+// sum to π per channel on a sunlit back wall, so it renders exactly the page colour; shadow keeps only the sky (~64%).
+// The sky is a little warm (bounce off the plaster) and the sun a little cool, so shadows stay warm
+// while the sunlit sum is neutral white. Values are linear RGB.
+const SKY = 2.2;
+const SKY_COLOR = new Color().setRGB(1, 0.965, 0.92, LinearSRGBColorSpace);
+const GROUND_COLOR = SKY_COLOR.clone().multiplyScalar(0.91);
+const SUN = 1.397;
+const SUN_COLOR = new Color().setRGB(0.842, 0.911, 1, LinearSRGBColorSpace);
 
 interface PlasterNicheProps {
   className?: string;
@@ -40,7 +50,7 @@ function NicheScene({ trackRef, depth, children }: { trackRef: React.RefObject<H
   const frame = useRef<Group>(null);
   const floor = useRef<Group>(null);
   const sun = useRef<DirectionalLight>(null);
-  const material = useMemo(() => new MeshStandardMaterial({ color: PLASTER, roughness: 1, metalness: 0 }), []);
+  const material = useMemo(() => new MeshLambertMaterial({ color: PLASTER }), []);
   // Smaller shadow maps on phones; the niches are smaller there anyway.
   const shadowSize = useMemo(() => (window.innerWidth < 768 ? 1024 : 2048), []);
 
@@ -105,11 +115,12 @@ function NicheScene({ trackRef, depth, children }: { trackRef: React.RefObject<H
   return (
     <>
       <PerspectiveCamera ref={camera} makeDefault manual />
-      <hemisphereLight args={['#fffaf2', '#e6ddd0', 1.7]} />
+      {/* Ground slightly darker than sky so ceilings read a touch deeper than floors. */}
+      <hemisphereLight args={[SKY_COLOR, GROUND_COLOR, SKY]} />
       <directionalLight
         ref={sun}
-        color="#fff8ee"
-        intensity={1.6}
+        color={SUN_COLOR}
+        intensity={SUN}
         castShadow
         shadow-mapSize={[shadowSize, shadowSize]}
         shadow-bias={-0.0004}

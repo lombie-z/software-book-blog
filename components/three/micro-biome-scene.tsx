@@ -5,6 +5,8 @@ import { ContactShadows, OrthographicCamera, useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { type Group, type Mesh, type Object3D, type OrthographicCamera as OrthographicCameraImpl, Vector3 } from 'three';
 import { DRACO_PATH } from './cactus';
+import { SilhouetteOutline } from './silhouette-outline';
+import { useStudioReflections } from './studio-environment';
 
 const URL = '/models/micro-biome.glb';
 // Matches the Blender preview camera (art/micro-biome.blend): orthographic, three-quarter, 3.9 units across.
@@ -21,15 +23,19 @@ export interface DragState {
   active: boolean;
 }
 
-type Animated = { node: Object3D; kind: 'spire' | 'cloud' | 'star' | 'letter' | 'water'; i: number; base: { position: Vector3; scale: Vector3; rotY: number } };
+type Animated = { node: Object3D; kind: 'cloud' | 'star' | 'letter' | 'water'; i: number; base: { position: Vector3; scale: Vector3; rotY: number } };
 
 function classify(name: string): Animated['kind'] | null {
-  if (name.startsWith('Spire')) return 'spire';
   if (name.startsWith('Cloud')) return 'cloud';
   if (name.startsWith('Star')) return 'star';
   if (name.startsWith('Letter') || name.startsWith('Word')) return 'letter';
   if (name.startsWith('Water')) return 'water';
   return null;
+}
+
+// The lettering tumbles free of the sticker outline; contact shadows aren't part of the object.
+function isOutsideOutline(o: Object3D) {
+  return o.name.startsWith('Letter') || o.name.startsWith('Word') || o.name === 'ContactShadows';
 }
 
 export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef: React.RefObject<HTMLDivElement | null>; drag: React.RefObject<DragState>; onReady: () => void; animate: boolean }) {
@@ -56,6 +62,7 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
     return list;
   }, [scene]);
 
+  useStudioReflections(scene, 0.8);
   useEffect(onReady, [onReady]);
 
   useFrame((state, delta) => {
@@ -89,10 +96,6 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
     for (const a of animated) {
       const { node, base, i } = a;
       switch (a.kind) {
-        case 'spire':
-          node.rotation.x = Math.sin(t * 0.9 + i * 1.3) * 0.035;
-          node.rotation.z = Math.cos(t * 0.7 + i) * 0.03;
-          break;
         case 'cloud':
           node.position.x = base.position.x + Math.sin(t * 0.35 + i * 2.1) * 0.12;
           node.position.z = base.position.z + Math.cos(t * 0.25 + i) * 0.05;
@@ -118,7 +121,7 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
   return (
     <>
       <OrthographicCamera ref={camera} makeDefault position={CAMERA_POSITION.toArray()} near={0.1} far={40} onUpdate={(c) => c.lookAt(TARGET)} />
-      <hemisphereLight args={['#fffaf2', '#e3d6c6', 1.5]} />
+      <hemisphereLight args={['#fffaf2', '#e3d6c6', 0.9]} />
       <directionalLight
         position={[-3, 6, 4]}
         intensity={1.8}
@@ -136,7 +139,8 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
         <group ref={pivot}>
           <primitive object={scene} />
         </group>
-        <ContactShadows position={[0, -0.01, 0]} scale={3} blur={2.4} opacity={0.32} far={1.2} resolution={512} color="#6b5a48" />
+        <SilhouetteOutline target={scene} exclude={isOutsideOutline} />
+        <ContactShadows name="ContactShadows" position={[0, -0.01, 0]} scale={3} blur={2.4} opacity={0.32} far={1.2} resolution={512} color="#6b5a48" />
       </group>
     </>
   );

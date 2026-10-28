@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
 import type { ThreeElements } from '@react-three/fiber';
 import type { Mesh } from 'three';
+import { useStudioReflections } from './studio-environment';
 
 const URL = '/models/cactus.glb';
 // Self-hosted decoder (copied from three/examples) so models never depend on a CDN.
@@ -22,6 +23,7 @@ export function Cactus(props: ThreeElements['group']) {
     });
     return clone;
   }, [scene]);
+  useStudioReflections(model, 0.7);
 
   return (
     <group {...props}>

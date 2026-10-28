@@ -124,3 +124,17 @@ html.lenis body {
 .lenis.lenis-smooth {
   scroll-behavior: auto !important;
 }
+
+/* Signature written stroke by stroke (components/ui/signature.tsx). */
+.signature-stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation-name: signature-write;
+  animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  animation-fill-mode: forwards;
+}
+@keyframes signature-write {
+  to {
+    stroke-dashoffset: 0;
+  }
+}

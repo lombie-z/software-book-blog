@@ -47,7 +47,7 @@ export default function SceneCanvas() {
       style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}
     >
       <SunController />
-      <SoftShadows size={18} samples={16} focus={0.6} />
+      <SoftShadows size={42} samples={24} focus={0.35} />
       <View.Port />
     </Canvas>
   );
