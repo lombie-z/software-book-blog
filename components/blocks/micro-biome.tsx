@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { ArrowUpRight } from 'lucide-react';
 import { tinaField } from 'tinacms/dist/react';
 import type { DragState } from '@/components/three/micro-biome-scene';
 import { useSceneAvailable } from '@/components/three/scene-context';
@@ -80,7 +81,29 @@ export function MicroBiome({ data }: { data: PageBlocksMicroBiome }) {
       {data.caption && (
         <p data-tina-field={tinaField(data, 'caption')} className="mt-4 text-center text-xs uppercase tracking-[0.18em] text-muted-foreground">
           {data.caption}
-          {ready && <span className="mt-1 block normal-case tracking-normal">Drag to turn it</span>}
+        </p>
+      )}
+      {data.linkLabel && (
+        <p className="mt-2 text-center text-xs">
+          {/* Until the full site has an address, the label shows without a link. */}
+          {data.linkUrl ? (
+            <a
+              href={data.linkUrl}
+              target="_blank"
+              rel="noopener"
+              data-tina-field={tinaField(data, 'linkLabel')}
+              className="inline-flex items-center gap-1 text-ink underline-offset-4 hover:underline"
+            >
+              {data.linkLabel}
+              <ArrowUpRight className="size-3.5" aria-hidden="true" />
+              <span className="sr-only">(opens in a new tab)</span>
+            </a>
+          ) : (
+            <span data-tina-field={tinaField(data, 'linkLabel')} className="inline-flex items-center gap-1 text-ink">
+              {data.linkLabel}
+              <ArrowUpRight className="size-3.5" aria-hidden="true" />
+            </span>
+          )}
         </p>
       )}
     </section>

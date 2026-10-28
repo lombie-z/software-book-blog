@@ -22,13 +22,24 @@ export const microBiomeBlockSchema: Template = {
   name: 'microBiome',
   label: 'Micro Biome',
   ui: {
-    defaultItem: { caption: 'Modelled in Blender by Claude' },
+    defaultItem: { caption: 'Claude-powered Modelling for Interactive Web Experiences', linkLabel: 'See full site' },
   },
   fields: [
     {
       type: 'string',
       label: 'Caption',
       name: 'caption',
+    },
+    {
+      type: 'string',
+      label: 'Link label',
+      name: 'linkLabel',
+    },
+    {
+      type: 'string',
+      label: 'Link URL',
+      name: 'linkUrl',
+      description: 'The full micro biome site. Opens in a new tab.',
     },
   ],
 };
