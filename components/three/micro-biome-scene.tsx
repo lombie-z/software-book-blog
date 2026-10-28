@@ -117,11 +117,10 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
         case 'letter':
           node.position.y = base.position.y + Math.sin(t * 1.6 - i * 0.7) * 0.035;
           break;
-        case 'water': {
-          const s = 1 + Math.sin(t * 1.4) * 0.025;
-          node.scale.set(base.scale.x * s, base.scale.y, base.scale.z * (2 - s));
+        case 'water':
+          // It fills the planter wall to wall, so it can't swell; it rises and falls a hair instead.
+          node.position.y = base.position.y + Math.sin(t * 0.9) * 0.004;
           break;
-        }
       }
     }
   });
