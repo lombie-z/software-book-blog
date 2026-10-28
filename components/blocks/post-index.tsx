@@ -12,11 +12,11 @@ type Post = NonNullable<NonNullable<PostEdges[number]>['node']>;
 
 const VISIBLE = 3;
 
-// Desert tones, low chroma and warm so they sit on the plaster: terracotta clay, dusty sage, sandy ochre.
+// Warm desert tones, low chroma so they sit on the plaster: terracotta, sandstone, ochre.
 const CONCEPT_PILLS: Record<string, { label: string; className: string }> = {
-  model: { label: 'Model', className: 'bg-[oklch(0.9_0.024_45)] text-[oklch(0.47_0.055_42)]' },
-  site: { label: 'Site', className: 'bg-[oklch(0.91_0.016_120)] text-[oklch(0.46_0.035_120)]' },
-  graphic: { label: 'Graphic', className: 'bg-[oklch(0.92_0.028_80)] text-[oklch(0.5_0.055_75)]' },
+  model: { label: 'Model', className: 'bg-[oklch(0.9_0.026_32)] text-[oklch(0.47_0.06_32)]' },
+  site: { label: 'Site', className: 'bg-[oklch(0.91_0.02_62)] text-[oklch(0.46_0.04_60)]' },
+  graphic: { label: 'Graphic', className: 'bg-[oklch(0.92_0.032_88)] text-[oklch(0.5_0.06_82)]' },
 };
 
 export const sectionId = (category?: string | null) => (category === 'concept' ? 'concepts' : 'thoughts');
