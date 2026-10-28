@@ -17,13 +17,17 @@ const NICHES = [
   { id: 'bottom', aspect: 'aspect-[16/9]', slope: 0 },
 ] as const;
 
-function SideText({ text, className, y }: { text?: string | null; className?: string; y: MotionValue<number> }) {
+/** Vertical text beside a rule. The rule moves with `y`; the text slides along it by `slide` on top of that. */
+function SideText({ text, className, y, slide }: { text?: string | null; className?: string; y: MotionValue<number>; slide: MotionValue<number> }) {
   if (!text) return null;
   return (
     <motion.div style={{ y }} className={cn('pointer-events-none absolute hidden items-start gap-3 md:flex', className)} aria-hidden="true">
-      <span className="text-[0.8rem] font-medium uppercase leading-[1.55] tracking-[0.3em] text-ink [text-orientation:upright] [writing-mode:vertical-rl]">
+      <motion.span
+        style={{ y: slide }}
+        className="text-[0.8rem] font-medium uppercase leading-[1.55] tracking-[0.3em] text-ink [text-orientation:upright] [writing-mode:vertical-rl]"
+      >
         {text}
-      </span>
+      </motion.span>
       <span className="w-px self-stretch bg-ink/70" />
     </motion.div>
   );
@@ -33,19 +37,22 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
   const { globalSettings } = useLayout();
   const site = globalSettings?.site;
   const ref = useRef<HTMLElement>(null);
-  // Side texts drift at different rates to the niches as the hero scrolls past.
+  // Side rules drift at different rates to the niches as the hero scrolls past, and their text at a third rate,
+  // so text, rules and niches all slide past one another.
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
   const drift = useReducedMotion() ? 0 : 1;
   const leftY = useTransform(scrollYProgress, [0, 1], [0, 260 * drift]);
   const rightY = useTransform(scrollYProgress, [0, 1], [0, -180 * drift]);
+  const leftSlide = useTransform(scrollYProgress, [0, 1], [0, -170 * drift]);
+  const rightSlide = useTransform(scrollYProgress, [0, 1], [0, 150 * drift]);
 
   return (
     <section ref={ref} className="relative mx-auto w-full max-w-[min(560px,78vw)] pt-10 md:pt-16" aria-label="Intro">
       <h1 className="sr-only">{site?.name}</h1>
       <Signature variant="etched" className="relative z-10 mb-[calc(min(560px,78vw)*-0.05)] ml-[-3%] w-[min(260px,56vw)] text-ink" />
 
-      <SideText text={site?.name} y={leftY} className="-left-24 top-32 h-[46%] flex-row-reverse" />
-      <SideText text={site?.tagline} y={rightY} className="-right-24 top-[44%] h-[54%]" />
+      <SideText text={site?.name} y={leftY} slide={leftSlide} className="-left-24 top-32 h-[46%] flex-row-reverse" />
+      <SideText text={site?.tagline} y={rightY} slide={rightSlide} className="-right-24 top-[44%] h-[54%]" />
 
       <div className="flex flex-col gap-10 md:gap-14">
         {NICHES.map((niche) => (
