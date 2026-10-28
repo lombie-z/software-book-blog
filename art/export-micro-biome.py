@@ -9,24 +9,38 @@ GLB = os.path.join(ROOT_DIR, 'public', 'models', 'micro-biome.glb')
 STILL = os.path.join(ROOT_DIR, 'public', 'images', '3d', 'micro-biome.png')
 # Silhouette without the lettering, for the sticker outline (composited by art/outline-still.sh).
 STILL_MASK = os.path.join(ROOT_DIR, 'public', 'images', '3d', 'micro-biome-mask.png')
+STILL_BACK = os.path.join(ROOT_DIR, 'public', 'images', '3d', 'micro-biome-back.png')
 DECIMATE = {'Cloud': 0.3, 'Letter': 0.45, 'Word': 0.45, 'Spire': 0.6}
 
 scene = bpy.context.scene
 root = bpy.data.objects['MicroBiome']
 
-# Fallback still first, from the untouched scene (preview camera + studio lights, transparent background).
+# Fallback stills first, from the untouched scene (preview camera + studio lights, transparent background).
+# Three layers so the letter ring weaves around the sticker outline like the live scene:
+#   back  - ring letters on the far side only (goes under the outline band)
+#   front - everything except the far-side letters (goes over it)
+#   mask  - silhouette without any letters (the outline is grown from this)
 scene.render.engine = 'BLENDER_EEVEE'
 scene.render.film_transparent = True
 scene.render.resolution_x = scene.render.resolution_y = 1200
 os.makedirs(os.path.dirname(STILL), exist_ok=True)
-scene.render.filepath = STILL
-bpy.ops.render.render(write_still=True)
-letters = [o for o in root.children_recursive if o.name.startswith(('Letter', 'Word'))]
-for o in letters:
-    o.hide_render = True
-scene.render.filepath = STILL_MASK
-bpy.ops.render.render(write_still=True)
-for o in letters:
+cam_dir = (scene.camera.matrix_world.translation - root.matrix_world.translation).normalized()
+letters = [o for o in root.children_recursive if o.type in {'FONT', 'MESH'} and o.name.startswith(('Letter', 'Word'))]
+back = [o for o in letters if (o.matrix_world.translation - root.matrix_world.translation).dot(cam_dir) < 0]
+everything = [o for o in scene.objects if o.type in {'MESH', 'FONT'}]
+
+
+def render(path, visible):
+    for o in everything:
+        o.hide_render = o not in visible
+    scene.render.filepath = path
+    bpy.ops.render.render(write_still=True)
+
+
+render(STILL_BACK, set(back))
+render(STILL, set(everything) - set(back))
+render(STILL_MASK, set(everything) - set(letters))
+for o in everything:
     o.hide_render = False
 
 

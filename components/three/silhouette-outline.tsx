@@ -3,15 +3,16 @@
 import { useMemo, useRef } from 'react';
 import { useFBO } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Color, type Mesh, MeshBasicMaterial, type Object3D, ShaderMaterial, Vector2 } from 'three';
+import { Color, type Mesh, MeshBasicMaterial, type Object3D, ShaderMaterial, Vector2, Vector3 } from 'three';
 
 // Sticker-style outline: renders the model's silhouette into a mask each frame, then draws a dilated
 // white band with a thin dark rim behind it. Follows rotation and animation because it is the real silhouette.
 const vertexShader = /* glsl */ `
+  uniform float uDepth;
   varying vec2 vUv;
   void main() {
     vUv = uv;
-    gl_Position = vec4(position.xy, 0.999, 1.0);
+    gl_Position = vec4(position.xy, uDepth, 1.0);
   }
 `;
 
@@ -57,11 +58,15 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
+const projected = new Vector3();
+
 interface SilhouetteOutlineProps {
   /** Objects whose silhouette gets the outline. */
   target: Object3D;
   /** Objects hidden from the silhouette (left un-outlined). */
   exclude: (object: Object3D) => boolean;
+  /** World-space point the sticker sits at in depth: things nearer pass in front of the band, farther pass behind. */
+  depthAt: Vector3;
   /** Outline widths in CSS pixels. */
   width?: number;
   rim?: number;
@@ -69,7 +74,7 @@ interface SilhouetteOutlineProps {
   rimColor?: string;
 }
 
-export function SilhouetteOutline({ target, exclude, width = 12, rim = 2.5, color = '#ffffff', rimColor = '#2f2a27' }: SilhouetteOutlineProps) {
+export function SilhouetteOutline({ target, exclude, depthAt, width = 12, rim = 2.5, color = '#ffffff', rimColor = '#2f2a27' }: SilhouetteOutlineProps) {
   const dpr = useThree((s) => s.viewport.dpr);
   const mask = useFBO();
   const quad = useRef<Mesh>(null);
@@ -81,6 +86,7 @@ export function SilhouetteOutline({ target, exclude, width = 12, rim = 2.5, colo
         fragmentShader,
         uniforms: {
           uMask: { value: mask.texture },
+          uDepth: { value: 0.999 },
           uTexel: { value: new Vector2() },
           uWidth: { value: 0 },
           uRim: { value: 0 },
@@ -88,7 +94,7 @@ export function SilhouetteOutline({ target, exclude, width = 12, rim = 2.5, colo
           uRimColor: { value: new Color(rimColor) },
         },
         transparent: true,
-        depthTest: false,
+        depthTest: true,
         depthWrite: false,
       }),
     [mask, color, rimColor]
@@ -115,6 +121,7 @@ export function SilhouetteOutline({ target, exclude, width = 12, rim = 2.5, colo
     scene.overrideMaterial = previousOverride;
     for (const o of hidden) o.visible = true;
 
+    material.uniforms.uDepth.value = projected.copy(depthAt).project(camera).z;
     material.uniforms.uTexel.value.set(1 / mask.width, 1 / mask.height);
     material.uniforms.uWidth.value = width * dpr;
     material.uniforms.uRim.value = rim * dpr;

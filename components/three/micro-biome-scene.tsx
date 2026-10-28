@@ -10,9 +10,11 @@ import { useStudioReflections } from './studio-environment';
 
 const URL = '/models/micro-biome.glb';
 // Matches the Blender preview camera (art/micro-biome.blend): orthographic, three-quarter, 3.9 units across.
-const TARGET = new Vector3(0, 0.75, 0);
+const TARGET = new Vector3(0, 0.92, 0);
 const CAMERA_POSITION = TARGET.clone().add(new Vector3(-1, 0.75, 1).normalize().multiplyScalar(8));
-const FRAME = 3.9;
+const FRAME = 3.7;
+// The letter ring orbits this point; the sticker band sits at its depth so the ring weaves in front of and behind it.
+const OUTLINE_DEPTH = new Vector3(0, 0.62, 0);
 const MAX_YAW = Math.PI / 3;
 const MAX_PITCH = Math.PI / 14;
 
@@ -23,9 +25,11 @@ export interface DragState {
   active: boolean;
 }
 
-type Animated = { node: Object3D; kind: 'cloud' | 'star' | 'letter' | 'water'; i: number; base: { position: Vector3; scale: Vector3; rotY: number } };
+type Animated = { node: Object3D; kind: 'ring' | 'cloud' | 'star' | 'letter' | 'water'; i: number; base: { position: Vector3; scale: Vector3; rotY: number } };
 
 function classify(name: string): Animated['kind'] | null {
+  if (name === 'LetterRing') return 'ring';
+  if (name === 'LetterRingTilt') return null;
   if (name.startsWith('Cloud')) return 'cloud';
   if (name.startsWith('Star')) return 'star';
   if (name.startsWith('Letter') || name.startsWith('Word')) return 'letter';
@@ -96,6 +100,10 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
     for (const a of animated) {
       const { node, base, i } = a;
       switch (a.kind) {
+        case 'ring':
+          // MICRO • BIOME orbits slowly around the planter.
+          node.rotation.y = base.rotY + t * 0.18;
+          break;
         case 'cloud':
           node.position.x = base.position.x + Math.sin(t * 0.35 + i * 2.1) * 0.12;
           node.position.z = base.position.z + Math.cos(t * 0.25 + i) * 0.05;
@@ -139,8 +147,8 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
         <group ref={pivot}>
           <primitive object={scene} />
         </group>
-        <SilhouetteOutline target={scene} exclude={isOutsideOutline} />
-        <ContactShadows name="ContactShadows" position={[0, -0.01, 0]} scale={3} blur={2.4} opacity={0.32} far={1.2} resolution={512} color="#6b5a48" />
+        <SilhouetteOutline target={scene} exclude={isOutsideOutline} depthAt={OUTLINE_DEPTH} />
+        <ContactShadows name="ContactShadows" position={[0, -0.01, 0]} scale={3} blur={2.4} opacity={0.32} far={0.35} resolution={512} color="#6b5a48" />
       </group>
     </>
   );
