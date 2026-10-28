@@ -37,7 +37,7 @@ function Niche({ id, aspect, slope, cactus }: { id: string; aspect: string; slop
     >
       <PlasterNiche slope={slope} cactus={cactus} onReady={onReady} />
       {/* Above the canvas (z-0) until the room is in. */}
-      <div className={cn('pointer-events-none absolute inset-0 z-[1] transition-opacity duration-700 ease-out', ready && 'opacity-0')}>
+      <div className={cn('pointer-events-none absolute inset-0 z-[1] transition-opacity duration-[1600ms] ease-in-out', ready && 'opacity-0')}>
         <NicheSketch slope={slope} active={!ready} />
       </div>
     </div>

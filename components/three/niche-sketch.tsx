@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
+import { cn } from '@/lib/utils';
 import { eyeFor, GROUND_FACTOR, NICHE_DEPTH, PLASTER_HEX, SKY, SKY_RGB, SUN, SUN_DIRECTION, SUN_RGB } from './niche-params';
 
 // An SVG drawing of a niche from the same eye, walls, light and sun as its 3D room (plaster-niche.tsx), so the two
@@ -119,7 +120,11 @@ export function NicheSketch({ slope = 0, active = true }: { slope?: number; acti
   }, [slope, active]);
 
   return (
-    <svg ref={ref} className="absolute inset-0 h-full w-full" viewBox={geometry ? `0 0 ${geometry.width} ${geometry.height}` : undefined} aria-hidden="true">
+    <svg
+      ref={ref}
+      // Fades in when first drawn (just after the page becomes interactive) rather than snapping in.
+      className={cn('absolute inset-0 h-full w-full transition-opacity duration-700 ease-out', !geometry && 'opacity-0')}
+      viewBox={geometry ? `0 0 ${geometry.width} ${geometry.height}` : undefined} aria-hidden="true">
       {geometry && (
         <>
           <defs>
