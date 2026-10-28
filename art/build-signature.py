@@ -18,7 +18,7 @@ import sys
 import numpy as np
 from PIL import Image
 from scipy import ndimage
-from scipy.ndimage import gaussian_filter1d
+from scipy.interpolate import splev, splprep
 from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import dijkstra
 from scipy.spatial import cKDTree
@@ -32,6 +32,8 @@ TRACE = os.path.join(HERE, 'signature', 'trace.json')  # named fragments, used t
 NOT_SIGNATURE = [6, 7, 10, 13, 19, 24, 25]
 TOTAL_SECONDS = 3.2
 SEGMENTS_PER_SECOND = 18  # pieces each stroke is cut into so the replay keeps the hand's speed changes
+SMOOTHING = 2.4   # px of wobble the spline may smooth away; higher = smoother, softer
+CUSP_DEGREES = 100  # direction changes sharper than this (the w and r peaks, retraces) stay sharp
 
 # Pen strokes in the take's order. (fragment, where): 's' start, 'e' end, or a fraction along the fragment.
 STROKES = [
@@ -101,6 +103,47 @@ def route(a, b):
     return [px[i] for i in reversed(path)]
 
 
+def smooth(p):
+    """Smoothing spline per section between cusps, so curves lose the marker's wobble but peaks stay crisp."""
+    if len(p) < 12:
+        return p
+    k = 4
+    v = p[k:] - p[:-k]
+    v /= np.maximum(np.linalg.norm(v, axis=1, keepdims=True), 1e-9)
+    turn = np.degrees(np.arccos(np.clip((v[:-k] * v[k:]).sum(1), -1, 1)))  # turn across sample i+k
+    cusps = []
+    for i in np.where(turn > CUSP_DEGREES)[0] + k:
+        if not cusps or i - cusps[-1] > 2 * k:
+            cusps.append(int(i))
+        elif turn[i - k] > turn[cusps[-1] - k]:
+            cusps[-1] = int(i)
+    # Tiny back-and-forth jogs where the route hops between traced lines aren't real corners: when two cusps
+    # are closer than ~16px, cut out the jog between them; cusps right at the ends are ignored.
+    MIN_SECTION = 8
+    kept, removed = [], 0
+    for c in cusps:
+        c -= removed
+        if kept and c - kept[-1] < MIN_SECTION:
+            a = kept.pop()
+            p = np.vstack([p[:a], p[c:]])
+            removed += c - a
+        elif MIN_SECTION <= c <= len(p) - 1 - MIN_SECTION:
+            kept.append(c)
+    cusps = [c for c in kept if c <= len(p) - 1 - MIN_SECTION]
+    out = []
+    for a, b in zip([0] + cusps, cusps + [len(p) - 1]):
+        seg = p[a : b + 1]
+        if len(seg) < 6:
+            out.append(seg)
+            continue
+        tck, _ = splprep([seg[:, 0], seg[:, 1]], s=len(seg) * SMOOTHING**2, k=3)
+        x, y = splev(np.linspace(0, 1, len(seg)), tck)
+        fitted = np.column_stack([x, y])
+        fitted[0], fitted[-1] = seg[0], seg[-1]  # keep cusps and ends exactly in place
+        out.append(fitted)
+    return np.vstack([out[0]] + [o[1:] for o in out[1:]])
+
+
 def resample(p, step=2.0):
     seg = np.linalg.norm(np.diff(p[:, :2], axis=0), axis=1)
     keep = np.concatenate([[True], seg > 1e-6])
@@ -127,7 +170,7 @@ def rdp(p, eps):
 
 
 def to_path(p):
-    p = rdp(p, 0.6)
+    p = rdp(p, 0.35)
     out = f'M{p[0][0]:.1f} {p[0][1]:.1f}'
     for i in range(len(p) - 1):
         p0 = p[i - 1] if i > 0 else p[i]
@@ -148,10 +191,7 @@ for spec, pen in zip(STROKES, take['strokes']):
             path += follow(fa, ia, ib)[1:]
         else:
             path += route(fragments[fa][ia], fragments[fb][ib])[1:]
-    path = resample(np.array(path))
-    if len(path) > 7:
-        path[:, 0] = gaussian_filter1d(path[:, 0], 1.8, mode='nearest')
-        path[:, 1] = gaussian_filter1d(path[:, 1], 1.8, mode='nearest')
+    path = resample(smooth(resample(np.array(path))))
     pen = np.array(pen, float)
     pen_len = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(pen[:, :2], axis=0), axis=1))])
     our_len = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))])
