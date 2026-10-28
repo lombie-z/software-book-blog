@@ -9,9 +9,6 @@ import { Signature } from '@/components/ui/signature';
 import type { PageBlocksInlayHero } from '@/tina/__generated__/types';
 import { cn } from '@/lib/utils';
 
-// Keeps "MICRO・BIOME" on one line: word joiners stop a break either side of the middle dot.
-const unbreakable = (text?: string | null) => text?.replace(/・/g, '\u2060・\u2060');
-
 // Niche proportions (width / height) taken from the sketch: tall, short, mid.
 // The top niche's ceiling slopes down to the left (slope = fraction of its height), leaving room for the signature.
 const NICHES = [
@@ -20,28 +17,12 @@ const NICHES = [
   { id: 'bottom', aspect: 'aspect-[16/9]', slope: 0 },
 ] as const;
 
-// In upright vertical text a comma would otherwise take a full letter cell of its own; tuck it up against the
-// previous letter and over to the right, as vertical typesetting does. (In vertical-rl, inline-start is the top.)
-const TUCKED_COMMA: React.CSSProperties = { display: 'inline-block', marginInlineStart: '-0.85em', marginInlineEnd: '-0.35em', transform: 'translateX(0.4em)' };
-
-function verticalPunctuation(text: string) {
-  return text.split(/(,)/).map((part, i) =>
-    part === ',' ? (
-      <span key={i} style={TUCKED_COMMA}>
-        ,
-      </span>
-    ) : (
-      part
-    )
-  );
-}
-
 function SideText({ text, className, y }: { text?: string | null; className?: string; y: MotionValue<number> }) {
   if (!text) return null;
   return (
     <motion.div style={{ y }} className={cn('pointer-events-none absolute hidden items-start gap-3 md:flex', className)} aria-hidden="true">
       <span className="text-[0.8rem] font-medium uppercase leading-[1.55] tracking-[0.3em] text-ink [text-orientation:upright] [writing-mode:vertical-rl]">
-        {verticalPunctuation(text)}
+        {text}
       </span>
       <span className="w-px self-stretch bg-ink/70" />
     </motion.div>
@@ -93,7 +74,7 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
       {/* The vertical side texts need gutters; on phones they sit under the niches instead. */}
       <p className="mt-8 flex flex-wrap justify-between gap-x-4 gap-y-1 text-[0.7rem] uppercase tracking-[0.24em] text-ink md:hidden" aria-hidden="true">
         <span>{site?.name}</span>
-        <span className="text-muted-foreground">{unbreakable(site?.tagline)}</span>
+        <span className="text-muted-foreground">{site?.tagline}</span>
       </p>
     </section>
   );
