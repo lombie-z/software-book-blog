@@ -118,7 +118,11 @@ export function NicheSketch({ slope = 0, active = true, onShown }: { slope?: num
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const el = ref.current?.parentElement;
-        if (el) setGeometry(build(el.getBoundingClientRect(), slope));
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        // Only redraw while on screen (plus a margin, so it's current as it scrolls in).
+        if (rect.bottom < -200 || rect.top > window.innerHeight + 200) return;
+        setGeometry(build(rect, slope));
       });
     };
     update();

@@ -39,6 +39,9 @@ function Niche({ id, aspect, slope, cactus }: { id: string; aspect: string; slop
       style={slope ? { clipPath: `polygon(0 ${slope * 100}%, 100% 0, 100% 100%, 0 100%)` } : undefined}
       className={cn(aspect, 'relative w-full')}
     >
+      {/* Under the canvas: drei skips a view's first frame or two as it scrolls back on screen, and this matching
+          drawing shows through instead of empty plaster, so there's no pop. */}
+      {handOver && <NicheSketch slope={slope} />}
       <PlasterNiche slope={slope} cactus={cactus} onReady={onReady} />
       {/* Above the canvas (z-0) until the room is in. The plaster base (the page colour) keeps the 3D from showing
           through while the drawing is still fading in. */}
