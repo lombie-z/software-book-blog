@@ -10,7 +10,7 @@ STILL = os.path.join(ROOT_DIR, 'public', 'images', '3d', 'micro-biome.png')
 # Silhouette without the lettering, for the sticker outline (composited by art/outline-still.sh).
 STILL_MASK = os.path.join(ROOT_DIR, 'public', 'images', '3d', 'micro-biome-mask.png')
 STILL_BACK = os.path.join(ROOT_DIR, 'public', 'images', '3d', 'micro-biome-back.png')
-DECIMATE = {'Cloud': 0.3, 'Letter': 0.45, 'Word': 0.45, 'Spire': 0.6}
+DECIMATE = {'Cloud': 0.3, 'Letter': 0.45, 'Word': 0.45, 'Spire': 0.6, 'Moss': 0.12, 'Leaf': 0.5}
 
 scene = bpy.context.scene
 root = bpy.data.objects['MicroBiome']
