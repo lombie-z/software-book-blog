@@ -130,7 +130,7 @@ html.lenis body {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
   animation-name: signature-write;
-  animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  animation-timing-function: linear; /* pace comes from the recorded pen speed */
   animation-fill-mode: forwards;
 }
 @keyframes signature-write {
