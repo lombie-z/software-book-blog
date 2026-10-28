@@ -1,10 +1,9 @@
 """Build components/ui/signature.tsx from the traced sketch, in the stroke order and rhythm of a pen take.
 
-Shapes: centre lines skeletonised from the paper sketch (art/signature/sketch-clean.png).
+Shapes: centre lines skeletonised from the paper sketch (art/signature/sketch-clean.png, see trace-sketch.py).
 Order and rhythm: a take drawn at /dev/signature (art/signature/take-*.json).
 
-Each pen stroke is a list of waypoints (fragment ends, loop tops, peaks) in the order the take was written.
-Waypoints on the same traced fragment follow it exactly (so loops stay loops); hops between fragments take the
+Each pen stroke is a list of waypoints (ends, loop sides, peaks) in the order the take was written, joined by the
 shortest route along the sketch's ink, so retraces (up to a peak and back down the same line) come out naturally
 and nothing is drawn where there is no ink.
 
@@ -17,54 +16,46 @@ import sys
 
 import numpy as np
 from PIL import Image
-from scipy import ndimage
 from scipy.interpolate import splev, splprep
 from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import dijkstra
 from scipy.spatial import cKDTree
-from skimage.morphology import disk, remove_small_objects, skeletonize
+from skimage.morphology import skeletonize
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', 'components', 'ui', 'signature.tsx')
 SKETCH = os.path.join(HERE, 'signature', 'sketch-clean.png')
-TRACE = os.path.join(HERE, 'signature', 'trace.json')  # named fragments, used to place waypoints
-# Trace fragments that are the inlay box's edge from the sketch, not the signature.
-NOT_SIGNATURE = [6, 7, 10, 13, 19, 24, 25]
+TRACE = os.path.join(HERE, 'signature', 'trace.json')  # from trace-sketch.py; only its ink thickness is used here
 TOTAL_SECONDS = 3.2
 SEGMENTS_PER_SECOND = 18  # pieces each stroke is cut into so the replay keeps the hand's speed changes
 SMOOTHING = 2.4   # px of wobble the spline may smooth away; higher = smoother, softer
-CUSP_DEGREES = 100  # direction changes sharper than this (the w and r peaks, retraces) stay sharp
+CUSP_DEGREES = 100  # direction changes sharper than this (the peaks, retraces) stay sharp
 
-# Pen strokes in the take's order. (fragment, where): 's' start, 'e' end, or a fraction along the fragment.
+# Pen strokes in the take's order, as waypoints in sketch-clean.png pixels. Consecutive waypoints are joined along
+# the ink, so loops need a waypoint on each side to be drawn the right way round, and retraces revisit a point.
 STROKES = [
-    # Lead-in, I (top loop, stem, bottom loop), w, r, l loop, final loop, then the underline swash back to the left.
-    [(1, 's'), (1, 'e'), (9, 's'), (9, 0.5), (9, 'e'), (4, 'e'), (4, 0.5), (4, 0.2), (4, 's'), (8, 's'), (8, 'e'),
-     (11, 's'), (11, 'e'), (12, 'e'), (12, 's'), (14, 'e'), (14, 0.5), (14, 's'), (16, 's'), (16, 'e'), (17, 'e'),
-     (17, 's'), (18, 's'), (18, 'e'), (23, 'e'), (23, 's'), (21, 's'), (21, 'e'), (22, 's'), (22, 0.33), (22, 0.66),
-     (22, 'e'), (0, 'e'), (0, 0.5), (0, 's')],
-    [(3, 's'), (3, 0.5), (3, 'e'), (5, 's'), (5, 'e')],  # little circle before the I
-    [(20, 's'), (20, 0.33), (20, 0.66), (20, 'e')],  # dot above the r
-    [(2, 's'), (2, 'e')],  # overline, right to left
-    [(15, 's'), (15, 'e')],  # its flag, right to left
+    # Lead-in, I (top loop, stem, big left loop), u, r with its spur, the tall flourish up and back, down into the
+    # junction, out to the tip and back, then the swash sweeping left into the hook.
+    [(95, 450), (385, 355), (421, 303), (520, 198), (437, 307), (385, 358), (215, 590), (182, 607), (100, 630),
+     (38, 690), (100, 686), (182, 607), (306, 565), (365, 520), (306, 565), (260, 652), (365, 605), (395, 565),
+     (367, 607), (500, 545), (472, 590), (600, 537), (620, 520), (600, 540), (740, 477), (907, 342), (740, 477),
+     (712, 550), (747, 605), (970, 485), (747, 605), (440, 785), (315, 765), (370, 726)],
+    [(176, 532), (190, 519), (201, 527), (187, 540), (176, 532)],  # little circle before the I
+    [(723, 418), (742, 397)],  # dot
+    [(882, 245), (560, 116), (335, 41)],  # overline, right to left
+    [(860, 227), (790, 77), (782, 62), (695, 21), (687, 21), (600, 58), (560, 116)],  # flag, right end up and over
 ]
 
 take_path = sys.argv[1] if len(sys.argv) > 1 else sorted(glob.glob(os.path.join(HERE, 'signature', 'take-*.json')))[-1]
 debug_path = sys.argv[2] if len(sys.argv) > 2 else None
 take = json.load(open(take_path))
-fragments = json.load(open(TRACE))['strokes']
 width = json.load(open(TRACE))['width']  # median ink thickness of the sketch, in px
 assert len(take['strokes']) == len(STROKES), f"take has {len(take['strokes'])} strokes, STROKES lists {len(STROKES)}"
 
-# Skeleton of the sketch, without the box edge.
+# Skeleton of the sketch.
 ink = np.array(Image.open(SKETCH).convert('L')) < 128
-ink = ndimage.binary_closing(ink, structure=disk(2))
-ink = remove_small_objects(ink, 60)
-skel = skeletonize(ink)
-box = np.array([p for i in NOT_SIGNATURE for p in fragments[i]], float)
-ys, xs = np.nonzero(skel)
+ys, xs = np.nonzero(skeletonize(ink))
 px = np.column_stack([xs, ys]).astype(float)
-near_box = cKDTree(box).query(px)[0] < 3
-px = px[~near_box]
 
 # 8-connected pixel graph over the skeleton.
 index = {(int(x), int(y)): i for i, (x, y) in enumerate(px)}
@@ -79,20 +70,8 @@ graph = coo_matrix((weights, (rows, cols)), shape=(len(px), len(px))).tocsr()
 pixel_tree = cKDTree(px)
 
 
-def waypoint(frag, where):
-    """Index into a fragment's points."""
-    n = len(fragments[frag])
-    return 0 if where == 's' else n - 1 if where == 'e' else int(where * (n - 1))
-
-
-def follow(frag, i, j):
-    """Along one traced fragment, in either direction (keeps loops intact)."""
-    f = np.array(fragments[frag], float)
-    return list(f[i : j + 1]) if i <= j else list(f[j : i + 1][::-1])
-
-
 def route(a, b):
-    """Shortest path along the ink between two points on different fragments (bridges junctions, retraces)."""
+    """Shortest path along the ink between two points (a straight hop where the ink is broken)."""
     a, b = int(pixel_tree.query(a)[1]), int(pixel_tree.query(b)[1])
     dist, pred = dijkstra(graph, indices=a, return_predecessors=True)
     if not np.isfinite(dist[b]):
@@ -184,13 +163,9 @@ def to_path(p):
 # Route each stroke through its waypoints, smooth it, and give it the take's timing (by fraction of length).
 cleaned = []
 for spec, pen in zip(STROKES, take['strokes']):
-    stops = [(f, waypoint(f, w)) for f, w in spec]
-    path = [np.array(fragments[stops[0][0]][stops[0][1]], float)]
-    for (fa, ia), (fb, ib) in zip(stops[:-1], stops[1:]):
-        if fa == fb:
-            path += follow(fa, ia, ib)[1:]
-        else:
-            path += route(fragments[fa][ia], fragments[fb][ib])[1:]
+    path = [px[int(pixel_tree.query(spec[0])[1])]]
+    for a, b in zip(spec[:-1], spec[1:]):
+        path += route(a, b)[1:]
     path = resample(smooth(resample(np.array(path))))
     pen = np.array(pen, float)
     pen_len = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(pen[:, :2], axis=0), axis=1))])
