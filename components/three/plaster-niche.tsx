@@ -47,27 +47,35 @@ interface PlasterNicheProps {
   slope?: number;
   /** Puts the clay cactus at the back left of the floor, as in the sketch. */
   cactus?: boolean;
+  /** Called once the room (and its cactus) has drawn, so the CSS stand-in can fade out. */
+  onReady?: () => void;
   /** Rendered on the niche floor, in units of the niche's height (1 = full height), origin at floor centre. */
   children?: ReactNode;
 }
 
-export function PlasterNiche({ className, depth = 0.6, slope = 0, cactus, children }: PlasterNicheProps) {
+export function PlasterNiche({ className, depth = 0.6, slope = 0, cactus, onReady, children }: PlasterNicheProps) {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <View ref={ref} className={cn('absolute inset-0', className)}>
-      <NicheScene trackRef={ref} depth={depth} slope={slope}>
-        {cactus && (
-          <Suspense fallback={null}>
-            <Cactus position={[-0.5, 0, -0.16]} rotation-y={0.5} />
-          </Suspense>
-        )}
-        {children}
-      </NicheScene>
+      {/* One boundary for the whole room, so it only appears once the cactus model is in too. */}
+      <Suspense fallback={null}>
+        <NicheScene trackRef={ref} depth={depth} slope={slope} onReady={onReady}>
+          {cactus && <Cactus position={[-0.5, 0, -0.16]} rotation-y={0.5} />}
+          {children}
+        </NicheScene>
+      </Suspense>
     </View>
   );
 }
 
-function NicheScene({ trackRef, depth, slope, children }: { trackRef: React.RefObject<HTMLDivElement | null>; depth: number; slope: number; children?: ReactNode }) {
+function NicheScene({
+  trackRef,
+  depth,
+  slope,
+  onReady,
+  children,
+}: { trackRef: React.RefObject<HTMLDivElement | null>; depth: number; slope: number; onReady?: () => void; children?: ReactNode }) {
+  const reported = useRef(false);
   const camera = useRef<PerspectiveCameraImpl>(null);
   const back = useRef<Mesh>(null);
   const top = useRef<Mesh>(null);
@@ -147,6 +155,12 @@ function NicheScene({ trackRef, depth, slope, children }: { trackRef: React.RefO
     shadowCam.near = 0.01;
     shadowCam.far = reach * 4;
     shadowCam.updateProjectionMatrix();
+
+    if (!reported.current) {
+      reported.current = true;
+      // This frame is drawn right after this callback; report on the next one so it's definitely on screen.
+      requestAnimationFrame(() => onReady?.());
+    }
   }, 0);
 
   return (

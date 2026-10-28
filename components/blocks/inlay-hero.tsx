@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
 import { useLayout } from '@/components/layout/layout-context';
@@ -19,6 +19,34 @@ const NICHES = [
   { id: 'middle', aspect: 'aspect-[2/1]', slope: 0 },
   { id: 'bottom', aspect: 'aspect-[16/9]', slope: 0 },
 ] as const;
+
+/**
+ * One niche box. The 3D room draws into it from the shared canvas; above that sits a CSS stand-in (sunlit plaster,
+ * soft shadow from the top-left lip) that fades out once the room has drawn, so there's no pop. Without WebGL the
+ * stand-in simply stays.
+ */
+function Niche({ id, aspect, slope, cactus }: { id: string; aspect: string; slope: number; cactus: boolean }) {
+  const [ready, setReady] = useState(false);
+  const onReady = useCallback(() => setReady(true), []);
+  return (
+    <div
+      data-niche={id}
+      style={slope ? { clipPath: `polygon(0 ${slope * 100}%, 100% 0, 100% 100%, 0 100%)` } : undefined}
+      className={cn(aspect, 'relative w-full')}
+    >
+      <PlasterNiche slope={slope} cactus={cactus} onReady={onReady} />
+      <div
+        aria-hidden="true"
+        className={cn(
+          // Above the canvas (z-0) until the room is in.
+          'pointer-events-none absolute inset-0 z-[1] bg-plaster transition-opacity duration-700 ease-out',
+          'shadow-[inset_30px_38px_34px_-14px_oklch(0.6_0.014_70/0.7),inset_8px_10px_10px_-4px_oklch(0.55_0.014_70/0.35)]',
+          ready && 'opacity-0'
+        )}
+      />
+    </div>
+  );
+}
 
 function SideText({ text, className, y }: { text?: string | null; className?: string; y: MotionValue<number> }) {
   if (!text) return null;
@@ -52,19 +80,7 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
 
       <div className="flex flex-col gap-10 md:gap-14">
         {NICHES.map((niche) => (
-          <div
-            key={niche.id}
-            data-niche={niche.id}
-            style={niche.slope ? { clipPath: `polygon(0 ${niche.slope * 100}%, 100% 0, 100% 100%, 0 100%)` } : undefined}
-            className={cn(
-              niche.aspect,
-              'relative w-full bg-plaster-shade',
-              // CSS stand-in for the lit recess; the WebGL niche draws over this box.
-              'shadow-[inset_18px_22px_28px_-6px_oklch(0.55_0.02_70/0.55),inset_-2px_-2px_0_oklch(1_0_0/0.6)]'
-            )}
-          >
-            <PlasterNiche slope={niche.slope} cactus={niche.id === 'bottom' && !!data.showCactus} />
-          </div>
+          <Niche key={niche.id} id={niche.id} aspect={niche.aspect} slope={niche.slope} cactus={niche.id === 'bottom' && !!data.showCactus} />
         ))}
       </div>
       {/* The vertical side texts need gutters; on phones they sit under the niches instead. */}
