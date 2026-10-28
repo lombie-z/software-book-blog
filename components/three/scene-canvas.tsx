@@ -8,8 +8,10 @@ import { sceneState } from './scene-state';
 // Perspective-led, like walking past a real wall: the sun stays put and the viewpoint does the moving.
 const SUN_ANGLE = (125 * Math.PI) / 180; // upper left
 const SUN_GRAZE = 0.75;
-// The eye sits low and right of the screen (the sketch's view, with top and left walls showing). Its distance from
-// the screen, in screen sizes: closer means walls visibly open and close as each niche scrolls past.
+// Where the eye sits on screen, as fractions of its size. Right of centre so the left walls show; above the middle so
+// niches below eye level show their floors, turning to ceilings as they scroll up past it.
+const EYE_HEIGHT = 0.38;
+// Its distance from the screen, in screen sizes: closer means walls visibly open and close as each niche scrolls past.
 const EYE_DISTANCE = 0.7;
 function SunController() {
   useEffect(() => {
@@ -20,7 +22,7 @@ function SunController() {
     const w = window.innerWidth;
     const h = window.innerHeight;
     sceneState.eye.x = w * 0.62;
-    sceneState.eye.y = h * 0.78;
+    sceneState.eye.y = h * EYE_HEIGHT;
     sceneState.eye.distance = Math.max(w, h) * EYE_DISTANCE;
   }, -1);
   return null;
