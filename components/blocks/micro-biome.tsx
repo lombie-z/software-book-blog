@@ -1,15 +1,15 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { View } from '@react-three/drei';
 import { tinaField } from 'tinacms/dist/react';
 import type { DragState } from '@/components/three/micro-biome-scene';
 import { useSceneAvailable } from '@/components/three/scene-context';
 import type { PageBlocksMicroBiome } from '@/tina/__generated__/types';
 import { cn } from '@/lib/utils';
 
-const MicroBiomeScene = dynamic(() => import('@/components/three/micro-biome-scene').then((m) => m.MicroBiomeScene), { ssr: false });
+// The scene module carries three.js, so it (and the 2 MB model) only loads when the stage nears the viewport.
+const MicroBiomeView = dynamic(() => import('@/components/three/micro-biome-scene').then((m) => m.MicroBiomeView), { ssr: false });
 
 // Radians of rotation per pixel dragged.
 const DRAG_SPEED = 0.008;
@@ -75,13 +75,7 @@ export function MicroBiome({ data }: { data: PageBlocksMicroBiome }) {
           className={cn('absolute inset-0 h-full w-full object-contain transition-opacity duration-500', ready && 'opacity-0')}
           draggable={false}
         />
-        {live && near && (
-          <View className="absolute inset-0">
-            <Suspense fallback={null}>
-              <MicroBiomeScene trackRef={stage} drag={drag} onReady={onReady} animate />
-            </Suspense>
-          </View>
-        )}
+        {live && near && <MicroBiomeView trackRef={stage} drag={drag} onReady={onReady} animate />}
       </div>
       {data.caption && (
         <p data-tina-field={tinaField(data, 'caption')} className="mt-4 text-center text-xs uppercase tracking-[0.18em] text-muted-foreground">

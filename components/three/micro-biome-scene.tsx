@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
-import { ContactShadows, OrthographicCamera, useGLTF } from '@react-three/drei';
+import { Suspense, useEffect, useMemo, useRef } from 'react';
+import { ContactShadows, OrthographicCamera, useGLTF, View } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { type Group, type Mesh, type Object3D, type OrthographicCamera as OrthographicCameraImpl, Vector3 } from 'three';
 import { DRACO_PATH } from './cactus';
@@ -150,5 +150,18 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
         <ContactShadows name="ContactShadows" position={[0, -0.01, 0]} scale={3} blur={2.4} opacity={0.32} far={0.35} resolution={512} color="#6b5a48" />
       </group>
     </>
+  );
+}
+
+type MicroBiomeSceneProps = Parameters<typeof MicroBiomeScene>[0];
+
+/** The biome's drei View: lives in this module so three.js only loads with it (see blocks/micro-biome.tsx). */
+export function MicroBiomeView(props: MicroBiomeSceneProps) {
+  return (
+    <View className="absolute inset-0">
+      <Suspense fallback={null}>
+        <MicroBiomeScene {...props} />
+      </Suspense>
+    </View>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useMemo, useRef } from 'react';
+import { type ReactNode, Suspense, useMemo, useRef } from 'react';
 import { PerspectiveCamera, View } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import {
@@ -18,6 +18,7 @@ import {
   Vector3,
 } from 'three';
 import { cn } from '@/lib/utils';
+import { Cactus } from './cactus';
 import { sceneState } from './scene-state';
 
 // CSS pixels → world units.
@@ -44,15 +45,22 @@ interface PlasterNicheProps {
   depth?: number;
   /** How far the ceiling drops at the left edge, as a fraction of the height (0 = rectangular opening). */
   slope?: number;
+  /** Puts the clay cactus at the back left of the floor, as in the sketch. */
+  cactus?: boolean;
   /** Rendered on the niche floor, in units of the niche's height (1 = full height), origin at floor centre. */
   children?: ReactNode;
 }
 
-export function PlasterNiche({ className, depth = 0.6, slope = 0, children }: PlasterNicheProps) {
+export function PlasterNiche({ className, depth = 0.6, slope = 0, cactus, children }: PlasterNicheProps) {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <View ref={ref} className={cn('absolute inset-0', className)}>
       <NicheScene trackRef={ref} depth={depth} slope={slope}>
+        {cactus && (
+          <Suspense fallback={null}>
+            <Cactus position={[-0.5, 0, -0.16]} rotation-y={0.5} />
+          </Suspense>
+        )}
         {children}
       </NicheScene>
     </View>

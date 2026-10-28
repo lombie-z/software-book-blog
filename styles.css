@@ -114,6 +114,11 @@
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
+  /* Signature shown fully written rather than waiting out its stroke delays. */
+  .signature-stroke {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
 }
 
 /* Lenis owns smooth scrolling when active. */

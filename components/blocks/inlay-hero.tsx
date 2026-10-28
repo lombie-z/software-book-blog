@@ -1,13 +1,16 @@
 'use client';
 
-import { Suspense, useRef } from 'react';
+import { useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
-import { Cactus } from '@/components/three/cactus';
-import { PlasterNiche } from '@/components/three/plaster-niche';
 import { useLayout } from '@/components/layout/layout-context';
 import { Signature } from '@/components/ui/signature';
 import type { PageBlocksInlayHero } from '@/tina/__generated__/types';
 import { cn } from '@/lib/utils';
+
+// The 3D niches (and three.js with them) load in the browser after the page is up; until then, and without WebGL,
+// each niche box shows its CSS-shaded stand-in.
+const PlasterNiche = dynamic(() => import('@/components/three/plaster-niche').then((m) => m.PlasterNiche), { ssr: false });
 
 // Niche proportions (width / height) taken from the sketch: tall, short, mid.
 // The top niche's ceiling slopes down to the left (slope = fraction of its height), leaving room for the signature.
@@ -60,14 +63,7 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
               'shadow-[inset_18px_22px_28px_-6px_oklch(0.55_0.02_70/0.55),inset_-2px_-2px_0_oklch(1_0_0/0.6)]'
             )}
           >
-            <PlasterNiche slope={niche.slope}>
-              {niche.id === 'bottom' && data.showCactus && (
-                <Suspense fallback={null}>
-                  {/* Back-left of the floor, as in the sketch. */}
-                  <Cactus position={[-0.5, 0, -0.16]} rotation-y={0.5} />
-                </Suspense>
-              )}
-            </PlasterNiche>
+            <PlasterNiche slope={niche.slope} cactus={niche.id === 'bottom' && !!data.showCactus} />
           </div>
         ))}
       </div>
