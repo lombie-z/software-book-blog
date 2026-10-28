@@ -68,7 +68,7 @@ export function Signature({ className, animate = true }: SignatureProps) {
 
   return (
     <svg viewBox="6 6 990 793" role="img" aria-label="Isaac's signature" className={cn('h-auto overflow-visible', className)}>
-      <g fill="none" stroke="currentColor" strokeWidth={7.6} strokeLinecap="round" strokeLinejoin="round">
+      <g fill="none" stroke="currentColor" strokeWidth={10.2} strokeLinecap="round" strokeLinejoin="round">
         {PIECES.map(([d, delay, duration]) => (
           <path
             key={d}

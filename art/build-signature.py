@@ -194,7 +194,7 @@ all_xy = np.vstack([p[:, :2] for p in cleaned])
 pad = 14
 x0, y0 = all_xy.min(0) - pad
 x1, y1 = all_xy.max(0) + pad
-stroke_width = round(width * 0.9, 1)  # trace 'width' is the sketch's ink thickness
+stroke_width = round(width * 1.2, 1)  # trace 'width' is the sketch's ink thickness; a touch heavier reads better small
 
 rows = '\n'.join(f"  ['{d}', {s}, {dur}]," for d, s, dur in pieces)
 src = f"""'use client';
