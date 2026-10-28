@@ -34,17 +34,20 @@ CUSP_DEGREES = 100  # direction changes sharper than this (the peaks, retraces) 
 # Pen strokes in the take's order, as waypoints in sketch-clean.png pixels. Consecutive waypoints are joined along
 # the ink, so loops need a waypoint on each side to be drawn the right way round, and retraces revisit a point.
 STROKES = [
-    # Lead-in, I (top loop, stem, big left loop), u, r with its spur, the tall flourish up and back, down into the
-    # junction, out to the tip and back, then the swash sweeping left into the hook.
-    [(95, 450), (385, 355), (421, 303), (520, 198), (437, 307), (385, 358), (215, 590), (182, 607), (100, 630),
-     (38, 690), (100, 686), (182, 607), (306, 565), (365, 520), (306, 565), (260, 652), (365, 605), (395, 565),
-     (367, 607), (500, 545), (472, 590), (600, 537), (620, 520), (600, 540), (740, 477), (907, 342), (740, 477),
-     (712, 550), (747, 605), (970, 485), (747, 605), (440, 785), (315, 765), (370, 726)],
-    [(176, 532), (190, 519), (201, 527), (187, 540), (176, 532)],  # little circle before the I
-    [(723, 418), (742, 397)],  # dot
-    [(882, 245), (560, 116), (335, 41)],  # overline, right to left
-    [(860, 227), (790, 77), (782, 62), (695, 21), (687, 21), (600, 58), (560, 116)],  # flag, right end up and over
+    # Lead-in, I (top loop, stem, left loop), u and r with their peaks and spur, the downstroke, the l loop, then the
+    # big closing loop and the swash sweeping back left into the hook.
+    [(307, 349), (460, 314), (497, 285), (540, 235), (615, 185), (560, 252), (497, 285), (460, 314), (350, 440),
+     (232, 555), (165, 575), (120, 577), (100, 585), (130, 598), (165, 575), (232, 557), (350, 527), (455, 460),
+     (350, 527), (320, 582), (455, 540), (500, 507), (455, 540), (460, 572), (570, 510), (625, 470), (642, 450),
+     (625, 470), (680, 460), (580, 570), (680, 460), (712, 490), (812, 445), (890, 362), (929, 300), (982, 250),
+     (955, 300), (890, 362), (812, 445), (760, 520), (720, 617), (750, 662), (815, 655), (920, 575), (890, 557),
+     (720, 617), (440, 740), (200, 785), (25, 712)],
+    [(307, 393), (263, 430), (272, 446), (312, 410), (307, 393)],  # little circle before the I
+    [(855, 315), (812, 352), (825, 372), (857, 327), (855, 315)],  # dot
+    [(952, 205), (660, 102), (357, 37)],  # overline, right to left
+    [(952, 205), (955, 120), (900, 45), (800, 17), (700, 50), (660, 100)],  # flag, right end up and over
 ]
+
 
 take_path = sys.argv[1] if len(sys.argv) > 1 else sorted(glob.glob(os.path.join(HERE, 'signature', 'take-*.json')))[-1]
 debug_path = sys.argv[2] if len(sys.argv) > 2 else None
