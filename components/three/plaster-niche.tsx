@@ -19,21 +19,15 @@ import {
 } from 'three';
 import { cn } from '@/lib/utils';
 import { Cactus } from './cactus';
+import { GROUND_FACTOR, NICHE_DEPTH, PLASTER_HEX, SKY, SKY_RGB, SUN, SUN_RGB } from './niche-params';
 import { sceneState } from './scene-state';
 
 // CSS pixels → world units.
 const PX = 0.01;
-// Same as --plaster in styles.css: the niche is the page itself, only shadow sets it apart.
-const PLASTER = new Color('#f5f2ed');
-// Lambert output = albedo * irradiance / π. Sun (×0.8, its fixed tilt toward the wall) plus sky light
-// sum to π per channel on a sunlit back wall, so it renders exactly the page colour; shadow keeps only the sky (~64%).
-// The sky is a little warm (bounce off the plaster) and the sun a little cool, so shadows stay warm
-// while the sunlit sum is neutral white. Values are linear RGB.
-const SKY = 2.2;
-const SKY_COLOR = new Color().setRGB(1, 0.965, 0.92, LinearSRGBColorSpace);
-const GROUND_COLOR = SKY_COLOR.clone().multiplyScalar(0.91);
-const SUN = 1.397;
-const SUN_COLOR = new Color().setRGB(0.842, 0.911, 1, LinearSRGBColorSpace);
+const PLASTER = new Color(PLASTER_HEX);
+const SKY_COLOR = new Color().setRGB(...SKY_RGB, LinearSRGBColorSpace);
+const GROUND_COLOR = SKY_COLOR.clone().multiplyScalar(GROUND_FACTOR);
+const SUN_COLOR = new Color().setRGB(...SUN_RGB, LinearSRGBColorSpace);
 
 const X_AXIS = new Vector3(1, 0, 0);
 const Z_AXIS = new Vector3(0, 0, 1);
@@ -53,7 +47,7 @@ interface PlasterNicheProps {
   children?: ReactNode;
 }
 
-export function PlasterNiche({ className, depth = 0.6, slope = 0, cactus, onReady, children }: PlasterNicheProps) {
+export function PlasterNiche({ className, depth = NICHE_DEPTH, slope = 0, cactus, onReady, children }: PlasterNicheProps) {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <View ref={ref} className={cn('absolute inset-0', className)}>

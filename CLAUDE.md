@@ -48,6 +48,8 @@ components/
     scene-state.ts                    # Shared per-frame state (sun direction, viewer eye)
     scene-context.tsx                 # Whether WebGL is available (else fallbacks render)
     plaster-niche.tsx                 # One recessed niche sized from its DOM box, off-axis camera
+    niche-params.ts                   # Shared eye/light/sun values for the 3D niches and their SVG stand-in
+    niche-sketch.tsx                  # SVG drawing of a niche from the same projection + light (pre-3D / no-WebGL)
     cactus.tsx                        # Clay cactus glTF (public/models/cactus.glb)
     micro-biome-scene.tsx             # Biome glTF, procedural idle animation by node name, drag spring
   layout/

@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
 import { useLayout } from '@/components/layout/layout-context';
+import { NicheSketch } from '@/components/three/niche-sketch';
 import { Signature } from '@/components/ui/signature';
 import type { PageBlocksInlayHero } from '@/tina/__generated__/types';
 import { cn } from '@/lib/utils';
@@ -21,9 +22,9 @@ const NICHES = [
 ] as const;
 
 /**
- * One niche box. The 3D room draws into it from the shared canvas; above that sits a CSS stand-in (sunlit plaster,
- * soft shadow from the top-left lip) that fades out once the room has drawn, so there's no pop. Without WebGL the
- * stand-in simply stays.
+ * One niche box. The 3D room draws into it from the shared canvas; above that sits an SVG drawing of the same room
+ * (same eye, light and sun) that fades out once the 3D has drawn, so the handoff is near invisible. Without WebGL the
+ * drawing simply stays.
  */
 function Niche({ id, aspect, slope, cactus }: { id: string; aspect: string; slope: number; cactus: boolean }) {
   const [ready, setReady] = useState(false);
@@ -35,15 +36,10 @@ function Niche({ id, aspect, slope, cactus }: { id: string; aspect: string; slop
       className={cn(aspect, 'relative w-full')}
     >
       <PlasterNiche slope={slope} cactus={cactus} onReady={onReady} />
-      <div
-        aria-hidden="true"
-        className={cn(
-          // Above the canvas (z-0) until the room is in.
-          'pointer-events-none absolute inset-0 z-[1] bg-plaster transition-opacity duration-700 ease-out',
-          'shadow-[inset_30px_38px_34px_-14px_oklch(0.6_0.014_70/0.7),inset_8px_10px_10px_-4px_oklch(0.55_0.014_70/0.35)]',
-          ready && 'opacity-0'
-        )}
-      />
+      {/* Above the canvas (z-0) until the room is in. */}
+      <div className={cn('pointer-events-none absolute inset-0 z-[1] transition-opacity duration-700 ease-out', ready && 'opacity-0')}>
+        <NicheSketch slope={slope} active={!ready} />
+      </div>
     </div>
   );
 }

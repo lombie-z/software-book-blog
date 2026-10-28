@@ -3,27 +3,16 @@
 import { useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { SoftShadows, View } from '@react-three/drei';
+import { eyeFor, SUN_DIRECTION } from './niche-params';
 import { sceneState } from './scene-state';
 
-// Perspective-led, like walking past a real wall: the sun stays put and the viewpoint does the moving.
-const SUN_ANGLE = (125 * Math.PI) / 180; // upper left
-const SUN_GRAZE = 0.75;
-// Where the eye sits on screen, as fractions of its size. Right of centre so the left walls show; above the middle so
-// niches below eye level show their floors, turning to ceilings as they scroll up past it.
-const EYE_HEIGHT = 0.38;
-// Its distance from the screen, in screen sizes: closer means walls visibly open and close as each niche scrolls past.
-const EYE_DISTANCE = 0.7;
 function SunController() {
   useEffect(() => {
-    sceneState.sunDirection.set(Math.cos(SUN_ANGLE) * SUN_GRAZE, Math.sin(SUN_ANGLE) * SUN_GRAZE, 1).normalize();
+    sceneState.sunDirection.set(...SUN_DIRECTION);
   }, []);
 
   useFrame(() => {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    sceneState.eye.x = w * 0.62;
-    sceneState.eye.y = h * EYE_HEIGHT;
-    sceneState.eye.distance = Math.max(w, h) * EYE_DISTANCE;
+    Object.assign(sceneState.eye, eyeFor(window.innerWidth, window.innerHeight));
   }, -1);
   return null;
 }
