@@ -28,7 +28,11 @@ const NICHES = [
  */
 function Niche({ id, aspect, slope, cactus }: { id: string; aspect: string; slope: number; cactus: boolean }) {
   const [ready, setReady] = useState(false);
+  const [shown, setShown] = useState(false);
   const onReady = useCallback(() => setReady(true), []);
+  const onShown = useCallback(() => setShown(true), []);
+  // Hand over only when the 3D has drawn and the drawing has fully faded in, whichever is later.
+  const handOver = ready && shown;
   return (
     <div
       data-niche={id}
@@ -36,9 +40,10 @@ function Niche({ id, aspect, slope, cactus }: { id: string; aspect: string; slop
       className={cn(aspect, 'relative w-full')}
     >
       <PlasterNiche slope={slope} cactus={cactus} onReady={onReady} />
-      {/* Above the canvas (z-0) until the room is in. */}
-      <div className={cn('pointer-events-none absolute inset-0 z-[1] transition-opacity duration-[1600ms] ease-in-out', ready && 'opacity-0')}>
-        <NicheSketch slope={slope} active={!ready} />
+      {/* Above the canvas (z-0) until the room is in. The plaster base (the page colour) keeps the 3D from showing
+          through while the drawing is still fading in. */}
+      <div className={cn('pointer-events-none absolute inset-0 z-[1] bg-plaster transition-opacity duration-[1600ms] ease-in-out', handOver && 'opacity-0')}>
+        <NicheSketch slope={slope} active={!handOver} onShown={onShown} />
       </div>
     </div>
   );

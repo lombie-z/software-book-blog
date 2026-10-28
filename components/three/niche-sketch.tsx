@@ -93,11 +93,23 @@ function build(rect: DOMRect, slope: number): Geometry {
 
 const points = (pts: Point[]) => pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
 
-/** Fills its (relatively positioned) parent. Redraws on scroll and resize while visible, like the 3D. */
-export function NicheSketch({ slope = 0, active = true }: { slope?: number; active?: boolean }) {
+const FADE_IN_MS = 700;
+
+/**
+ * Fills its (relatively positioned) parent. Redraws on scroll and resize while visible, like the 3D. `onShown` fires
+ * once it has fully faded in, so the 3D can wait for it before crossfading.
+ */
+export function NicheSketch({ slope = 0, active = true, onShown }: { slope?: number; active?: boolean; onShown?: () => void }) {
   const ref = useRef<SVGSVGElement>(null);
   const [geometry, setGeometry] = useState<Geometry | null>(null);
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
+
+  const drawn = geometry !== null;
+  useEffect(() => {
+    if (!drawn || !onShown) return;
+    const timer = setTimeout(onShown, FADE_IN_MS);
+    return () => clearTimeout(timer);
+  }, [drawn, onShown]);
 
   useEffect(() => {
     if (!active) return;
@@ -123,7 +135,8 @@ export function NicheSketch({ slope = 0, active = true }: { slope?: number; acti
     <svg
       ref={ref}
       // Fades in when first drawn (just after the page becomes interactive) rather than snapping in.
-      className={cn('absolute inset-0 h-full w-full transition-opacity duration-700 ease-out', !geometry && 'opacity-0')}
+      className={cn('absolute inset-0 h-full w-full transition-opacity ease-out', !geometry && 'opacity-0')}
+      style={{ transitionDuration: `${FADE_IN_MS}ms` }}
       viewBox={geometry ? `0 0 ${geometry.width} ${geometry.height}` : undefined} aria-hidden="true">
       {geometry && (
         <>
