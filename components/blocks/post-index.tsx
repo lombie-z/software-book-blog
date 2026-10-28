@@ -12,11 +12,11 @@ type Post = NonNullable<NonNullable<PostEdges[number]>['node']>;
 
 const VISIBLE = 3;
 
-// Muted tints of the biome's colours: lavender letters, green foliage, pink planter.
+// Desert tones, low chroma and warm so they sit on the plaster: terracotta clay, dusty sage, sandy ochre.
 const CONCEPT_PILLS: Record<string, { label: string; className: string }> = {
-  model: { label: 'Model', className: 'bg-[oklch(0.93_0.03_300)] text-[oklch(0.45_0.08_300)]' },
-  site: { label: 'Site', className: 'bg-[oklch(0.93_0.03_150)] text-[oklch(0.42_0.07_150)]' },
-  graphic: { label: 'Graphic', className: 'bg-[oklch(0.93_0.03_15)] text-[oklch(0.47_0.08_15)]' },
+  model: { label: 'Model', className: 'bg-[oklch(0.9_0.024_45)] text-[oklch(0.47_0.055_42)]' },
+  site: { label: 'Site', className: 'bg-[oklch(0.91_0.016_120)] text-[oklch(0.46_0.035_120)]' },
+  graphic: { label: 'Graphic', className: 'bg-[oklch(0.92_0.028_80)] text-[oklch(0.5_0.055_75)]' },
 };
 
 export const sectionId = (category?: string | null) => (category === 'concept' ? 'concepts' : 'thoughts');
