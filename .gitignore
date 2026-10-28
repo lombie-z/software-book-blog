@@ -30,3 +30,6 @@ yarn-error.log*
 .vercel
 .claude
 .env*
+
+# Blender auto-backups
+*.blend1
