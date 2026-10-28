@@ -30,6 +30,9 @@ TOTAL_SECONDS = 3.2
 SEGMENTS_PER_SECOND = 18  # pieces each stroke is cut into so the replay keeps the hand's speed changes
 SMOOTHING = 2.4   # px of wobble the spline may smooth away; higher = smoother, softer
 CUSP_DEGREES = 100  # direction changes sharper than this (the peaks, retraces) stay sharp
+# The "hat" (overline and flag, the last two strokes) sits closer to the letters than in the sketch: (dx, dy) px.
+HAT_OFFSET = (-55, 48)
+HAT_STROKES = (3, 4)
 
 # Pen strokes in the take's order, as waypoints in sketch-clean.png pixels. Consecutive waypoints are joined along
 # the ink, so loops need a waypoint on each side to be drawn the right way round, and retraces revisit a point.
@@ -170,6 +173,8 @@ for spec, pen in zip(STROKES, take['strokes']):
     for a, b in zip(spec[:-1], spec[1:]):
         path += route(a, b)[1:]
     path = resample(smooth(resample(np.array(path))))
+    if len(cleaned) in HAT_STROKES:
+        path = path + np.array(HAT_OFFSET)
     pen = np.array(pen, float)
     pen_len = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(pen[:, :2], axis=0), axis=1))])
     our_len = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))])

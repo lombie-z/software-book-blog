@@ -45,7 +45,7 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
   return (
     <section ref={ref} className="relative mx-auto w-full max-w-[min(560px,78vw)] pt-10 md:pt-16" aria-label="Intro">
       <h1 className="sr-only">{site?.name}</h1>
-      <Signature variant="etched" className="relative z-10 mb-[calc(min(560px,78vw)*-0.13)] ml-[-2%] w-[min(210px,46vw)] text-ink" />
+      <Signature variant="etched" className="relative z-10 mb-[calc(min(560px,78vw)*-0.05)] ml-[-3%] w-[min(260px,56vw)] text-ink" />
 
       <SideText text={site?.name} y={leftY} className="-left-24 top-32 h-[46%] flex-row-reverse" />
       <SideText text={site?.tagline} y={rightY} className="-right-24 top-[44%] h-[54%]" />
