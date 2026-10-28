@@ -26,6 +26,27 @@ const Post: Collection = {
       description: 'Show this post on the site.',
     },
     {
+      type: 'string',
+      label: 'Section',
+      name: 'category',
+      description: 'Which home page list this appears in. Blank counts as a thought.',
+      options: [
+        { label: 'Thought', value: 'thought' },
+        { label: 'Design concept', value: 'concept' },
+      ],
+    },
+    {
+      type: 'string',
+      label: 'Concept type',
+      name: 'conceptType',
+      description: 'Design concepts only: shown as a coloured pill. Thoughts use their tags as topic pills instead.',
+      options: [
+        { label: 'Model', value: 'model' },
+        { label: 'Site', value: 'site' },
+        { label: 'Graphic', value: 'graphic' },
+      ],
+    },
+    {
       type: 'image',
       name: 'heroImg',
       label: 'Hero Image',

@@ -7,6 +7,7 @@ import { TinaMarkdown } from 'tinacms/dist/rich-text';
 import { PostQuery } from '@/tina/__generated__/types';
 import { components } from '@/components/mdx-components';
 import ErrorBoundary from '@/components/error-boundary';
+import { sectionId } from '@/components/blocks/post-index';
 
 interface ClientPostProps {
   data: PostQuery;
@@ -72,8 +73,8 @@ export default function PostClientPage(props: ClientPostProps) {
         </div>
 
         <div className="mx-auto mt-20 max-w-[65ch]">
-          <Link href="/#posts" className="text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-ink">
-            <span aria-hidden="true">&larr;</span> All writing
+          <Link href={`/#${sectionId(post.category)}`} className="text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-ink">
+            <span aria-hidden="true">&larr;</span> All {post.category === 'concept' ? 'design concepts' : 'thoughts'}
           </Link>
         </div>
       </article>

@@ -37,13 +37,23 @@ export const postIndexBlockSchema: Template = {
   name: 'postIndex',
   label: 'Post Index',
   ui: {
-    defaultItem: { heading: 'Writing' },
+    defaultItem: { heading: 'Thoughts', category: 'thought' },
   },
   fields: [
     {
       type: 'string',
       label: 'Heading',
       name: 'heading',
+    },
+    {
+      type: 'string',
+      label: 'Shows',
+      name: 'category',
+      description: 'Lists posts from this section; the latest three show, the rest behind a toggle.',
+      options: [
+        { label: 'Thoughts', value: 'thought' },
+        { label: 'Design concepts', value: 'concept' },
+      ],
     },
   ],
 };
