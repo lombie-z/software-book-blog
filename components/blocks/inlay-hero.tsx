@@ -9,6 +9,9 @@ import { Signature } from '@/components/ui/signature';
 import type { PageBlocksInlayHero } from '@/tina/__generated__/types';
 import { cn } from '@/lib/utils';
 
+// Keeps "MICRO・BIOME" on one line: word joiners stop a break either side of the middle dot.
+const unbreakable = (text?: string | null) => text?.replace(/・/g, '\u2060・\u2060');
+
 // Niche proportions (width / height) taken from the sketch: tall, short, mid.
 // The top niche's ceiling slopes down to the left (slope = fraction of its height), leaving room for the signature.
 const NICHES = [
@@ -74,7 +77,7 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
       {/* The vertical side texts need gutters; on phones they sit under the niches instead. */}
       <p className="mt-8 flex flex-wrap justify-between gap-x-4 gap-y-1 text-[0.7rem] uppercase tracking-[0.24em] text-ink md:hidden" aria-hidden="true">
         <span>{site?.name}</span>
-        <span className="text-muted-foreground">{site?.tagline}</span>
+        <span className="text-muted-foreground">{unbreakable(site?.tagline)}</span>
       </p>
     </section>
   );
