@@ -10,10 +10,11 @@ import type { PageBlocksInlayHero } from '@/tina/__generated__/types';
 import { cn } from '@/lib/utils';
 
 // Niche proportions (width / height) taken from the sketch: tall, short, mid.
+// The top niche's ceiling slopes down to the left (slope = fraction of its height), leaving room for the signature.
 const NICHES = [
-  { id: 'top', aspect: 'aspect-[4/3]' },
-  { id: 'middle', aspect: 'aspect-[2/1]' },
-  { id: 'bottom', aspect: 'aspect-[16/9]' },
+  { id: 'top', aspect: 'aspect-[4/3]', slope: 0.34 },
+  { id: 'middle', aspect: 'aspect-[2/1]', slope: 0 },
+  { id: 'bottom', aspect: 'aspect-[16/9]', slope: 0 },
 ] as const;
 
 function SideText({ text, className, y }: { text?: string | null; className?: string; y: MotionValue<number> }) {
@@ -41,7 +42,7 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
   return (
     <section ref={ref} className="relative mx-auto w-full max-w-[min(560px,78vw)] pt-10 md:pt-16" aria-label="Intro">
       <h1 className="sr-only">{site?.name}</h1>
-      <Signature className="relative z-10 -mb-8 ml-[-6%] w-[min(300px,60vw)] text-ink" />
+      <Signature className="relative z-10 mb-[calc(min(560px,78vw)*-0.2)] ml-[-4%] w-[min(300px,60vw)] text-ink" />
 
       <SideText text={site?.name} y={leftY} className="-left-24 top-32 h-[46%] flex-row-reverse" />
       <SideText text={site?.tagline} y={rightY} className="-right-24 top-[44%] h-[54%]" />
@@ -51,6 +52,7 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
           <div
             key={niche.id}
             data-niche={niche.id}
+            style={niche.slope ? { clipPath: `polygon(0 ${niche.slope * 100}%, 100% 0, 100% 100%, 0 100%)` } : undefined}
             className={cn(
               niche.aspect,
               'relative w-full bg-plaster-shade',
@@ -58,7 +60,7 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
               'shadow-[inset_18px_22px_28px_-6px_oklch(0.55_0.02_70/0.55),inset_-2px_-2px_0_oklch(1_0_0/0.6)]'
             )}
           >
-            <PlasterNiche>
+            <PlasterNiche slope={niche.slope}>
               {niche.id === 'bottom' && data.showCactus && (
                 <Suspense fallback={null}>
                   {/* Back-left of the floor, as in the sketch. */}

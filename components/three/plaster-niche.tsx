@@ -3,7 +3,20 @@
 import { type ReactNode, useMemo, useRef } from 'react';
 import { PerspectiveCamera, View } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { Color, LinearSRGBColorSpace, type DirectionalLight, type Group, type Mesh, MeshLambertMaterial, type PerspectiveCamera as PerspectiveCameraImpl } from 'three';
+import {
+  BufferGeometry,
+  Color,
+  type DirectionalLight,
+  DoubleSide,
+  Float32BufferAttribute,
+  type Group,
+  LinearSRGBColorSpace,
+  type Mesh,
+  MeshLambertMaterial,
+  type PerspectiveCamera as PerspectiveCameraImpl,
+  Quaternion,
+  Vector3,
+} from 'three';
 import { cn } from '@/lib/utils';
 import { sceneState } from './scene-state';
 
@@ -21,26 +34,32 @@ const GROUND_COLOR = SKY_COLOR.clone().multiplyScalar(0.91);
 const SUN = 1.397;
 const SUN_COLOR = new Color().setRGB(0.842, 0.911, 1, LinearSRGBColorSpace);
 
+const X_AXIS = new Vector3(1, 0, 0);
+const Z_AXIS = new Vector3(0, 0, 1);
+const tilt = new Quaternion();
+
 interface PlasterNicheProps {
   className?: string;
   /** Recess depth as a fraction of the opening's shorter side. */
   depth?: number;
+  /** How far the ceiling drops at the left edge, as a fraction of the height (0 = rectangular opening). */
+  slope?: number;
   /** Rendered on the niche floor, in units of the niche's height (1 = full height), origin at floor centre. */
   children?: ReactNode;
 }
 
-export function PlasterNiche({ className, depth = 0.6, children }: PlasterNicheProps) {
+export function PlasterNiche({ className, depth = 0.6, slope = 0, children }: PlasterNicheProps) {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <View ref={ref} className={cn('absolute inset-0', className)}>
-      <NicheScene trackRef={ref} depth={depth}>
+      <NicheScene trackRef={ref} depth={depth} slope={slope}>
         {children}
       </NicheScene>
     </View>
   );
 }
 
-function NicheScene({ trackRef, depth, children }: { trackRef: React.RefObject<HTMLDivElement | null>; depth: number; children?: ReactNode }) {
+function NicheScene({ trackRef, depth, slope, children }: { trackRef: React.RefObject<HTMLDivElement | null>; depth: number; slope: number; children?: ReactNode }) {
   const camera = useRef<PerspectiveCameraImpl>(null);
   const back = useRef<Mesh>(null);
   const top = useRef<Mesh>(null);
@@ -51,6 +70,13 @@ function NicheScene({ trackRef, depth, children }: { trackRef: React.RefObject<H
   const floor = useRef<Group>(null);
   const sun = useRef<DirectionalLight>(null);
   const material = useMemo(() => new MeshLambertMaterial({ color: PLASTER }), []);
+  // Wall face above a sloped ceiling, in the frame group's unit space (opening = 1 × 1 centred on 0).
+  const corner = useMemo(() => {
+    const g = new BufferGeometry();
+    g.setAttribute('position', new Float32BufferAttribute([-0.5, 0.5 - slope, 0, 0.5, 0.5, 0, -0.5, 0.5, 0], 3));
+    g.computeVertexNormals();
+    return g;
+  }, [slope]);
   // Smaller shadow maps on phones; the niches are smaller there anyway.
   const shadowSize = useMemo(() => (window.innerWidth < 768 ? 1024 : 2048), []);
 
@@ -65,15 +91,18 @@ function NicheScene({ trackRef, depth, children }: { trackRef: React.RefObject<H
     const w = rect.width * PX;
     const h = rect.height * PX;
     const d = Math.min(w, h) * depth;
+    const drop = h * slope;
 
     back.current.position.set(0, 0, -d);
     back.current.scale.set(w, h, 1);
-    top.current.position.set(0, h / 2, -d / 2);
-    top.current.scale.set(w, d, 1);
+    // Ceiling runs from the lowered top-left corner up to the top-right corner.
+    top.current.position.set(0, h / 2 - drop / 2, -d / 2);
+    top.current.quaternion.setFromAxisAngle(Z_AXIS, Math.atan2(drop, w)).multiply(tilt.setFromAxisAngle(X_AXIS, Math.PI / 2));
+    top.current.scale.set(Math.hypot(w, drop), d, 1);
     bottom.current.position.set(0, -h / 2, -d / 2);
     bottom.current.scale.set(w, d, 1);
-    left.current.position.set(-w / 2, 0, -d / 2);
-    left.current.scale.set(d, h, 1);
+    left.current.position.set(-w / 2, -drop / 2, -d / 2);
+    left.current.scale.set(d, h - drop, 1);
     right.current.position.set(w / 2, 0, -d / 2);
     right.current.scale.set(d, h, 1);
     frame.current.scale.set(w, h, 1);
@@ -130,7 +159,7 @@ function NicheScene({ trackRef, depth, children }: { trackRef: React.RefObject<H
       <mesh ref={back} material={material} receiveShadow castShadow>
         <planeGeometry />
       </mesh>
-      <mesh ref={top} material={material} rotation-x={Math.PI / 2} receiveShadow castShadow>
+      <mesh ref={top} material={material} receiveShadow castShadow>
         <planeGeometry />
       </mesh>
       <mesh ref={bottom} material={material} rotation-x={-Math.PI / 2} receiveShadow castShadow>
@@ -143,8 +172,14 @@ function NicheScene({ trackRef, depth, children }: { trackRef: React.RefObject<H
         <planeGeometry />
       </mesh>
 
-      {/* The wall face around the opening. Outside the view so never drawn, but it casts the lip shadow. */}
+      {/* The wall face around the opening. Never drawn (the page is visible there), but it hides what's behind it and casts the lip shadow. */}
       <group ref={frame}>
+        {slope > 0 && (
+          <mesh geometry={corner} castShadow renderOrder={-1}>
+            {/* Double-sided so it also lands in the shadow map, which renders back faces. */}
+            <meshBasicMaterial colorWrite={false} side={DoubleSide} />
+          </mesh>
+        )}
         <mesh position={[0, 1.5, 0]} castShadow>
           <boxGeometry args={[4, 2, 0.001]} />
           <meshBasicMaterial colorWrite={false} />
