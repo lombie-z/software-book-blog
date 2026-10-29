@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { AnimatePresence, motion, useInView, useReducedMotion } from 'motion/react';
 import { useLayout } from '@/components/layout/layout-context';
+import { cn } from '@/lib/utils';
 
 export type ThoughtItem = { id: string; href: string; title: string; excerpt: string; date?: string | null };
 
@@ -118,24 +119,23 @@ function StatusBar() {
   );
 }
 
+type PhoneProps = { items: ThoughtItem[]; name: string; avatar: ReactNode; active: boolean };
+
 /**
- * Thoughts as a message thread on a phone. The thread scrolls inside the screen; the newest few arrive one by one,
- * after a typing indicator, the first time the phone comes into view.
+ * One phone showing a message thread. The thread scrolls inside the screen; the newest few arrive one by one, after
+ * a typing indicator, the first time the phone is in front and in view.
  */
-export function ThoughtPhone({ items }: { items: ThoughtItem[] }) {
-  const { globalSettings } = useLayout();
-  const name = (globalSettings?.site?.name ?? '')
-    .split(' ')[0]
-    .toLowerCase()
-    .replace(/^\w/, (c) => c.toUpperCase());
+function Phone({ items, name, avatar, active }: PhoneProps) {
   const now = useNow();
   const still = useReducedMotion();
   const phone = useRef<HTMLDivElement>(null);
   const thread = useRef<HTMLDivElement>(null);
   const inView = useInView(phone, { once: true, amount: 0.6 });
+  const live = inView && active;
   // Oldest at the top, like a chat.
   const ordered = [...items].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
-  const held = Math.min(ARRIVING, ordered.length);
+  // Always leave at least one showing, so a phone waiting at the back isn't blank.
+  const held = Math.min(ARRIVING, Math.max(0, ordered.length - 1));
   const [shown, setShown] = useState(ordered.length - held);
   const [typing, setTyping] = useState(false);
   const [arrived, setArrived] = useState(false);
@@ -146,7 +146,11 @@ export function ThoughtPhone({ items }: { items: ThoughtItem[] }) {
 
   // Deliver the held messages one at a time.
   useEffect(() => {
-    if (!inView || still || arrived) return;
+    if (!live || still || arrived) {
+      // Sent to the back mid-delivery: drop the dots, carry on when it's in front again.
+      setTyping(false);
+      return;
+    }
     if (shown >= ordered.length) {
       setArrived(true);
       return;
@@ -157,16 +161,16 @@ export function ThoughtPhone({ items }: { items: ThoughtItem[] }) {
       setShown((n) => n + 1);
     }, 1100);
     return () => clearTimeout(delivered);
-  }, [inView, still, arrived, shown, ordered.length]);
+  }, [live, still, arrived, shown, ordered.length]);
 
   // Keep the thread pinned to the latest message as they arrive.
   useLayoutEffect(() => {
     const el = thread.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: inView ? 'smooth' : 'auto' });
-  }, [shown, typing, inView]);
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: live ? 'smooth' : 'auto' });
+  }, [shown, typing, live]);
 
   return (
-    <div className='relative mx-auto w-fit [perspective:1800px]'>
+    <div className='relative [perspective:1800px]'>
       {/* Its shadow on the plaster below. */}
       <div className='absolute inset-x-[12%] -bottom-6 h-10 rounded-[50%] blur-xl' style={{ background: shade(0.3) }} aria-hidden='true' />
       <div
@@ -192,13 +196,13 @@ export function ThoughtPhone({ items }: { items: ThoughtItem[] }) {
           <div className='absolute top-2.5 left-1/2 h-6 w-20 -translate-x-1/2 rounded-full bg-[oklch(0.16_0.006_60)]' aria-hidden='true' />
           <StatusBar />
           <div className='flex flex-col items-center gap-1 border-b border-rule/70 pt-5 pb-2.5'>
-            <Image src='/images/hero-portrait.png' alt='' width={40} height={40} className='size-10 rounded-full bg-plaster-shade object-cover' />
-            <span className='text-[0.7rem] font-medium text-ink'>{name || 'Thoughts'}</span>
+            {avatar}
+            <span className='text-[0.7rem] font-medium text-ink'>{name}</span>
           </div>
           <div ref={thread} data-lenis-prevent className='flex-1 overflow-y-auto overscroll-contain px-3.5 pb-3 [scrollbar-width:none]'>
             <ol>
               {ordered.slice(0, shown).map((item, i) => (
-                <Bubble key={item.id} item={item} now={now} fresh={inView && i >= ordered.length - held} />
+                <Bubble key={item.id} item={item} now={now} fresh={live && i >= ordered.length - held} />
               ))}
               <AnimatePresence>{typing && <Typing key='typing' />}</AnimatePresence>
             </ol>
@@ -215,6 +219,103 @@ export function ThoughtPhone({ items }: { items: ThoughtItem[] }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function useWide() {
+  const [wide, setWide] = useState(true);
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 640px)');
+    const update = () => setWide(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  return wide;
+}
+
+/**
+ * Thoughts on my phone, with my AI's notes on a second phone set behind it and off to one side. Clicking the back
+ * phone shuffles it to the front: each slides out sideways, they cross at the widest point, and settle in swapped.
+ */
+export function ThoughtPhones({ mine, ai, aiName }: { mine: ThoughtItem[]; ai: ThoughtItem[]; aiName?: string | null }) {
+  const { globalSettings } = useLayout();
+  const firstName = (globalSettings?.site?.name ?? '')
+    .split(' ')[0]
+    .toLowerCase()
+    .replace(/^\w/, (c) => c.toUpperCase());
+  const phones = [
+    {
+      key: 'mine',
+      name: firstName || 'Thoughts',
+      avatar: <Image src='/images/isaac-grey.webp' alt='' width={40} height={40} className='size-10 rounded-full bg-plaster-shade object-cover' />,
+      items: mine,
+    },
+    {
+      key: 'ai',
+      name: aiName || 'AI notes',
+      avatar: <Image src='/images/ai-robot.webp' alt='' width={40} height={40} className='size-10 rounded-full bg-plaster-shade object-contain' />,
+      items: ai,
+    },
+  ].filter((p) => p.items.length > 0);
+  const [front, setFront] = useState(0);
+  const wide = useWide();
+  const still = useReducedMotion();
+  const stacked = phones.length > 1;
+  // Where the back phone sits, and how far each slides out mid-swap (far enough on wide screens that they never overlap
+  // as they pass, so the change in stacking order can't be seen).
+  const back = wide ? { x: 120, y: -28 } : { x: 32, y: -20 };
+  const out = wide ? 170 : 90;
+
+  return (
+    <div
+      className={cn(
+        'relative mx-auto',
+        stacked
+          ? 'h-[calc(min(600px,78svh)+20px)] w-[calc(min(290px,78vw)+32px)] sm:h-[calc(min(600px,78svh)+28px)] sm:w-[calc(min(290px,78vw)+120px)]'
+          : 'w-fit'
+      )}
+    >
+      {phones.map((phone, i) => {
+        const isFront = i === front;
+        const swap = still ? { duration: 0 } : { duration: 0.75, ease: [0.4, 0, 0.2, 1] as const, times: [0, 0.45, 1] };
+        // Keyframes from wherever it is now (null), out to the side, to its new place. Initial render jumps to the end.
+        // The back phone fades as a whole, so the plaster shows through its tilted edges and buttons too.
+        const animate = isFront
+          ? { x: [null, back.x + out, 0], y: [null, back.y, 0], scale: [null, 0.92, 1], opacity: [null, 0.65, 1], zIndex: [1, 1, 2, 2] }
+          : { x: [null, -out * 0.6, back.x], y: [null, 0, back.y], scale: [null, 1, 0.92], opacity: [null, 1, 0.65], zIndex: [2, 2, 1, 1] };
+        const show = () => setFront(i);
+        return (
+          <motion.div
+            key={phone.key}
+            className={cn(stacked && 'absolute bottom-0 left-0 origin-bottom', !isFront && 'cursor-pointer')}
+            initial={false}
+            animate={animate}
+            transition={{ ...swap, zIndex: { duration: swap.duration, times: [0, 0.44, 0.45, 1] } }}
+            whileHover={isFront || still ? undefined : { y: back.y - 8, transition: { duration: 0.25 } }}
+            {...(isFront
+              ? {}
+              : {
+                  role: 'button',
+                  tabIndex: 0,
+                  'aria-label': `Show ${phone.name}`,
+                  onClick: show,
+                  onKeyDown: (e: React.KeyboardEvent) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      show();
+                    }
+                  },
+                })}
+          >
+            {/* The phone behind can't be used until it's brought forward. */}
+            <div {...(isFront ? {} : { inert: true })}>
+              <Phone items={phone.items} name={phone.name} avatar={phone.avatar} active={isFront} />
+            </div>
+          </motion.div>
+        );
+      })}
     </div>
   );
 }

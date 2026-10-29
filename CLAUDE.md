@@ -41,7 +41,7 @@ components/
     inlay-hero.tsx                    # Signature, three lit plaster niches, vertical side text with parallax
     micro-biome.tsx                   # Biome stage: lazy 3D scene, drag to turn, Blender still fallback
     post-index.tsx                    # Home Thoughts / Portfolio and concepts sections (routes to the two below)
-    thought-phone.tsx                 # Thoughts as a scrolling message thread on a CSS phone
+    thought-phone.tsx                 # Thoughts as message threads on CSS phones: mine in front, AI notes behind, click to swap
     concept-frame.tsx                 # Concept frames for the home grid: browser window (sites) or print mat
     mermaid.tsx                       # Mermaid diagram block
     video.tsx                         # Video embed block
@@ -69,7 +69,7 @@ components/
   error-boundary.tsx, icon.tsx, raw-renderer.tsx
   shared/theme.ts                     # Theme utilities
 
-art/                                  # Blender sources (cactus.blend, micro-biome.blend)
+art/                                  # Blender sources (cactus.blend, micro-biome.blend, robot.blend for the AI avatar)
 public/models/                        # Exported glTF (Draco); decoder self-hosted in public/draco/
 public/images/3d/                     # Blender stills used as fallbacks
 

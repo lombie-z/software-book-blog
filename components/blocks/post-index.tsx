@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { tinaField } from 'tinacms/dist/react';
 import type { PageBlocksPostIndex, PostConnectionQuery } from '@/tina/__generated__/types';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 import { ConceptFrame, LIFT } from './concept-frame';
-import { ThoughtPhone } from './thought-phone';
+import { type ThoughtItem, ThoughtPhones } from './thought-phone';
 
 export type PostEdges = NonNullable<PostConnectionQuery['postConnection']['edges']>;
 type Post = NonNullable<NonNullable<PostEdges[number]>['node']>;
@@ -34,15 +35,21 @@ const href = (post: Post) => `/posts/${post._sys.breadcrumbs.join('/')}`;
 export function PostIndex({ data, posts }: { data: PageBlocksPostIndex; posts: PostEdges }) {
   const [expanded, setExpanded] = useState(false);
   const category = data.category ?? 'thought';
-  const list = posts
-    .map((e) => e?.node)
-    .filter((p): p is Post => !!p && (p.category ?? 'thought') === category)
-    .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')); // newest first
+  const all = posts.map((e) => e?.node).filter((p): p is Post => !!p);
+  const list = all.filter((p) => (p.category ?? 'thought') === category).sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')); // newest first
+  // My AI's notes share the Thoughts section, on their own phone.
+  const aiNotes = category === 'thought' ? all.filter((p) => p.category === 'ai') : [];
+  const asThought = (p: Post): ThoughtItem => ({ id: p.id, href: href(p), title: p.title ?? '', excerpt: plainText(p.excerpt).trim(), date: p.date });
   const isConcept = category === 'concept';
   const id = sectionId(category);
 
   return (
-    <section id={id} className='mx-auto mt-24 w-full max-w-3xl scroll-mt-16 px-6' aria-labelledby={`${id}-heading`}>
+    <section
+      id={id}
+      // The thought phones slide out sideways as they swap; keep that from widening the page.
+      className={cn('mx-auto mt-24 w-full max-w-3xl scroll-mt-16 px-6', !isConcept && 'overflow-x-clip')}
+      aria-labelledby={`${id}-heading`}
+    >
       <h2
         id={`${id}-heading`}
         data-tina-field={tinaField(data, 'heading')}
@@ -50,10 +57,8 @@ export function PostIndex({ data, posts }: { data: PageBlocksPostIndex; posts: P
       >
         {data.heading || (isConcept ? 'Portfolio and concepts' : 'Thoughts')}
       </h2>
-      {list.length === 0 && <p className='text-muted-foreground'>Nothing here yet.</p>}
-      {list.length > 0 && !isConcept && (
-        <ThoughtPhone items={list.map((p) => ({ id: p.id, href: href(p), title: p.title ?? '', excerpt: plainText(p.excerpt).trim(), date: p.date }))} />
-      )}
+      {list.length + aiNotes.length === 0 && <p className='text-muted-foreground'>Nothing here yet.</p>}
+      {list.length + aiNotes.length > 0 && !isConcept && <ThoughtPhones mine={list.map(asThought)} ai={aiNotes.map(asThought)} aiName={data.aiName} />}
       {list.length > 0 && isConcept && (
         <>
           <ul className='grid gap-x-6 gap-y-8 sm:grid-cols-2'>

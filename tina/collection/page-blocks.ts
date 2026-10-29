@@ -60,11 +60,17 @@ export const postIndexBlockSchema: Template = {
       type: 'string',
       label: 'Shows',
       name: 'category',
-      description: 'Lists posts from this section; the latest three show, the rest behind a toggle.',
+      description: 'Thoughts show as a phone message thread (AI notes on a second phone behind it); portfolio and concepts as a grid.',
       options: [
         { label: 'Thoughts', value: 'thought' },
         { label: 'Portfolio and concepts', value: 'concept' },
       ],
+    },
+    {
+      type: 'string',
+      label: 'AI phone name',
+      name: 'aiName',
+      description: 'Thoughts only: the name at the top of the second phone, which shows AI notes.',
     },
   ],
 };
