@@ -57,8 +57,9 @@ export function PostIndex({ data, posts }: { data: PageBlocksPostIndex; posts: P
       >
         {data.heading || (isConcept ? 'Portfolio and concepts' : 'Thoughts')}
       </h2>
-      {list.length + aiNotes.length === 0 && <p className='text-muted-foreground'>Nothing here yet.</p>}
-      {list.length + aiNotes.length > 0 && !isConcept && <ThoughtPhones mine={list.map(asThought)} ai={aiNotes.map(asThought)} aiName={data.aiName} />}
+      {/* Both phones stay up even with nothing on them yet. */}
+      {!isConcept && <ThoughtPhones mine={list.map(asThought)} ai={aiNotes.map(asThought)} aiName={data.aiName} />}
+      {list.length === 0 && isConcept && <p className='text-muted-foreground'>Nothing here yet.</p>}
       {list.length > 0 && isConcept && (
         <>
           <ul className='grid gap-x-6 gap-y-8 sm:grid-cols-2'>

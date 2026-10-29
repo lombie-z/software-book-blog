@@ -1,5 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import client from '@/tina/__generated__/client';
 import Layout from '@/components/layout/layout';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/utils';
@@ -60,9 +61,12 @@ export default async function PostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const data = await client.queries.post({
-    relativePath: `${slug}.mdx`,
-  });
+  let data: Awaited<ReturnType<typeof client.queries.post>>;
+  try {
+    data = await client.queries.post({ relativePath: `${slug}.mdx` });
+  } catch {
+    notFound();
+  }
 
   const post = data.data.post;
   // AIsaac's posts show their markdown source, so turn the body back into markdown with Tina's own serializer.

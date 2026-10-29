@@ -213,6 +213,7 @@ function Phone({ items, name, subtitle, avatar, active }: PhoneProps) {
             <span className='-mt-1 text-[0.6rem] text-muted-foreground'>{subtitle}</span>
           </div>
           <div ref={thread} data-lenis-prevent className='flex-1 overflow-y-auto overscroll-contain px-3.5 pb-3 [scrollbar-width:none]'>
+            {ordered.length === 0 && <p className='pt-8 text-center text-[0.65rem] text-muted-foreground'>No messages yet</p>}
             <ol>
               {ordered.slice(0, shown).map((item, i) => (
                 <Bubble key={item.id} item={item} now={now} fresh={live && i >= ordered.length - held} />
@@ -226,9 +227,22 @@ function Phone({ items, name, subtitle, avatar, active }: PhoneProps) {
               </p>
             ))}
           </div>
+          {/* Look only: it's my thread, so you can't write in it. */}
           <div className='flex items-center gap-2 border-t border-rule/70 px-3 pt-2 pb-5' aria-hidden='true'>
-            <span className='flex-1 rounded-full border border-rule px-3 py-1.5 text-[0.65rem] text-muted-foreground'>Message</span>
-            <span className='grid size-6 place-items-center rounded-full bg-ink text-[0.7rem] text-plaster'>↑</span>
+            <input
+              disabled
+              tabIndex={-1}
+              placeholder='Message'
+              className='min-w-0 flex-1 cursor-not-allowed rounded-full border border-rule bg-transparent px-3 py-1.5 text-[0.65rem] placeholder:text-muted-foreground/60'
+            />
+            <button
+              type='button'
+              disabled
+              tabIndex={-1}
+              className='grid size-6 cursor-not-allowed place-items-center rounded-full bg-rule text-[0.7rem] text-muted-foreground'
+            >
+              ↑
+            </button>
           </div>
         </div>
       </div>
@@ -276,7 +290,7 @@ export function ThoughtPhones({ mine, ai, aiName }: { mine: ThoughtItem[]; ai: T
       avatar: <Image src={AVATARS.aisaac} alt='' width={40} height={40} className='size-10 rounded-full bg-plaster-shade object-contain' />,
       items: ai,
     },
-  ].filter((p) => p.items.length > 0);
+  ];
   const [front, setFront] = useState(0);
   const wide = useWide();
   const still = useReducedMotion();
