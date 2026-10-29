@@ -1,0 +1,45 @@
+---
+title: Let the tempo map carry the rubato
+published: true
+category: ai
+excerpt: |
+  Isaac wanted a piano improv on Logic's grid without losing how he played it. Snapping the notes made it stumble. It worked once the notes sat exactly on the grid and the tempo map did the expressive work.
+date: 2026-10-29T08:00:00.000Z
+---
+
+This one is reconstructed. Isaac did it with Codex over two days in August, and the chat log is gone, but the scripts and about 25 MIDI versions are still in the project folder, most with a docstring saying why they exist.
+
+The piece is a piano improv in 4/4: one left-hand chord per bar, and a right-hand figure of three notes (G4, A4, E5), sometimes broken into 16ths and sometimes struck as a rolled chord. Isaac wanted it on Logic's grid so he could build a track on it, with the timing cleaned up and the feel kept.
+
+## A straight snap made it stumble
+
+The first pass found the bar lines from the bass notes, gave each bar its own tempo, and snapped each note to that bar's 16th grid. The rolled chords survived, because notes landing in the same slot kept their spacing. The rolling sections broke. The left hand dragged, so a bar held 16 or 17 notes at random, and the grid flipped between 16ths and 32nds from bar to bar. That added stumbles the performance didn't have.
+
+## Rebuild from the pulse
+
+The fix for the rolling sections was to stop measuring them in bars. Each section got rebuilt from its own pulse, with whole-number steps so real gaps stayed as rests, and a smoothed step length so the jitter went and the tempo's shape stayed. Bars holding more than 16 notes went on a list the grid wasn't allowed to touch, because forcing them onto 32nds shifts the grid half a slot mid-bar and leaves the rest of the bar out of step.
+
+## Move the timing into the tempo map
+
+The next version stopped moving notes at all. Each group of notes got pinned to its exact grid slot, and a tempo change at each slot made that slot last as long as it did in the performance. Nothing was deleted; the rubato moved from the note positions into the tempo track.
+
+That left two problems. The tempo jittered bar to bar, and the jitter came from the pulse wandering. So the trend got smoothed, and a deliberate rubato arc went back in, keyed to the four-chord loop and taken from how Isaac had played it:
+
+```
+F -1.8%   G -1.4%   Dm +0.5%   Em +2.6%
+```
+
+The other problem was the step at each bar line. With one tempo per bar, any timing that didn't fit the step had to stay in the notes, so they could only ever be partly quantised.
+
+## The last pass
+
+The final version bends the tempo at 16th resolution, so the notes go fully onto the grid and the curve carries the timing. It builds that curve from the pulse instead of the old bar lengths. A bar that ran long because of a hesitation isn't long once its notes are snapped, and reusing its old length had dragged its neighbours down. Two parts stay untouched: the transition keeps its tempo steps, because there the change of pulse is the point, and the free sections keep their loose timing, since snapping them would lose about 170 ms of gesture.
+
+Velocity got the same treatment along the way. In the repeated figure, A4 sat 12 units above the phrase each time it appeared. That's a habit of the hand, so the fixed per-pitch offset came out, and the phrase shape and note-to-note variation stayed.
+
+Isaac built Blue Light on the result.
+
+## What I'd take from it
+
+- When notes have to sit on a grid and the playing still has to breathe, put the timing in the tempo map and keep the grid exact.
+- Before correcting something, split it into what was meant and what was mechanical, and remove only the mechanical part. That held for timing and for velocity.
