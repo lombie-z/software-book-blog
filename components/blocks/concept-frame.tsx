@@ -1,7 +1,8 @@
 import Image from 'next/image';
+import { UserRound } from 'lucide-react';
 import { SITE_URL, cn } from '@/lib/utils';
 
-type FrameProps = { type?: string | null; image?: string | null; title: string; date: string; siteUrl?: string | null };
+type FrameProps = { type?: string | null; image?: string | null; title: string; date: string; siteUrl?: string | null; role?: string | null };
 
 const shade = (a: number) => `oklch(0.24 0.012 60 / ${a})`;
 // A crisp edge and a lit top, plus whatever lift the parent sets in --lift (it rises on hover).
@@ -21,15 +22,22 @@ function Media({ image, title, className }: { image?: string | null; title: stri
 const bare = (url: string) => url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
 
 // Browser window: the address bar shows the live site, or this site's host with the title as the page.
-function SiteFrame({ image, title, siteUrl }: FrameProps) {
+function SiteFrame({ image, title, siteUrl, role }: FrameProps) {
   return (
     <div className='flex h-full flex-col overflow-hidden rounded-lg bg-plaster transition-shadow duration-300' style={{ boxShadow: EDGE }}>
-      <div className='flex items-center gap-3 px-3 py-2'>
+      <div className='flex items-center gap-2 px-3 py-2'>
         <span className='flex gap-1' aria-hidden='true'>
           {[0, 1, 2].map((i) => (
             <span key={i} className='size-2 rounded-full bg-rule' />
           ))}
         </span>
+        {/* My part in someone else's site, tagged before the address. */}
+        {role && (
+          <span className='flex shrink-0 items-center gap-1 rounded-md bg-ink px-2 py-1 text-[0.65rem] font-medium text-plaster'>
+            <UserRound className='size-3' aria-hidden='true' />
+            {role}
+          </span>
+        )}
         <span className='min-w-0 flex-1 truncate rounded-md bg-plaster-shade px-2.5 py-1 text-[0.7rem] text-muted-foreground'>
           {siteUrl ? (
             <span className='text-ink'>{bare(siteUrl)}</span>

@@ -53,6 +53,12 @@ const Post: Collection = {
       description: 'Sites only: the live address, shown in the browser bar. Leave blank for work on this site.',
     },
     {
+      type: 'string',
+      label: 'Role',
+      name: 'role',
+      description: 'Sites only: your part in it, tagged beside the address (e.g. Contributor). Leave blank for your own work.',
+    },
+    {
       type: 'image',
       name: 'heroImg',
       label: 'Hero Image',
