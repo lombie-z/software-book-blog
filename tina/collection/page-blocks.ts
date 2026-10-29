@@ -63,7 +63,7 @@ export const postIndexBlockSchema: Template = {
       description: 'Lists posts from this section; the latest three show, the rest behind a toggle.',
       options: [
         { label: 'Thoughts', value: 'thought' },
-        { label: 'Design concepts', value: 'concept' },
+        { label: 'Portfolio and concepts', value: 'concept' },
       ],
     },
   ],

@@ -48,7 +48,7 @@ export function PostIndex({ data, posts }: { data: PageBlocksPostIndex; posts: P
         data-tina-field={tinaField(data, 'heading')}
         className='mb-8 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground'
       >
-        {data.heading || (isConcept ? 'Design concepts' : 'Thoughts')}
+        {data.heading || (isConcept ? 'Portfolio and concepts' : 'Thoughts')}
       </h2>
       {list.length === 0 && <p className='text-muted-foreground'>Nothing here yet.</p>}
       {list.length > 0 && !isConcept && (

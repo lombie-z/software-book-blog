@@ -40,7 +40,7 @@ components/
     index.tsx                         # Block registry — maps block types to components
     inlay-hero.tsx                    # Signature, three lit plaster niches, vertical side text with parallax
     micro-biome.tsx                   # Biome stage: lazy 3D scene, drag to turn, Blender still fallback
-    post-index.tsx                    # Home Thoughts / Design concepts sections (routes to the two below)
+    post-index.tsx                    # Home Thoughts / Portfolio and concepts sections (routes to the two below)
     thought-phone.tsx                 # Thoughts as a scrolling message thread on a CSS phone
     concept-frame.tsx                 # Concept frames for the home grid: browser window (sites) or print mat
     mermaid.tsx                       # Mermaid diagram block

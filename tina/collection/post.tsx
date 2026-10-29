@@ -32,14 +32,14 @@ const Post: Collection = {
       description: 'Which home page list this appears in. Blank counts as a thought.',
       options: [
         { label: 'Thought', value: 'thought' },
-        { label: 'Design concept', value: 'concept' },
+        { label: 'Portfolio or concept', value: 'concept' },
       ],
     },
     {
       type: 'string',
       label: 'Concept type',
       name: 'conceptType',
-      description: 'Design concepts only: sites get a browser window, everything else a print mat.',
+      description: 'Portfolio and concepts only: sites get a browser window, everything else a print mat.',
       options: [
         { label: 'Model', value: 'model' },
         { label: 'Site', value: 'site' },
