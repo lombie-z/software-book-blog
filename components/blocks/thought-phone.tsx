@@ -212,7 +212,8 @@ function Phone({ items, name, subtitle, avatar, active }: PhoneProps) {
             <span className='text-[0.7rem] font-medium leading-tight text-ink'>{name}</span>
             <span className='-mt-1 text-[0.6rem] text-muted-foreground'>{subtitle}</span>
           </div>
-          <div ref={thread} data-lenis-prevent className='flex-1 overflow-y-auto overscroll-contain px-3.5 pb-3 [scrollbar-width:none]'>
+          {/* Scrolls on its own until it reaches an end, then the page carries on (Lenis allowNestedScroll). */}
+          <div ref={thread} className='flex-1 overflow-y-auto px-3.5 pb-3 [scrollbar-width:none]'>
             {ordered.length === 0 && <p className='pt-8 text-center text-[0.65rem] text-muted-foreground'>No messages yet</p>}
             <ol>
               {ordered.slice(0, shown).map((item, i) => (
