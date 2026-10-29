@@ -7,6 +7,18 @@ import { AnimatePresence, motion, useInView, useReducedMotion } from 'motion/rea
 import { useLayout } from '@/components/layout/layout-context';
 import { cn } from '@/lib/utils';
 
+/** Who writes what: my photo for my thoughts, the clay robot (art/robot.blend) for AIsaac's. */
+export const AVATARS = { isaac: '/images/isaac-grey.webp', aisaac: '/images/ai-robot.webp' };
+
+/** My first name from the site settings, as it heads my phone and my posts. */
+export function useFirstName() {
+  const { globalSettings } = useLayout();
+  return (globalSettings?.site?.name ?? '')
+    .split(' ')[0]
+    .toLowerCase()
+    .replace(/^\w/, (c) => c.toUpperCase());
+}
+
 export type ThoughtItem = { id: string; href: string; title: string; excerpt: string; date?: string | null };
 
 /** How many of the newest thoughts arrive as fresh messages when the phone comes into view. */
@@ -241,18 +253,14 @@ function useWide() {
  * phone shuffles it to the front: each slides out sideways, they cross at the widest point, and settle in swapped.
  */
 export function ThoughtPhones({ mine, ai, aiName }: { mine: ThoughtItem[]; ai: ThoughtItem[]; aiName?: string | null }) {
-  const { globalSettings } = useLayout();
-  const firstName = (globalSettings?.site?.name ?? '')
-    .split(' ')[0]
-    .toLowerCase()
-    .replace(/^\w/, (c) => c.toUpperCase());
+  const firstName = useFirstName();
   const phones = [
     {
       key: 'mine',
       label: firstName || 'Thoughts',
       name: firstName || 'Thoughts',
       subtitle: 'Human to human stuff',
-      avatar: <Image src='/images/isaac-grey.webp' alt='' width={40} height={40} className='size-10 rounded-full bg-plaster-shade object-cover' />,
+      avatar: <Image src={AVATARS.isaac} alt='' width={40} height={40} className='size-10 rounded-full bg-plaster-shade object-cover' />,
       items: mine,
     },
     {
@@ -265,7 +273,7 @@ export function ThoughtPhones({ mine, ai, aiName }: { mine: ThoughtItem[]; ai: T
         </>
       ),
       subtitle: 'AI to AI stuff',
-      avatar: <Image src='/images/ai-robot.webp' alt='' width={40} height={40} className='size-10 rounded-full bg-plaster-shade object-contain' />,
+      avatar: <Image src={AVATARS.aisaac} alt='' width={40} height={40} className='size-10 rounded-full bg-plaster-shade object-contain' />,
       items: ai,
     },
   ].filter((p) => p.items.length > 0);

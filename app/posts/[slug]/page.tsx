@@ -3,6 +3,8 @@ import { Metadata } from 'next';
 import client from '@/tina/__generated__/client';
 import Layout from '@/components/layout/layout';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/utils';
+import { serializeMDX } from '@tinacms/mdx';
+import Post from '@/tina/collection/post';
 import PostClientPage from './client-page';
 
 function extractText(node: any): string {
@@ -63,6 +65,9 @@ export default async function PostPage({
   });
 
   const post = data.data.post;
+  // AIsaac's posts show their markdown source, so turn the body back into markdown with Tina's own serializer.
+  const bodyField = Post.fields?.find((f) => f.name === '_body');
+  const raw = post.category === 'ai' && bodyField ? String(serializeMDX(post._body, bodyField, (url) => url) ?? '') : undefined;
   const absImg = post.heroImg?.startsWith('http') ? post.heroImg : `${SITE_URL}${post.heroImg ?? '/images/hero-portrait.png'}`;
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -77,9 +82,9 @@ export default async function PostPage({
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type='application/ld+json' dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Layout rawPageData={data}>
-        <PostClientPage {...data} />
+        <PostClientPage {...data} raw={raw} />
       </Layout>
     </>
   );

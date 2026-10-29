@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Prism } from 'tinacms/dist/rich-text/prism';
 import { Video, type VideoData } from './blocks/video';
 import { Mermaid } from './blocks/mermaid';
+import { AnnotatedImage, type AnnotatedImageData } from './blocks/annotated-image';
 
 export const components: Components<{
   BlockQuote: {
@@ -21,14 +22,15 @@ export const components: Components<{
     disclaimer?: TinaMarkdownContent;
   };
   video: VideoData;
+  AnnotatedImage: AnnotatedImageData;
 }> = {
   code_block: (props) => {
     if (!props) {
       return <></>;
     }
-    
+
     if (props.lang === 'mermaid') {
-      return <Mermaid value={props.value} />
+      return <Mermaid value={props.value} />;
     }
 
     return <Prism lang={props.lang} value={props.value} />;
@@ -64,13 +66,15 @@ export const components: Components<{
   },
   NewsletterSignup: (props) => {
     return (
-      <div style={{
-        background: 'var(--plaster-shade)',
-        border: '1px solid var(--rule)',
-        borderRadius: '4px',
-        padding: '1.25rem 1.5rem 1.75rem',
-        margin: '1.5rem 0',
-      }}>
+      <div
+        style={{
+          background: 'var(--plaster-shade)',
+          border: '1px solid var(--rule)',
+          borderRadius: '4px',
+          padding: '1.25rem 1.5rem 1.75rem',
+          margin: '1.5rem 0',
+        }}
+      >
         <div style={{ marginBottom: '1rem', color: 'var(--ink)' }}>
           <TinaMarkdown content={props.children} />
         </div>
@@ -138,4 +142,5 @@ export const components: Components<{
   video: (props) => {
     return <Video data={props} />;
   },
+  AnnotatedImage: (props) => <AnnotatedImage data={props} />,
 };

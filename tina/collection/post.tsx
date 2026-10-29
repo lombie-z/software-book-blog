@@ -1,3 +1,4 @@
+import { annotatedImageSchema } from '@/components/blocks/annotated-image';
 import { videoBlockSchema } from '@/components/blocks/video';
 import type { Collection } from 'tinacms';
 
@@ -183,6 +184,7 @@ const Post: Collection = {
           },
         },
         videoBlockSchema,
+        annotatedImageSchema,
       ],
       isBody: true,
     },
