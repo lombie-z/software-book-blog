@@ -20,23 +20,33 @@ function SunController() {
 /**
  * The canvas only draws when something changes. Scrolling and resizing move the 3D boxes, and so can layout shifts
  * (fonts loading, sections expanding), so those ask for a redraw. Animated scenes ask for their own frames while they're
- * on screen. Two frames each time, because drei's View skips one as a box comes back on screen.
+ * on screen. Waking up counts too: coming back to the tab or the page, or the GPU restoring a lost context (e.g. after
+ * sleep), where nothing else would ask for a frame. Two frames each time, because drei's View skips one as a box comes
+ * back on screen.
  */
 function RedrawOnChange() {
   const invalidate = useThree((s) => s.invalidate);
+  const canvas = useThree((s) => s.gl.domElement);
   useEffect(() => {
     const redraw = () => invalidate(2);
+    const onVisible = () => document.visibilityState === 'visible' && redraw();
     window.addEventListener('scroll', redraw, { passive: true });
     window.addEventListener('resize', redraw);
+    window.addEventListener('pageshow', redraw);
+    document.addEventListener('visibilitychange', onVisible);
+    canvas.addEventListener('webglcontextrestored', redraw);
     const layout = new ResizeObserver(redraw);
     layout.observe(document.body);
     document.fonts?.ready.then(redraw);
     return () => {
       window.removeEventListener('scroll', redraw);
       window.removeEventListener('resize', redraw);
+      window.removeEventListener('pageshow', redraw);
+      document.removeEventListener('visibilitychange', onVisible);
+      canvas.removeEventListener('webglcontextrestored', redraw);
       layout.disconnect();
     };
-  }, [invalidate]);
+  }, [invalidate, canvas]);
   return null;
 }
 
