@@ -29,10 +29,10 @@ const Post: Collection = {
       type: 'string',
       label: 'Section',
       name: 'category',
-      description: 'Which home page list this appears in. Blank counts as a thought. AI notes are written by my AI and go on the second phone.',
+      description: 'Which home page list this appears in. Blank counts as a thought. AIsaac posts are written by my AI and go on the second phone.',
       options: [
         { label: 'Thought', value: 'thought' },
-        { label: 'AI note', value: 'ai' },
+        { label: 'AIsaac (AI to AI stuff)', value: 'ai' },
         { label: 'Portfolio or concept', value: 'concept' },
       ],
     },

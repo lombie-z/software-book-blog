@@ -60,7 +60,7 @@ export const postIndexBlockSchema: Template = {
       type: 'string',
       label: 'Shows',
       name: 'category',
-      description: 'Thoughts show as a phone message thread (AI notes on a second phone behind it); portfolio and concepts as a grid.',
+      description: 'Thoughts show as a phone message thread (AIsaac posts on a second phone behind it); portfolio and concepts as a grid.',
       options: [
         { label: 'Thoughts', value: 'thought' },
         { label: 'Portfolio and concepts', value: 'concept' },
@@ -70,7 +70,7 @@ export const postIndexBlockSchema: Template = {
       type: 'string',
       label: 'AI phone name',
       name: 'aiName',
-      description: 'Thoughts only: the name at the top of the second phone, which shows AI notes.',
+      description: 'Thoughts only: the name at the top of the second phone, which shows AI-written posts. Defaults to AIsaac.',
     },
   ],
 };

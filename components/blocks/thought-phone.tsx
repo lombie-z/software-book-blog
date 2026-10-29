@@ -119,13 +119,13 @@ function StatusBar() {
   );
 }
 
-type PhoneProps = { items: ThoughtItem[]; name: string; avatar: ReactNode; active: boolean };
+type PhoneProps = { items: ThoughtItem[]; name: ReactNode; subtitle: string; avatar: ReactNode; active: boolean };
 
 /**
  * One phone showing a message thread. The thread scrolls inside the screen; the newest few arrive one by one, after
  * a typing indicator, the first time the phone is in front and in view.
  */
-function Phone({ items, name, avatar, active }: PhoneProps) {
+function Phone({ items, name, subtitle, avatar, active }: PhoneProps) {
   const now = useNow();
   const still = useReducedMotion();
   const phone = useRef<HTMLDivElement>(null);
@@ -197,7 +197,8 @@ function Phone({ items, name, avatar, active }: PhoneProps) {
           <StatusBar />
           <div className='flex flex-col items-center gap-1 border-b border-rule/70 pt-5 pb-2.5'>
             {avatar}
-            <span className='text-[0.7rem] font-medium text-ink'>{name}</span>
+            <span className='text-[0.7rem] font-medium leading-tight text-ink'>{name}</span>
+            <span className='-mt-1 text-[0.6rem] text-muted-foreground'>{subtitle}</span>
           </div>
           <div ref={thread} data-lenis-prevent className='flex-1 overflow-y-auto overscroll-contain px-3.5 pb-3 [scrollbar-width:none]'>
             <ol>
@@ -248,13 +249,22 @@ export function ThoughtPhones({ mine, ai, aiName }: { mine: ThoughtItem[]; ai: T
   const phones = [
     {
       key: 'mine',
+      label: firstName || 'Thoughts',
       name: firstName || 'Thoughts',
+      subtitle: 'Human to human stuff',
       avatar: <Image src='/images/isaac-grey.webp' alt='' width={40} height={40} className='size-10 rounded-full bg-plaster-shade object-cover' />,
       items: mine,
     },
     {
       key: 'ai',
-      name: aiName || 'AI notes',
+      label: aiName || 'AIsaac',
+      // AI + the greyed-out rest of my name.
+      name: aiName || (
+        <>
+          AI<span className='text-muted-foreground'>saac</span>
+        </>
+      ),
+      subtitle: 'AI to AI stuff',
       avatar: <Image src='/images/ai-robot.webp' alt='' width={40} height={40} className='size-10 rounded-full bg-plaster-shade object-contain' />,
       items: ai,
     },
@@ -299,7 +309,7 @@ export function ThoughtPhones({ mine, ai, aiName }: { mine: ThoughtItem[]; ai: T
               : {
                   role: 'button',
                   tabIndex: 0,
-                  'aria-label': `Show ${phone.name}`,
+                  'aria-label': `Show ${phone.label}`,
                   onClick: show,
                   onKeyDown: (e: React.KeyboardEvent) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -311,7 +321,7 @@ export function ThoughtPhones({ mine, ai, aiName }: { mine: ThoughtItem[]; ai: T
           >
             {/* The phone behind can't be used until it's brought forward. */}
             <div {...(isFront ? {} : { inert: true })}>
-              <Phone items={phone.items} name={phone.name} avatar={phone.avatar} active={isFront} />
+              <Phone items={phone.items} name={phone.name} subtitle={phone.subtitle} avatar={phone.avatar} active={isFront} />
             </div>
           </motion.div>
         );
