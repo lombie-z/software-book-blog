@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import { SITE_URL, cn } from '@/lib/utils';
 
-type FrameProps = { type?: string | null; image?: string | null; title: string; date: string };
+type FrameProps = { type?: string | null; image?: string | null; title: string; date: string; siteUrl?: string | null };
 
 const shade = (a: number) => `oklch(0.24 0.012 60 / ${a})`;
 // A crisp edge and a lit top, plus whatever lift the parent sets in --lift (it rises on hover).
@@ -18,9 +18,10 @@ function Media({ image, title, className }: { image?: string | null; title: stri
   );
 }
 
-// Browser window: the title sits in the address bar.
-function SiteFrame({ image, title }: FrameProps) {
-  const host = SITE_URL.replace(/^https?:\/\/(www\.)?/, '');
+const bare = (url: string) => url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+
+// Browser window: the address bar shows the live site, or this site's host with the title as the page.
+function SiteFrame({ image, title, siteUrl }: FrameProps) {
   return (
     <div className='flex h-full flex-col overflow-hidden rounded-lg bg-plaster transition-shadow duration-300' style={{ boxShadow: EDGE }}>
       <div className='flex items-center gap-3 px-3 py-2'>
@@ -30,7 +31,13 @@ function SiteFrame({ image, title }: FrameProps) {
           ))}
         </span>
         <span className='min-w-0 flex-1 truncate rounded-md bg-plaster-shade px-2.5 py-1 text-[0.7rem] text-muted-foreground'>
-          {host}/ <span className='text-ink'>{title}</span>
+          {siteUrl ? (
+            <span className='text-ink'>{bare(siteUrl)}</span>
+          ) : (
+            <>
+              {bare(SITE_URL)}/ <span className='text-ink'>{title}</span>
+            </>
+          )}
         </span>
       </div>
       <Media image={image} title={title} className='aspect-[16/10] grow' />

@@ -74,7 +74,7 @@ export default function PostClientPage(props: ClientPostProps) {
 
         <div className="mx-auto mt-20 max-w-[65ch]">
           <Link href={`/#${sectionId(post.category)}`} className="text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-ink">
-            <span aria-hidden="true">&larr;</span> All {post.category === 'concept' ? 'design concepts' : 'thoughts'}
+            <span aria-hidden="true">&larr;</span> All {post.category === 'concept' ? 'portfolio and concepts' : 'thoughts'}
           </Link>
         </div>
       </article>

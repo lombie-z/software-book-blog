@@ -65,7 +65,7 @@ export function PostIndex({ data, posts }: { data: PageBlocksPostIndex; posts: P
                   className='block h-full transition-transform duration-300 ease-out [--lift:var(--rest)] hover:-translate-y-1.5 hover:[--lift:var(--raised)] focus-visible:-translate-y-1.5 focus-visible:[--lift:var(--raised)] motion-reduce:transition-none'
                   style={{ '--rest': LIFT.rest, '--raised': LIFT.raised } as React.CSSProperties}
                 >
-                  <ConceptFrame type={p.conceptType} image={p.heroImg} title={p.title ?? ''} date={formatDate(p.date)} />
+                  <ConceptFrame type={p.conceptType} image={p.heroImg} title={p.title ?? ''} date={formatDate(p.date)} siteUrl={p.siteUrl} />
                 </Link>
               </li>
             ))}

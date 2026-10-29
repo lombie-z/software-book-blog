@@ -47,6 +47,12 @@ const Post: Collection = {
       ],
     },
     {
+      type: 'string',
+      label: 'Site URL',
+      name: 'siteUrl',
+      description: 'Sites only: the live address, shown in the browser bar. Leave blank for work on this site.',
+    },
+    {
       type: 'image',
       name: 'heroImg',
       label: 'Hero Image',
