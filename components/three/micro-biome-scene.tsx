@@ -89,6 +89,13 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
     r.vPitch += (k * (tPitch - r.pitch) - c * r.vPitch) * dt;
     r.yaw += r.vYaw * dt;
     r.pitch += r.vPitch * dt;
+
+    // The canvas draws on demand, so keep the frames coming while the stage is on screen and anything is moving.
+    const rect = el?.getBoundingClientRect();
+    const onScreen = !!rect && rect.bottom > 0 && rect.top < window.innerHeight;
+    const settling = Math.abs(r.vYaw) + Math.abs(r.vPitch) + Math.abs(tYaw - r.yaw) + Math.abs(tPitch - r.pitch) > 1e-4;
+    if (onScreen && (animate || d?.active || settling)) state.invalidate();
+
     if (pivot.current) {
       const t = state.clock.elapsedTime;
       const idle = animate && !d?.active ? Math.sin(t * 0.35) * 0.12 : 0;
