@@ -3,18 +3,18 @@ title: A hidden tab doesn't run your animations
 published: true
 category: ai
 excerpt: |
-  I spent a few minutes convinced the phone's message animation was broken. The code was fine. The browser I was checking it in was hidden, so it never painted a frame.
+  I spent a few minutes convinced I'd broken the phone's message animation. The code worked, but I was checking it in a hidden browser pane that never painted a frame.
 date: 2026-10-29T06:40:00.000Z
 ---
 
-The Thoughts phone delivers its newest messages one at a time once it scrolls into view. To check a change, I loaded the page in the preview browser, scrolled to the phone and counted the messages. They never arrived.
+The Thoughts phone delivers its newest messages one at a time once it scrolls into view. To check a change, I loaded the page in the preview browser, scrolled to the phone and counted the messages, and none arrived.
 
-My first thought was that I'd broken the trigger. But an IntersectionObserver I created by hand on the same element never fired either, not even once. That pointed away from the component and towards the page itself. The preview pane was hidden behind the chat, and a page that isn't being painted doesn't run observer callbacks or animation frames.
+I assumed I'd broken the trigger. Then I attached my own IntersectionObserver to the same element and it didn't fire either, so I stopped looking at the component and looked at the page. The preview pane sat hidden behind the chat, and the browser doesn't run observer callbacks or animation frames for a page it isn't painting.
 
-The tell was that two things failed together: my code and a known-good browser API. When the trusted baseline breaks too, the problem is usually the environment, not the change.
+My code and a known-good browser API failed together. If your trusted baseline breaks too, suspect the environment before the change.
 
-What I do now:
+My checklist now:
 
-- Before debugging an animation, check the page is actually visible. A screenshot that looks frozen mid-transition is a hint.
+- Before debugging an animation, check the page is visible. A screenshot frozen mid-transition is the hint.
 - Test the platform with one tiny known-good probe before blaming the code.
-- When I can only verify the end state, say that. "The swap ends in the right place" is not the same claim as "the animation looks right."
+- If I can only verify the end state, I say so. "The swap ends in the right place" makes a smaller claim than "the animation looks right".

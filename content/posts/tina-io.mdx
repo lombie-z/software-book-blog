@@ -11,30 +11,30 @@ excerpt: |
 date: 2026-10-29T01:00:00.000Z
 ---
 
-I work at [SSW](https://www.ssw.com.au), which builds TinaCMS, so a lot of my week goes into tina.io. The site is built with Tina itself, which is the useful part: we hit the editor's rough edges before customers do, then fix them in the product.
+I work at [SSW](https://www.ssw.com.au), which builds TinaCMS, and I spend a lot of my week on tina.io. We build the site with Tina, so we hit the editor's rough edges before customers do and fix them in the product.
 
 ## The homepage
 
-Every page on tina.io is a stack of blocks that the marketing team can edit and rearrange without a developer. I've built a fair few of them, including the comparison box, the testimonials, rich text in the feature cards, and the markdown block below. I also did a pass over every page title.
+Each page on tina.io is a stack of blocks that the marketing team can edit and rearrange without a developer. I've built a fair few of them, including the comparison box and the markdown block below, and I audited the page titles across the site.
 
-<AnnotatedImage src="/uploads/posts/tina-io-md.webp" alt="The tina.io homepage section titled Markdown is the Answer, with a terminal window on the left and the llama mascot peeking over it" caption="One block, edited in Tina like everything else on the page." aspect="16/10" notes={[{ text: "a block I built", x: 30.5, y: 56, mark: "circle", side: "bottom", size: 30 }]} />
+<AnnotatedImage src="/uploads/posts/tina-io-md.webp" alt="The tina.io homepage section titled Markdown is the Answer, with a terminal window on the left and the llama mascot peeking over it" caption="The marketing team edits this block in Tina, like the rest of the page." aspect="16/10" notes={[{ text: "a block I built", x: 30.5, y: 56, mark: "circle", side: "bottom", size: 30 }]} />
 
 ## AI search readiness
 
-[tina.io/geo](https://tina.io/geo) is a free tool I built. You paste in a URL and get a graded report on how ready the page is for search engines and AI answer engines: whether AI crawlers can reach it, the search basics, structured data, and newer things like serving markdown to agents. It lives in its own repo and project, and tina.io proxies it under `/geo`, the same way it does TinaDocs.
+I built [tina.io/geo](https://tina.io/geo), a free checker. You paste in a URL and get a graded report on how ready the page is for search engines and AI answer engines, from whether AI crawlers can reach it to whether it serves markdown to agents. The tool has its own repo and Vercel project, and tina.io proxies it under `/geo`, the same way it serves TinaDocs.
 
 <AnnotatedImage src="/uploads/posts/tina-io-geo.webp" alt="The AI search readiness page: a headline asking if your site is ready for AI search, a URL field with an Analyze button, and a short video beside it" caption="The landing page for the checker." aspect="16/10" notes={[{ text: "paste any URL, get a graded report", x: 30, y: 51, mark: "underline", side: "bottom", size: 36 }]} />
 
 ## TinaDocs
 
-[TinaDocs](https://tina.io/tinadocs) is a docs starter built on Tina. Clone it and every page is already editable in the visual editor, with nothing to set up. I worked on most of what sits inside the pages: tabbed code blocks, recipe blocks, type definitions, file structure embeds and a Monaco code editor. I also did the theme selector and dark mode.
+[TinaDocs](https://tina.io/tinadocs) is a docs starter built on Tina. Clone it and you can edit the pages in the visual editor with no setup. I built many of the components you write docs with, like tabbed code blocks, recipe blocks and type definitions, along with the theme selector and dark mode.
 
 <AnnotatedImage src="/uploads/posts/tina-io-recipe.webp" alt="A TinaDocs page showing a recipe block, a numbered list of steps beside a block of React code" caption="A recipe block in the TinaDocs starter." aspect="16/10" notes={[{ text: "each step lights up its lines", x: 37, y: 37.5, mark: "circle", side: "bottom", size: 18 }]} />
 
-Search is Pagefind, so it's static and needs no server. The index is built at build time, so I added a check when the dev server starts that warns you if it's gone stale.
+Search runs on Pagefind, which needs no server. Pagefind builds its index at build time, so I added a check that warns you when the dev server starts if the index has gone stale.
 
-<AnnotatedImage src="/uploads/posts/tina-io-search.webp" alt="The TinaDocs search dialog open over a docs page, with results for the word deploy" caption="Search runs entirely in the browser." aspect="16/10" notes={[{ text: "no server needed", x: 37, y: 19, mark: "underline", side: "right", size: 12 }]} />
+<AnnotatedImage src="/uploads/posts/tina-io-search.webp" alt="The TinaDocs search dialog open over a docs page, with results for the word deploy" caption="Search runs in the browser." aspect="16/10" notes={[{ text: "no server needed", x: 37, y: 19, mark: "underline", side: "right", size: 12 }]} />
 
 ## Plus the boring bits
 
-There's plenty of upkeep too. I added visual regression tooling to catch UI changes, wrote AGENTS.md so AI coding agents can find their way around the repo, removed old dependencies and kept the docs current.
+The site needs upkeep too. I added visual regression tooling to catch UI changes and wrote an AGENTS.md so AI coding agents can find their way around the repo.

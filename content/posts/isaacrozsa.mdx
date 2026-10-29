@@ -12,28 +12,28 @@ date: 2026-01-01T00:00:00.000Z
 
 ## A playground for the music
 
-isaacrozsa.com is where my music lives, and it's as much a place to play with 3D and shaders as a place to listen. The singles share the home page, and each album gets a world of its own.
+I put my music on isaacrozsa.com, and I use the site as much to play with 3D and shaders as to host the songs. The singles share the home page, and each album gets a world of its own.
 
 ## The singles
 
-The home page is a run of scenes, one per single: Prologue's cover glowing over a dark sea, then Dude Like Dust, then a red rozsa form, then links. It doesn't scroll. A flick of the wheel, a swipe or an arrow key glides you to the next scene, and the roses in the top right show where you are.
+The home page is a run of scenes, one per single: Prologue's cover glowing over a dark sea, then Dude Like Dust, then a red rozsa form, then links. The page doesn't scroll: flick the wheel, swipe or press an arrow key and it glides to the next scene, while the roses in the top right show where you are.
 
 <AnnotatedImage src="/uploads/posts/isaacrozsa-singles.webp" alt="The isaacrozsa.com home page: the Prologue cover glowing over a dark red sea, with a rose navigation card in the top right" caption="Prologue, the first scene on the home page." aspect="16/10" marker="yellow" notes={[{ text: "roses show which single you're on", x: 91.5, y: 12, mark: "arrow", side: "left" }, { text: "one flick, next single", x: 50, y: 50, mark: "circle", side: "bottom", size: 24 }]} />
 
 ## Good Talk
 
-Good Talk is a field of flowers and leaves that the camera flies through as you scroll. Each track has its own colour, so the whole scene shifts as you move from one song to the next, and the player in the corner shifts with it. Beats in the music send out ripples in that song's colour.
+In Good Talk you scroll the camera through a field of flowers and leaves. I gave each track its own colour, and the scene and the player in the corner change colour as you move from one song to the next. On each beat, a ripple goes out in that song's colour.
 
 <AnnotatedImage src="/uploads/posts/isaacrozsa-good-talk.webp" alt="The Good Talk page: green leaves drifting through grey space around a glowing white line, with a red music player in the bottom right" caption="Partway through Good Talk." aspect="16/10" marker="yellow" notes={[{ text: "each track brings its own colour", x: 80, y: 70, mark: "arrow", side: "left" }]} />
 
 ## Arrhythmia
 
-Arrhythmia is early-2000s PC nostalgia. You switch it on with a power button, and the photos come through VHS noise and glitches, like they're on the old family computer. Each scroll draws an MS Paint-style lasso around part of a photo, point by point, until it cuts out and dissolves to the next. Keep going and the machine blue-screens.
+Arrhythmia is early-2000s PC nostalgia. You switch it on with a power button, and the photos come through VHS noise and glitches, like they're on the old family computer. Each scroll adds a point to an MS Paint-style lasso around part of a photo, and when the loop closes, the cut-out dissolves into the next photo. If you keep scrolling past the last one, the machine blue-screens.
 
 <AnnotatedImage src="/uploads/posts/isaacrozsa-arrhythmia-lasso.webp" alt="The Arrhythmia cover: me in a bucket hat drinking from a bottle under the album title, with a dotted MS Paint-style lasso partway round me and a 07/01/2001 date stamp" caption="The album cover, a few scrolls in." aspect="16/10" marker="yellow" notes={[{ text: "each scroll adds a point to the lasso", x: 37.5, y: 74.7, mark: "arrow", side: "left" }]} />
 
 ## Under the hood
 
-- Scenes, not scrolling. On the main sequence I don't want the page to scroll at all, so wheel, touch and key events are caught and each one moves to the next scene with an eased transition. Arrhythmia adds momentum, so a long flick keeps drawing before it settles.
-- Performance. The liquid scenes render on demand at 30fps instead of every frame, which roughly halves their GPU cost, and they pause completely when they're off screen. Phones get a lighter version of the raymarched shader, with fewer steps and fewer blobs.
-- The lasso editor. Every selection path is hand-drawn. A hidden editor page loads a photo and lets me click the lasso out over it, and those points become the album's data.
+- Scene changes. On the main sequence I catch wheel, touch and key events and turn each one into an eased move to the next scene, so the page itself stays put. Arrhythmia adds momentum, so a long flick keeps drawing before it settles.
+- Performance. I render the liquid scenes on demand at 30fps, which cuts their GPU cost about in half, and pause them when they're off screen. Phones get a lighter raymarched shader with fewer steps and fewer blobs.
+- The lasso editor. I drew each selection path by hand, on a hidden editor page that loads a photo and lets me click points around it. The page saves those points as the album's data.

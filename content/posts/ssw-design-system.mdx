@@ -4,9 +4,31 @@ published: true
 category: concept
 conceptType: site
 siteUrl: 'https://design.ssw.com.au'
-role: Contributor
+role: Lead developer
 heroImg: /uploads/posts/ssw-design-system.webp
 excerpt: |
   SSW's shared React components and design tokens, documented in Storybook.
 date: 2026-10-29T03:00:00.000Z
 ---
+
+The SSW Design System is SSW's shared set of React components and design tokens, documented in Storybook at [design.ssw.com.au](https://design.ssw.com.au). The design team draws the components in Figma and reviews them. As lead developer, I turn those designs into code and look after the repo and its releases.
+
+## Built for AI agents
+
+AI agents now write much of the code that uses a design system, so this one has to make sense to agents as well as people. An agent that can't find the right component and its props will guess, and you end up with a lookalike button.
+
+<AnnotatedImage src="/uploads/posts/ssw-ds-agent.webp" alt="The design system's install docs, showing a one-line command to add the agent skill and a URL for a component's props as JSON" caption="The install docs cover setting up your agent as well as your app." aspect="16/10" notes={[{ text: "one command, any agent", x: 61, y: 27, mark: "arrow", side: "right" }, { text: "real props, as JSON", x: 61, y: 89, mark: "arrow", side: "right" }]} />
+
+The agent skill does the setup. It picks between the npm package and the registry for your project, wires up the styles and fonts, and themes through tokens so the components stay untouched. I tested agents with and without it. With the skill, the agent passed all the test assertions and used about a third fewer tokens. Without it, an agent asked to darken the brand colour edited the design system's own source files.
+
+Storybook publishes a manifest of the components, but most of its props were empty because the default parser can't follow types like `ComponentProps<typeof X>`. I switched Storybook to the TypeScript parser, which took the count of components with props from 24 of 52 to 49. I also split the manifest into a small JSON file per component, so an agent can check that a badge has a `success` variant before it uses one.
+
+## One line to install
+
+You install components through an `@ssw` namespace on the shadcn registry, so adding a badge to a project takes `npx shadcn add @ssw/badge`. Each docs page leads with that line, then says when to use the component and which variant fits, in plain enough terms for a person or an agent to follow.
+
+<AnnotatedImage src="/uploads/posts/ssw-ds-badge.webp" alt="The Badge docs page in Storybook, with an install command at the top and guidance on when to use each variant" caption="Each component page starts this way." aspect="16/10" notes={[{ text: "via the @ssw namespace", x: 42, y: 23, mark: "arrow", side: "right" }, { text: "guidance an agent can follow", x: 39, y: 69, mark: "arrow", side: "right" }]} />
+
+## Where it's used
+
+A few internal apps use it so far, like the GitHub stars report for SSW and TinaCMS repos. ssw.com.au is starting to move over too, through a new family of Website components that I keep separate from the Application components used in apps.
