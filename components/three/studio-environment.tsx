@@ -5,16 +5,20 @@ import { useThree } from '@react-three/fiber';
 import { type Material, type Object3D, PMREMGenerator, type Texture, type WebGLRenderer } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
-let cached: Texture | null = null;
+// One map per renderer. The home page's canvas (and its WebGL context) is torn down when you leave, and a map
+// rendered on the old context is empty on the new one, so the model would come back without its reflections.
+const cached = new WeakMap<WebGLRenderer, Texture>();
 
 function studioEnvMap(gl: WebGLRenderer) {
-  if (!cached) {
+  let map = cached.get(gl);
+  if (!map) {
     // Procedural softbox room, so nothing is downloaded.
     const pmrem = new PMREMGenerator(gl);
-    cached = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    map = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     pmrem.dispose();
+    cached.set(gl, map);
   }
-  return cached;
+  return map;
 }
 
 /**
