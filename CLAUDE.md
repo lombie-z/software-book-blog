@@ -69,7 +69,7 @@ components/
   error-boundary.tsx, icon.tsx, raw-renderer.tsx
   shared/theme.ts                     # Theme utilities
 
-art/                                  # Blender sources (cactus.blend, micro-biome.blend, robot.blend for the AI avatar)
+art/                                  # Blender sources (cactus.blend, micro-biome.blend, robot.blend for the AI avatar); build-favicon.py (favicons from the signature's hat)
 public/models/                        # Exported glTF (Draco); decoder self-hosted in public/draco/
 public/images/3d/                     # Blender stills used as fallbacks
 
