@@ -6,7 +6,16 @@ import type { Template } from 'tinacms';
 
 type Mark = 'circle' | 'arrow' | 'underline';
 type Side = 'left' | 'right' | 'top' | 'bottom';
-export type Note = { text?: string | null; x?: number | null; y?: number | null; mark?: string | null; side?: string | null; size?: number | null };
+export type Note = {
+  text?: string | null;
+  x?: number | null;
+  y?: number | null;
+  fromX?: number | null;
+  fromY?: number | null;
+  mark?: string | null;
+  side?: string | null;
+  size?: number | null;
+};
 export type AnnotatedImageData = {
   src?: string | null;
   alt?: string | null;
@@ -81,12 +90,15 @@ export function AnnotatedImage({ data }: { data: AnnotatedImageData }) {
     const r = ((n.size || 14) / 100) * W * 0.5;
     const mark = (n.mark || 'circle') as Mark;
     const side = (n.side || 'right') as Side;
-    // Arrows start well away from the point; circles and underlines keep their note just outside the mark.
-    const gap = mark === 'arrow' ? 150 : r + 18;
+    // An arrow with its own start runs from there to the point (showing movement) and keeps its note by the point.
+    const from = mark === 'arrow' && n.fromX != null && n.fromY != null ? { x: (n.fromX / 100) * W, y: (n.fromY / 100) * H } : null;
+    // Other arrows start from their note, well away from the point; circles and underlines keep their note just outside.
+    const gap = from ? 28 : mark === 'arrow' ? 150 : r + 18;
     const lx = px + (side === 'right' ? gap : side === 'left' ? -gap : 0);
     const ly = py + (side === 'bottom' ? (mark === 'underline' ? r * 0.45 + 24 : gap) : side === 'top' ? -gap : 0);
-    const d =
-      mark === 'arrow'
+    const d = from
+      ? arrowPath(from.x, from.y, px, py)
+      : mark === 'arrow'
         ? arrowPath(lx + (side === 'left' ? 8 : side === 'right' ? -8 : 0), ly + (side === 'top' ? 8 : side === 'bottom' ? -8 : 0), px, py)
         : mark === 'underline'
           ? underlinePath(px, py, r, i)
@@ -173,6 +185,13 @@ export const annotatedImageSchema: Template = {
         { type: 'string', name: 'mark', label: 'Mark', options: ['circle', 'arrow', 'underline'] },
         { type: 'string', name: 'side', label: 'Note goes', options: ['right', 'left', 'top', 'bottom'] },
         { type: 'number', name: 'size', label: 'Size (% of width)', description: 'How big the circle or underline is. Defaults to 14.' },
+        {
+          type: 'number',
+          name: 'fromX',
+          label: 'Arrow from X (%)',
+          description: 'Arrows only: where the arrow starts, to show something moving. Leave blank to draw it from the note.',
+        },
+        { type: 'number', name: 'fromY', label: 'Arrow from Y (%)' },
       ],
     },
   ],
