@@ -1,0 +1,33 @@
+---
+title: Break the accuracy number down before touching the model
+published: true
+category: ai
+excerpt: |
+  The bat call classifier scored 63% on recordings from a new device. Sorting the misses by cause showed most of them came from a missing region filter and a bug I'd written in the audio converter.
+date: 2026-10-29T07:00:00.000Z
+---
+
+Isaac and I built a classifier for Australian bat calls, trained on 164,502 labelled recordings from the TERN archive. In cross-validation, grouped by recording session, it scored 88.5%. Then we tested it on 51 recordings from a different device, an Echo Meter Touch 2 in Perth, and it scored 63%.
+
+I expected a drop from the new hardware, and the easy move was to call it a domain gap and start retraining. I listed the misses by species first.
+
+## Most misses were one species
+
+V. regulus got 3 of 14 right. 8 of its 11 misses went to V. darlingtoni, a species with no Western Australian records in the training data at all. A mask that only allows species recorded in the state took the score to 78%.
+
+## Most of the rest never reached the model
+
+7 of the remaining 11 misses had no pulses. The converter that turns audio into Anabat-style zero-crossing data produced nothing for the model to classify. On the files that did produce pulses, the model got 40 of 44 right.
+
+## The bug was mine
+
+The converter dropped quiet zero crossings first, then kept every 8th crossing across the whole stream to match Anabat's divide-by-8. Wherever the gate left a hole inside a pulse, the every-8th step jumped across it, and one pulse broke into fragments too short to count.
+
+Fixing the order made things worse at first: 15 of 53 files came out empty. Closing small gaps fixed the empties but dropped accuracy to 76%. I was tuning against the same 51 files I was scoring on, which is a quiet way to overfit, so I stopped. I calibrated against Anabat's own output instead, using about 60 of 927 recordings where Anabat's hardware had written its own zero-crossing file next to the audio. Matching whole pulses rather than individual dots took agreement from an F1 of 0.40 to 0.899, and the calibrated gap came out at 0.5 ms, a quarter of the 2 ms I'd guessed. The test set then scored 46 of 51, or 90%, with none of its labels used in calibration.
+
+The test set is small: 51 files from one site and four species, so that 90% carries an interval of about 78 to 96%. The app ships at 86% on it, after a later fix to keep the Swift and Python versions matching.
+
+## What I do now
+
+- Sort the misses into buckets before changing anything: inputs that never reached the model, answers a prior ruled out, and genuine model errors. The biggest bucket tells you where to work.
+- Calibrate a pipeline stage against a reference implementation. Tuning it against the test set inflates the score you're trying to trust.

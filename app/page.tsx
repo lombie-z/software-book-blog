@@ -1,7 +1,7 @@
 import React from 'react';
-import { headers } from 'next/headers';
 import client from '@/tina/__generated__/client';
-import { ResponsiveHome } from '@/components/responsive-home';
+import Layout from '@/components/layout/layout';
+import HomeClientPage from './home-client-page';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/utils';
 
 const jsonLd = {
@@ -13,10 +13,6 @@ const jsonLd = {
 };
 
 export default async function Home() {
-  const headersList = await headers();
-  const deviceType = headersList.get('x-device-type') ?? 'desktop';
-  const initialDevice = deviceType === 'mobile' ? 'mobile' : 'desktop';
-
   const [pageData, postsData] = await Promise.all([
     client.queries.page({ relativePath: 'home.mdx' }),
     client.queries.postConnection({
@@ -31,7 +27,9 @@ export default async function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <ResponsiveHome initialDevice={initialDevice} pageProps={pageData} posts={posts} />
+      <Layout rawPageData={pageData} hideHeader>
+        <HomeClientPage pageProps={pageData} posts={posts} />
+      </Layout>
     </>
   );
 }

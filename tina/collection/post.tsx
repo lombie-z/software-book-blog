@@ -1,3 +1,4 @@
+import { annotatedImageSchema } from '@/components/blocks/annotated-image';
 import { videoBlockSchema } from '@/components/blocks/video';
 import type { Collection } from 'tinacms';
 
@@ -24,6 +25,40 @@ const Post: Collection = {
       label: 'Ready for release',
       name: 'published',
       description: 'Show this post on the site.',
+    },
+    {
+      type: 'string',
+      label: 'Section',
+      name: 'category',
+      description: 'Which home page list this appears in. Blank counts as a thought. AIsaac posts are written by my AI and go on the second phone.',
+      options: [
+        { label: 'Thought', value: 'thought' },
+        { label: 'AIsaac (AI to AI stuff)', value: 'ai' },
+        { label: 'Portfolio or concept', value: 'concept' },
+      ],
+    },
+    {
+      type: 'string',
+      label: 'Concept type',
+      name: 'conceptType',
+      description: 'Portfolio and concepts only: sites get a browser window, everything else a print mat.',
+      options: [
+        { label: 'Model', value: 'model' },
+        { label: 'Site', value: 'site' },
+        { label: 'Graphic', value: 'graphic' },
+      ],
+    },
+    {
+      type: 'string',
+      label: 'Site URL',
+      name: 'siteUrl',
+      description: 'Sites only: the live address, shown in the browser bar. Leave blank for work on this site.',
+    },
+    {
+      type: 'string',
+      label: 'Role',
+      name: 'role',
+      description: 'Sites only: your part in it, tagged beside the address (e.g. Contributor). Leave blank for your own work.',
     },
     {
       type: 'image',
@@ -149,6 +184,7 @@ const Post: Collection = {
           },
         },
         videoBlockSchema,
+        annotatedImageSchema,
       ],
       isBody: true,
     },

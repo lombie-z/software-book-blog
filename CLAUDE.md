@@ -26,66 +26,59 @@ No test framework is configured.
 
 ```
 app/
-  layout.tsx                          # Root layout, wraps everything in LayoutContext
-  page.tsx                            # Home page (server) — fetches page query
-  home-client-page.tsx                # Home page (client, desktop) — useTina + scroll orchestration
-  mobile-home-client-page.tsx         # Home page (client, mobile) — useTina + mobile layout
+  layout.tsx                          # Root layout: fonts (Instrument Sans + Newsreader), metadata
+  page.tsx                            # Home page (server) — fetches page + published posts
+  home-client-page.tsx                # Home page (client) — useTina, mounts the shared WebGL canvas
   not-found.tsx                       # 404 page
   manifest.ts                         # PWA manifest
-  posts/[...urlSegments]/
-    page.tsx                          # Post page (server) — fetches post query
-    client-page.tsx                   # Post page (client, desktop)
-    mobile-client-page.tsx            # Post page (client, mobile)
+  posts/[slug]/
+    page.tsx                          # Post page (server) — fetches post query, metadata, JSON-LD
+    client-page.tsx                   # Post page (client) — reading column
 
 components/
-  blocks/                             # Page-level block components
+  blocks/                             # Page-level block components (Tina page blocks)
     index.tsx                         # Block registry — maps block types to components
-    home-scroll-stage.tsx             # Desktop home scroll orchestrator (GSAP ScrollTrigger)
-    topo-hero.tsx                     # Desktop hero with 3D tilt + frame animation
-    recent-posts-slider.tsx           # Post card slider
-    blog-archive.tsx                  # Archive listing
+    inlay-hero.tsx                    # Signature, three lit plaster niches, vertical side text with parallax
+    micro-biome.tsx                   # Biome stage: lazy 3D scene, drag to turn, Blender still fallback
+    post-index.tsx                    # Home Thoughts / Portfolio and concepts sections (routes to the two below)
+    thought-phone.tsx                 # Thoughts as message threads on CSS phones: mine in front, AIsaac's (AI-written) behind, click to swap
+    concept-frame.tsx                 # Concept frames for the home grid: browser window (sites) or print mat
     mermaid.tsx                       # Mermaid diagram block
     video.tsx                         # Video embed block
-  mobile/                             # Mobile-specific components
-    mobile-home.tsx                   # Mobile home page shell
-    mobile-hero.tsx                   # Mobile hero component
-    mobile-card.tsx                   # Single post card (mobile)
-    mobile-card-stack.tsx             # Stacked card layout
-    mobile-post-reader.tsx            # Mobile post reading view
-    reading-bucket.tsx                # Read-later bucket UI
-    reading-queue.tsx                 # Reading queue management
-    filigree-transitions.tsx          # Mobile page transition animations
-    baroque-loading.tsx               # Mobile loading skeleton
+  three/                              # react-three-fiber (v9) pieces, all drawn on one shared canvas
+    scene-canvas.tsx                  # Fixed full-screen <Canvas> + drei <View.Port>; sun/eye controller
+    scene-state.ts                    # Shared per-frame state (sun direction, viewer eye)
+    scene-context.tsx                 # Whether WebGL is available (else fallbacks render)
+    plaster-niche.tsx                 # One recessed niche sized from its DOM box, off-axis camera
+    niche-params.ts                   # Shared eye/light/sun values for the 3D niches and their SVG stand-in
+    niche.tsx                         # Niche box: 3D room + SVG stand-in handoff (used by the hero)
+    niche-sketch.tsx                  # SVG drawing of a niche from the same projection + light (pre-3D / no-WebGL)
+    cactus.tsx                        # Clay cactus glTF (public/models/cactus.glb)
+    micro-biome-scene.tsx             # Biome glTF, procedural idle animation by node name, drag spring
   layout/
-    layout.tsx                        # Site shell (header + content + footer)
+    layout.tsx                        # Site shell (global query, header, footer, smooth scroll)
     layout-context.tsx                # LayoutContext provider (global settings)
-    section.tsx                       # Section wrapper
-    nav/header.tsx                    # Site header + nav
-    nav/footer.tsx                    # Site footer
-  ui/                                 # shadcn/ui + custom UI primitives
-    avatar.tsx, button.tsx, card.tsx  # Standard shadcn components
-    tilt.tsx                          # 3D tilt effect wrapper
-    halide-topo-hero.tsx              # Topographic background SVG
-    full-screen-scroll-fx.tsx         # Scroll-driven fullscreen effect
-    argent-loop-infinite-slider.tsx   # Infinite horizontal slider
-    progressive-blur.tsx              # Blur gradient overlay
-    spotlight.tsx                     # Cursor spotlight effect
-    breakpoint-indicator.tsx          # Dev-only breakpoint label
+    smooth-scroll.tsx                 # Lenis root (off for reduced motion)
+    nav/header.tsx                    # Small signature link (hidden on home)
+    nav/footer.tsx                    # Footer with links
+  ui/
+    signature.tsx                     # Traced handwritten signature SVG with wipe-in
+    button.tsx, breakpoint-indicator.tsx
   mdx-components.tsx                  # MDX renderers (code blocks, blockquotes, mermaid, video)
   mermaid-renderer.tsx                # Client-side mermaid rendering
-  error-boundary.tsx                  # React error boundary
-  icon.tsx                            # Icon component
-  raw-renderer.tsx                    # Raw HTML renderer
-  social-footer.tsx                   # Social links footer
+  error-boundary.tsx, icon.tsx, raw-renderer.tsx
   shared/theme.ts                     # Theme utilities
+
+art/                                  # Blender sources (cactus.blend, micro-biome.blend, robot.blend for the AI avatar)
+public/models/                        # Exported glTF (Draco); decoder self-hosted in public/draco/
+public/images/3d/                     # Blender stills used as fallbacks
 
 content/                              # CMS-managed content (TinaCMS edits these)
   posts/*.mdx                         # Blog posts (MDX)
-  posts/june/*.mdx                    # Posts in subdirectories
-  pages/home.mdx                      # Home page block definitions
+  pages/home.mdx                      # Home page block order (inlayHero, microBiome, postIndex)
   authors/*.md                        # Author profiles
   tags/*.mdx                          # Tag definitions
-  global/index.json                   # Site-wide config (header, footer, theme)
+  global/index.json                   # Site-wide config (site name/tagline, header, footer, theme)
 
 tina/
   config.tsx                          # Main TinaCMS configuration
@@ -99,9 +92,8 @@ tina/
   queries/*.gql                       # GraphQL query/fragment definitions
   __generated__/                      # AUTO-GENERATED — never edit
 
-lib/utils.ts                          # Utility functions (cn, etc.)
-middleware.ts                         # Next.js middleware
-styles.css                           # Global styles (Tailwind CSS 4)
+lib/utils.ts                          # Utility functions (cn, SITE_URL, etc.)
+styles.css                            # Global styles (Tailwind CSS 4, plaster palette tokens)
 next.config.ts                        # Next.js config
 biome.json                            # Biome linter/formatter config
 ```
@@ -110,10 +102,10 @@ biome.json                            # Biome linter/formatter config
 
 | Task | Start here |
 |------|-----------|
-| Change post rendering/layout | `app/posts/[...urlSegments]/client-page.tsx` (desktop), `mobile-client-page.tsx` (mobile) |
-| Change home page layout | `app/home-client-page.tsx` (desktop), `app/mobile-home-client-page.tsx` (mobile) |
-| Edit desktop scroll/hero animation | `components/blocks/home-scroll-stage.tsx`, `components/blocks/topo-hero.tsx` |
-| Edit mobile experience | `components/mobile/` directory |
+| Change post rendering/layout | `app/posts/[slug]/client-page.tsx` |
+| Change home page layout | `content/pages/home.mdx` (block order), `components/blocks/*` |
+| Edit the niches / lighting | `components/three/plaster-niche.tsx`, `components/three/scene-canvas.tsx` |
+| Edit the 3D models | `art/*.blend` in Blender, re-export to `public/models/` (Draco) and re-render the still in `public/images/3d/` |
 | Add/change an MDX component | `components/mdx-components.tsx` + template in `tina/collection/post.tsx` |
 | Add a page block type | `tina/collection/page.ts` (schema) + `components/blocks/` (renderer) + `components/blocks/index.tsx` (registry) |
 | Change header/footer/nav | `components/layout/nav/header.tsx` or `footer.tsx` |
@@ -131,7 +123,7 @@ biome.json                            # Biome linter/formatter config
 Every page follows this structure:
 
 ```
-app/posts/[...urlSegments]/
+app/posts/[slug]/
   page.tsx           # Server component — fetches data via client.queries.xxx()
   client-page.tsx    # Client component — renders with useTina() hook
 ```
@@ -140,9 +132,13 @@ app/posts/[...urlSegments]/
 
 **Client component** (`client-page.tsx`): Marked `"use client"`. Uses `useTina({ query, data, variables })` for live editing. Add `data-tina-field={tinaField(obj, 'fieldName')}` to every editable element.
 
-### Desktop/Mobile Split
+### One responsive site
 
-The home page and post pages each have separate desktop and mobile client components. The server `page.tsx` passes data to both; the client components handle their own responsive concerns.
+There is no separate mobile tree; every page is a single responsive layout.
+
+### 3D
+
+All WebGL draws on one fixed, pointer-transparent canvas (`components/three/scene-canvas.tsx`) using drei `<View>`, so each 3D element tracks a normal DOM box. Next 15's App Router runs React 19 internally, so react-three-fiber must stay on v9 / drei v10 (v8 crashes) even though package.json lists React 18; the peer warnings are expected.
 
 ### TinaCMS Collections
 
@@ -177,7 +173,7 @@ Site-wide config (header nav, footer social links, theme colors, font, dark mode
 - **Node version**: v22 (see `.nvmrc`)
 - **Package manager**: pnpm
 - **Naming**: Files in kebab-case, components in PascalCase, fields in camelCase
-- **Styling**: Tailwind CSS 4 with oklch CSS variables for theming. Dark mode supported (system/light/dark).
+- **Styling**: Tailwind CSS 4 with oklch CSS variables (plaster palette). Light only.
 
 ## Key Patterns
 

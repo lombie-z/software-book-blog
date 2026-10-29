@@ -1,14 +1,11 @@
-import type { ReactNode } from 'react';
 import { tinaField } from 'tinacms/dist/react';
 import type { Page, PageBlocks } from '../../tina/__generated__/types';
-import { TopoHero } from './topo-hero';
-import type { CardPost } from './topo-hero';
-import type { ProgressRef } from './home-scroll-stage';
+import { InlayHero } from './inlay-hero';
+import { MicroBiome } from './micro-biome';
+import { PostIndex, type PostEdges } from './post-index';
 
 type BlocksExtraProps = {
-  cardPosts?: CardPost[];
-  progressRef?: ProgressRef;
-  sectionNavSlot?: ReactNode;
+  posts: PostEdges;
 };
 
 export const Blocks = (props: Omit<Page, 'id' | '_sys' | '_values'> & BlocksExtraProps) => {
@@ -16,9 +13,10 @@ export const Blocks = (props: Omit<Page, 'id' | '_sys' | '_values'> & BlocksExtr
   return (
     <>
       {props.blocks.map(function (block, i) {
+        if (!block) return null;
         return (
           <div key={i} data-tina-field={tinaField(block)}>
-            <Block {...block} cardPosts={props.cardPosts} progressRef={props.progressRef} sectionNavSlot={props.sectionNavSlot} />
+            <Block block={block} posts={props.posts} />
           </div>
         );
       })}
@@ -26,10 +24,14 @@ export const Blocks = (props: Omit<Page, 'id' | '_sys' | '_values'> & BlocksExtr
   );
 };
 
-const Block = (block: PageBlocks & BlocksExtraProps) => {
+const Block = ({ block, posts }: { block: PageBlocks } & BlocksExtraProps) => {
   switch (block.__typename) {
-    case 'PageBlocksTopoHero':
-      return <TopoHero data={block} cardPosts={block.cardPosts} progressRef={block.progressRef} sectionNavSlot={block.sectionNavSlot} />;
+    case 'PageBlocksInlayHero':
+      return <InlayHero data={block} />;
+    case 'PageBlocksMicroBiome':
+      return <MicroBiome data={block} />;
+    case 'PageBlocksPostIndex':
+      return <PostIndex data={block} posts={posts} />;
     default:
       return null;
   }

@@ -1,12 +1,12 @@
 import React from 'react';
-import { headers } from 'next/headers';
 import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import client from '@/tina/__generated__/client';
 import Layout from '@/components/layout/layout';
-import { ResponsiveSwitch } from '@/components/responsive-switch';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/utils';
+import { serializeMDX } from '@tinacms/mdx';
+import Post from '@/tina/collection/post';
 import PostClientPage from './client-page';
-import MobilePostClientPage from './mobile-client-page';
 
 function extractText(node: any): string {
   if (!node) return '';
@@ -61,14 +61,17 @@ export default async function PostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const data = await client.queries.post({
-    relativePath: `${slug}.mdx`,
-  });
-
-  const headersList = await headers();
-  const initialDevice = headersList.get('x-device-type') === 'mobile' ? 'mobile' : 'desktop';
+  let data: Awaited<ReturnType<typeof client.queries.post>>;
+  try {
+    data = await client.queries.post({ relativePath: `${slug}.mdx` });
+  } catch {
+    notFound();
+  }
 
   const post = data.data.post;
+  // AIsaac's posts show their markdown source, so turn the body back into markdown with Tina's own serializer.
+  const bodyField = Post.fields?.find((f) => f.name === '_body');
+  const raw = post.category === 'ai' && bodyField ? String(serializeMDX(post._body, bodyField, (url) => url) ?? '') : undefined;
   const absImg = post.heroImg?.startsWith('http') ? post.heroImg : `${SITE_URL}${post.heroImg ?? '/images/hero-portrait.png'}`;
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -83,16 +86,10 @@ export default async function PostPage({
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <ResponsiveSwitch
-        initialDevice={initialDevice}
-        desktop={
-          <Layout rawPageData={data}>
-            <PostClientPage {...data} />
-          </Layout>
-        }
-        mobile={<MobilePostClientPage {...data} />}
-      />
+      <script type='application/ld+json' dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <Layout rawPageData={data}>
+        <PostClientPage {...data} raw={raw} />
+      </Layout>
     </>
   );
 }

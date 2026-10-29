@@ -1,13 +1,18 @@
 @import 'tailwindcss';
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
 @plugin "@tailwindcss/typography";
 
 @theme inline {
-  --font-heading: var(--font-lucida-bl), serif;
+  --font-heading: var(--font-newsreader), Georgia, serif;
+  --font-serif: var(--font-newsreader), Georgia, serif;
   --font-body: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-lato), ui-monospace, monospace;
+  --font-mono: ui-monospace, SFMono-Regular, monospace;
+  --font-script: var(--font-caveat), cursive;
+  --color-plaster: var(--plaster);
+  --color-plaster-shade: var(--plaster-shade);
+  --color-ink: var(--ink);
+  --color-rule: var(--rule);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -46,102 +51,43 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Warm off-white plaster. The page is the wall the inlays are cut into. */
+  --plaster: oklch(0.962 0.008 82);
+  --plaster-shade: oklch(0.915 0.011 78);
+  --ink: oklch(0.24 0.012 60);
+  --rule: oklch(0.86 0.012 78);
+  --radius: 0.25rem;
+  --background: var(--plaster);
+  --foreground: var(--ink);
+  --card: var(--plaster);
+  --card-foreground: var(--ink);
+  --popover: var(--plaster);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--plaster);
+  --secondary: var(--plaster-shade);
+  --secondary-foreground: var(--ink);
+  --muted: var(--plaster-shade);
+  --muted-foreground: oklch(0.52 0.012 65);
+  --accent: var(--plaster-shade);
+  --accent-foreground: var(--ink);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: oklch(0.6 0.012 65);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
-/* Card flip view transition */
-@keyframes flip-out {
-  from {
-    transform: perspective(1200px) rotateY(0deg);
-  }
-  to {
-    transform: perspective(1200px) rotateY(90deg);
-  }
-}
-
-@keyframes flip-in {
-  from {
-    transform: perspective(1200px) rotateY(-90deg);
-  }
-  to {
-    transform: perspective(1200px) rotateY(0deg);
-  }
-}
-
-::view-transition-old(blog-card) {
-  animation: flip-out 0.4s ease-in forwards;
-  backface-visibility: hidden;
-}
-
-::view-transition-new(blog-card) {
-  animation: flip-in 0.4s ease-out 0.4s both;
-  backface-visibility: hidden;
-  background: #0a0a0a;
+  --sidebar: var(--plaster);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: var(--plaster);
+  --sidebar-accent: var(--plaster-shade);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--rule);
+  --sidebar-ring: var(--ring);
 }
 
 @layer base {
@@ -151,9 +97,50 @@
   html {
     scroll-behavior: smooth;
     overscroll-behavior: none;
+    color-scheme: light;
+  }
+  ::selection {
+    background: oklch(0.86 0.06 25);
   }
   body {
     @apply bg-background text-foreground;
     overscroll-behavior: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+  /* Signature shown fully written rather than waiting out its stroke delays. */
+  .signature-stroke {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+}
+
+/* Lenis owns smooth scrolling when active. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+/* Signature written stroke by stroke (components/ui/signature.tsx). */
+.signature-stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation-name: signature-write;
+  animation-timing-function: linear; /* pace comes from the recorded pen speed */
+  animation-fill-mode: forwards;
+}
+@keyframes signature-write {
+  to {
+    stroke-dashoffset: 0;
   }
 }

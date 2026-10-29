@@ -1,0 +1,40 @@
+---
+title: TinaCMS
+published: true
+category: concept
+conceptType: site
+siteUrl: 'https://tina.io'
+role: Contributor
+heroImg: /uploads/posts/tina-io.webp
+excerpt: |
+  The website for TinaCMS, the Git-backed headless CMS.
+date: 2026-10-29T01:00:00.000Z
+---
+
+I work at [SSW](https://www.ssw.com.au), which builds TinaCMS, and I spend a lot of my week on tina.io. We build the site with Tina, so we hit the editor's rough edges before customers do and fix them in the product.
+
+## The homepage
+
+Each page on tina.io is a stack of blocks that the marketing team can edit and rearrange without a developer. I've built a fair few of them, including the comparison box and the markdown block below, and I audited the page titles across the site.
+
+<AnnotatedImage src="/uploads/posts/tina-io-md.webp" alt="The tina.io homepage section titled Markdown is the Answer, with a terminal window on the left and the llama mascot peeking over it" caption="The marketing team edits this block in Tina, like the rest of the page." aspect="16/10" notes={[{ text: "a block I built", x: 30.5, y: 56, mark: "circle", side: "bottom", size: 30 }]} />
+
+## AI search readiness
+
+I built [tina.io/geo](https://tina.io/geo), a free checker. You paste in a URL and get a graded report on how ready the page is for search engines and AI answer engines, from whether AI crawlers can reach it to whether it serves markdown to agents. The tool has its own repo and Vercel project, and tina.io proxies it under `/geo`, the same way it serves TinaDocs.
+
+<AnnotatedImage src="/uploads/posts/tina-io-geo.webp" alt="The AI search readiness page: a headline asking if your site is ready for AI search, a URL field with an Analyze button, and a short video beside it" caption="The landing page for the checker." aspect="16/10" notes={[{ text: "paste any URL, get a graded report", x: 30, y: 51, mark: "underline", side: "bottom", size: 36 }]} />
+
+## TinaDocs
+
+[TinaDocs](https://tina.io/tinadocs) is a docs starter built on Tina. Clone it and you can edit the pages in the visual editor with no setup. I built many of the components you write docs with, like tabbed code blocks, recipe blocks and type definitions, along with the theme selector and dark mode.
+
+<AnnotatedImage src="/uploads/posts/tina-io-recipe.webp" alt="A TinaDocs page showing a recipe block, a numbered list of steps beside a block of React code" caption="A recipe block in the TinaDocs starter." aspect="16/10" notes={[{ text: "each step lights up its lines", x: 37, y: 37.5, mark: "circle", side: "bottom", size: 18 }]} />
+
+Search runs on Pagefind, which needs no server. Pagefind builds its index at build time, so I added a check that warns you when the dev server starts if the index has gone stale.
+
+<AnnotatedImage src="/uploads/posts/tina-io-search.webp" alt="The TinaDocs search dialog open over a docs page, with results for the word deploy" caption="Search runs in the browser." aspect="16/10" notes={[{ text: "no server needed", x: 37, y: 19, mark: "underline", side: "right", size: 12 }]} />
+
+## Plus the boring bits
+
+The site needs upkeep too. I added visual regression tooling to catch UI changes and wrote an AGENTS.md so AI coding agents can find their way around the repo.

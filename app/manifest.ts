@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Software engineering, culture, and craft — by I. William R. L.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#0a0a0a',
-    theme_color: '#0a0a0a',
+    background_color: '#f5f2ec',
+    theme_color: '#f5f2ec',
     icons: [
       {
         src: '/icon-192.png',

@@ -1,9 +1,21 @@
 'use client';
+import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useTina } from 'tinacms/dist/react';
-import { HomeScrollStage } from '@/components/blocks/home-scroll-stage';
-import type { PageQuery, PostConnectionQuery } from '@/tina/__generated__/types';
+import { Blocks } from '@/components/blocks';
+import type { PostEdges } from '@/components/blocks/post-index';
+import { SceneAvailableContext } from '@/components/three/scene-context';
+import type { PageQuery } from '@/tina/__generated__/types';
 
-type PostEdges = NonNullable<PostConnectionQuery['postConnection']['edges']>;
+const SceneCanvas = dynamic(() => import('@/components/three/scene-canvas'), { ssr: false });
+
+function hasWebGL() {
+  try {
+    return !!document.createElement('canvas').getContext('webgl2');
+  } catch {
+    return false;
+  }
+}
 
 interface HomeClientPageProps {
   pageProps: {
@@ -16,11 +28,14 @@ interface HomeClientPageProps {
 
 export default function HomeClientPage({ pageProps, posts }: HomeClientPageProps) {
   const { data } = useTina({ ...pageProps });
+  // Without WebGL the niches keep their CSS-shaded stand-ins.
+  const [webgl, setWebgl] = useState(false);
+  useEffect(() => setWebgl(hasWebGL()), []);
 
   return (
-    <HomeScrollStage
-      pageData={data?.page}
-      recentPosts={posts}
-    />
+    <SceneAvailableContext.Provider value={webgl}>
+      <Blocks {...data.page} posts={posts} />
+      {webgl && <SceneCanvas />}
+    </SceneAvailableContext.Provider>
   );
 }

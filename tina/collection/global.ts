@@ -1,7 +1,6 @@
 import type { Collection } from "tinacms";
 import { ColorPickerInput } from "../fields/color";
 import { iconSchema } from "../fields/icon";
-import { icon } from "mermaid/dist/rendering-util/rendering-elements/shapes/icon.js";
 
 const Global: Collection = {
   label: "Global",
@@ -12,6 +11,25 @@ const Global: Collection = {
     global: true,
   },
   fields: [
+    {
+      type: "object",
+      label: "Site",
+      name: "site",
+      fields: [
+        {
+          type: "string",
+          label: "Name",
+          name: "name",
+          description: "Vertical text on the left of the home hero.",
+        },
+        {
+          type: "string",
+          label: "Tagline",
+          name: "tagline",
+          description: "Vertical text on the right of the home hero.",
+        },
+      ],
+    },
     {
       type: "object",
       label: "Header",
