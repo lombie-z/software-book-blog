@@ -7,9 +7,21 @@ const Post: Collection = {
   name: 'post',
   path: 'content/posts',
   format: 'mdx',
+  defaultItem: () => ({ published: true, category: 'thought' }),
   ui: {
     router: ({ document }) => {
       return `/posts/${document._sys.breadcrumbs.join('/')}`;
+    },
+    // The home page sorts by date, and Tina leaves undated posts out of a sorted query, so a post saved without a
+    // date gets the time it was saved.
+    beforeSubmit: async ({ values }) => (values.date ? values : { ...values, date: new Date().toISOString() }),
+    // Lowercase, hyphenated filenames, so the URL matches the rest of the site.
+    filename: {
+      slugify: (values) =>
+        String(values?.title ?? '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, ''),
     },
   },
   fields: [
