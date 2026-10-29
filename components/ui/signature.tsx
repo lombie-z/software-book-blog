@@ -64,9 +64,11 @@ interface SignatureProps {
   animate?: boolean;
   /** 'ink' draws a pen line; 'etched' carves it into the plaster, lit from the top left like the niches. */
   variant?: 'ink' | 'etched';
+  /** Etched only: scales the groove and its walls. Small signatures need a relatively deeper cut to read as carved. */
+  depth?: number;
 }
 
-export function Signature({ className, animate = true, variant = 'ink' }: SignatureProps) {
+export function Signature({ className, animate = true, variant = 'ink', depth = 1 }: SignatureProps) {
   const filterId = `etch-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const etched = variant === 'etched';
   // Pure CSS: the strokes start hidden and write from first paint, before any JavaScript runs, so there's no
@@ -79,14 +81,14 @@ export function Signature({ className, animate = true, variant = 'ink' }: Signat
         <defs>
           <filter id={filterId} x="-5%" y="-5%" width="110%" height="110%" colorInterpolationFilters="sRGB">
             {/* Top-left inner wall in shadow: the groove minus itself shifted down-right. */}
-            <feOffset in="SourceAlpha" dx={WALL} dy={WALL} result="down" />
-            <feGaussianBlur in="down" stdDeviation={SOFTEN} result="downSoft" />
+            <feOffset in="SourceAlpha" dx={WALL * depth} dy={WALL * depth} result="down" />
+            <feGaussianBlur in="down" stdDeviation={SOFTEN * depth} result="downSoft" />
             <feComposite in="SourceAlpha" in2="downSoft" operator="out" result="upperWall" />
             <feFlood floodColor="#3b322b" floodOpacity="0.75" />
             <feComposite in2="upperWall" operator="in" result="shade" />
             {/* Bottom-right inner wall faces the sun. */}
-            <feOffset in="SourceAlpha" dx={-WALL} dy={-WALL} result="up" />
-            <feGaussianBlur in="up" stdDeviation={SOFTEN} result="upSoft" />
+            <feOffset in="SourceAlpha" dx={-WALL * depth} dy={-WALL * depth} result="up" />
+            <feGaussianBlur in="up" stdDeviation={SOFTEN * depth} result="upSoft" />
             <feComposite in="SourceAlpha" in2="upSoft" operator="out" result="lowerWall" />
             <feFlood floodColor="#ffffff" floodOpacity="0.9" />
             <feComposite in2="lowerWall" operator="in" result="light" />
@@ -101,7 +103,7 @@ export function Signature({ className, animate = true, variant = 'ink' }: Signat
       <g
         fill="none"
         stroke={etched ? 'var(--plaster-shade)' : 'currentColor'}
-        strokeWidth={etched ? GROOVE_WIDTH : INK_WIDTH}
+        strokeWidth={etched ? GROOVE_WIDTH * depth : INK_WIDTH}
         strokeLinecap="round"
         strokeLinejoin="round"
         filter={etched ? `url(#${filterId})` : undefined}
