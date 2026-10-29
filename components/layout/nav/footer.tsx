@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { SITE_NAME } from '@/lib/utils';
 
 // Placeholder profile URLs, carried over from the previous footer.
@@ -15,6 +16,9 @@ export const Footer = () => {
           © {new Date().getFullYear()} {SITE_NAME}
         </span>
         <nav aria-label="Elsewhere" className="flex gap-6">
+          <Link href="/about" className="transition-colors hover:text-ink">
+            About
+          </Link>
           {SOCIAL_LINKS.map((s) => (
             <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-ink">
               {s.label}

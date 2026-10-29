@@ -1,5 +1,5 @@
 import type { Collection } from 'tinacms';
-import { inlayHeroBlockSchema, microBiomeBlockSchema, postIndexBlockSchema } from './page-blocks';
+import { inlayHeroBlockSchema, microBiomeBlockSchema, postIndexBlockSchema, proseBlockSchema } from './page-blocks';
 
 const Page: Collection = {
   label: 'Pages',
@@ -28,6 +28,7 @@ const Page: Collection = {
         inlayHeroBlockSchema,
         microBiomeBlockSchema,
         postIndexBlockSchema,
+        proseBlockSchema,
       ],
     },
   ],

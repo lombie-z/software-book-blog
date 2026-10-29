@@ -3,9 +3,11 @@ import type { Page, PageBlocks } from '../../tina/__generated__/types';
 import { InlayHero } from './inlay-hero';
 import { MicroBiome } from './micro-biome';
 import { PostIndex, type PostEdges } from './post-index';
+import { Prose } from './prose';
 
 type BlocksExtraProps = {
-  posts: PostEdges;
+  // Only the home page lists posts.
+  posts?: PostEdges;
 };
 
 export const Blocks = (props: Omit<Page, 'id' | '_sys' | '_values'> & BlocksExtraProps) => {
@@ -31,7 +33,9 @@ const Block = ({ block, posts }: { block: PageBlocks } & BlocksExtraProps) => {
     case 'PageBlocksMicroBiome':
       return <MicroBiome data={block} />;
     case 'PageBlocksPostIndex':
-      return <PostIndex data={block} posts={posts} />;
+      return <PostIndex data={block} posts={posts ?? []} />;
+    case 'PageBlocksProse':
+      return <Prose data={block} />;
     default:
       return null;
   }

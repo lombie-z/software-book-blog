@@ -74,3 +74,20 @@ export const postIndexBlockSchema: Template = {
     },
   ],
 };
+
+export const proseBlockSchema: Template = {
+  name: 'prose',
+  label: 'Text',
+  fields: [
+    {
+      type: 'string',
+      label: 'Heading',
+      name: 'heading',
+    },
+    {
+      type: 'rich-text',
+      label: 'Body',
+      name: 'body',
+    },
+  ],
+};

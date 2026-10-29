@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowUpRight, UserRound } from 'lucide-react';
 import { tinaField, useTina } from 'tinacms/dist/react';
 import { TinaMarkdown } from 'tinacms/dist/rich-text';
+import { PROSE } from '@/components/blocks/prose';
 import { PostQuery } from '@/tina/__generated__/types';
 import { components } from '@/components/mdx-components';
 import ErrorBoundary from '@/components/error-boundary';
@@ -21,9 +22,6 @@ interface ClientPostProps {
   /** The body as markdown, for AIsaac's posts (serialized on the server). */
   raw?: string;
 }
-
-const PROSE =
-  'prose prose-lg max-w-[65ch] font-serif prose-headings:font-serif prose-headings:font-normal prose-headings:text-ink prose-p:text-ink/85 prose-a:text-ink prose-a:decoration-1 prose-a:underline-offset-4 prose-strong:text-ink prose-blockquote:border-rule prose-blockquote:font-normal prose-blockquote:italic prose-blockquote:text-ink/70 prose-code:font-mono prose-li:text-ink/85';
 
 function plainText(node: any): string {
   if (!node) return '';

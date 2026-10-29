@@ -34,6 +34,7 @@ app/
   posts/[slug]/
     page.tsx                          # Post page (server) — fetches post query, metadata, JSON-LD
     client-page.tsx                   # Post page (client) — reading column
+  about/page.tsx, client-page.tsx     # About page: content/pages/about.mdx rendered through the page blocks
 
 components/
   blocks/                             # Page-level block components (Tina page blocks)
@@ -43,6 +44,7 @@ components/
     post-index.tsx                    # Home Thoughts / Portfolio and concepts sections (routes to the two below)
     thought-phone.tsx                 # Thoughts as message threads on CSS phones: mine in front, AIsaac's (AI-written) behind, click to swap
     concept-frame.tsx                 # Concept frames for the home grid: browser window (sites) or print mat
+    prose.tsx                         # Text block (heading + rich text) for plain pages like About; exports the shared PROSE styles
     mermaid.tsx                       # Mermaid diagram block
     video.tsx                         # Video embed block
   three/                              # react-three-fiber (v9) pieces, all drawn on one shared canvas
