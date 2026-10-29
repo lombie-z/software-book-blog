@@ -68,12 +68,21 @@ function arrowPath(fx: number, fy: number, tx: number, ty: number) {
   return `M${fx} ${fy} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${tx} ${ty} ${head(0.45)} ${head(-0.45)}`;
 }
 
-const LABEL_SHIFT: Record<Side, string> = {
-  right: 'translate(0, -50%)',
-  left: 'translate(-100%, -50%)',
-  top: 'translate(-50%, -100%)',
-  bottom: 'translate(-50%, 0)',
-};
+// How much of the image's width a note has to grow into, given where it's anchored and which way it extends.
+function room(lx: number, side: Side) {
+  const x = (lx / W) * 100;
+  if (side === 'left') return x;
+  if (side === 'right') return 100 - x;
+  return 2 * Math.min(x, 100 - x);
+}
+
+// Notes beside a point centre on it, unless that's near the top or bottom edge, where they hang inwards instead.
+function labelShift(side: Side, y: number) {
+  const v = y < 0.2 ? '-15%' : y > 0.8 ? '-85%' : '-50%';
+  if (side === 'right') return `translate(0, ${v})`;
+  if (side === 'left') return `translate(-100%, ${v})`;
+  return side === 'top' ? 'translate(-50%, -100%)' : 'translate(-50%, 0)';
+}
 
 /** A screenshot with handwritten marker notes drawn over it: circles, arrows and underlines that draw themselves in. */
 export function AnnotatedImage({ data }: { data: AnnotatedImageData }) {
@@ -134,11 +143,13 @@ export function AnnotatedImage({ data }: { data: AnnotatedImageData }) {
           n.text ? (
             <motion.span
               key={i}
-              className='pointer-events-none absolute max-w-[16ch] font-script text-base leading-none sm:text-2xl'
+              className='pointer-events-none absolute font-script text-base leading-none sm:text-2xl'
               style={{
                 left: `${(lx / W) * 100}%`,
                 top: `${(ly / H) * 100}%`,
-                transform: `${LABEL_SHIFT[side]} rotate(-2deg)`,
+                // Wrap within the room on its side so a note never runs off the image.
+                maxWidth: `min(16ch, calc(${room(lx, side)}% - 10px))`,
+                transform: `${labelShift(side, ly / H)} rotate(-2deg)`,
                 color: marker.stroke,
                 textShadow: marker.halo,
               }}
