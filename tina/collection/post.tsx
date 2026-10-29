@@ -39,7 +39,7 @@ const Post: Collection = {
       type: 'string',
       label: 'Concept type',
       name: 'conceptType',
-      description: 'Design concepts only: shown as a coloured pill. Thoughts use their tags as topic pills instead.',
+      description: 'Design concepts only: sites get a browser window, everything else a print mat.',
       options: [
         { label: 'Model', value: 'model' },
         { label: 'Site', value: 'site' },

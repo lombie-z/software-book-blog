@@ -40,7 +40,9 @@ components/
     index.tsx                         # Block registry — maps block types to components
     inlay-hero.tsx                    # Signature, three lit plaster niches, vertical side text with parallax
     micro-biome.tsx                   # Biome stage: lazy 3D scene, drag to turn, Blender still fallback
-    post-index.tsx                    # Plain typographic list of posts
+    post-index.tsx                    # Home Thoughts / Design concepts sections (routes to the two below)
+    thought-phone.tsx                 # Thoughts as a scrolling message thread on a CSS phone
+    concept-frame.tsx                 # Concept frames for the home grid: browser window (sites) or print mat
     mermaid.tsx                       # Mermaid diagram block
     video.tsx                         # Video embed block
   three/                              # react-three-fiber (v9) pieces, all drawn on one shared canvas
@@ -49,6 +51,7 @@ components/
     scene-context.tsx                 # Whether WebGL is available (else fallbacks render)
     plaster-niche.tsx                 # One recessed niche sized from its DOM box, off-axis camera
     niche-params.ts                   # Shared eye/light/sun values for the 3D niches and their SVG stand-in
+    niche.tsx                         # Niche box: 3D room + SVG stand-in handoff (used by the hero)
     niche-sketch.tsx                  # SVG drawing of a niche from the same projection + light (pre-3D / no-WebGL)
     cactus.tsx                        # Clay cactus glTF (public/models/cactus.glb)
     micro-biome-scene.tsx             # Biome glTF, procedural idle animation by node name, drag spring

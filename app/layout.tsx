@@ -1,6 +1,6 @@
 import React from "react";
 import { Metadata } from "next";
-import { Instrument_Sans, Newsreader } from "next/font/google";
+import { Caveat, Instrument_Sans, Newsreader } from "next/font/google";
 import { cn, SITE_URL } from "@/lib/utils";
 
 import "@/styles.css";
@@ -16,6 +16,12 @@ const newsreader = Newsreader({
   variable: "--font-newsreader",
   style: ["normal", "italic"],
   axes: ["opsz"],
+});
+
+// Handwritten captions on the concept frames.
+const caveat = Caveat({
+  subsets: ["latin"],
+  variable: "--font-caveat",
 });
 
 export const metadata: Metadata = {
@@ -54,7 +60,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn(fontSans.variable, newsreader.variable)}>
+    <html lang="en" className={cn(fontSans.variable, newsreader.variable, caveat.variable)}>
       <body className="min-h-screen bg-background font-body text-foreground antialiased">
         {children}
         <TailwindIndicator />

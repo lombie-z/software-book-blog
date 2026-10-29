@@ -8,6 +8,7 @@
   --font-serif: var(--font-newsreader), Georgia, serif;
   --font-body: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, monospace;
+  --font-script: var(--font-caveat), cursive;
   --color-plaster: var(--plaster);
   --color-plaster-shade: var(--plaster-shade);
   --color-ink: var(--ink);
