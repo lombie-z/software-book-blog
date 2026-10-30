@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { type RefObject, useEffect, useLayoutEffect, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { SoftShadows, View } from '@react-three/drei';
 import { eyeFor, SUN_DIRECTION, viewportSize } from './niche-params';
@@ -72,7 +72,27 @@ function RedrawOnChange() {
   return null;
 }
 
+/**
+ * Moves the canvas to the top of the screen just before each frame draws. The canvas sits in the page (not fixed), so
+ * between frames the browser scrolls it along with everything else. Phones scroll on their own thread and JavaScript
+ * catches up a frame or more later; a fixed canvas would trail the page by those frames and the 3D would jump. This
+ * way the 3D stays glued to its boxes, and only the subtle perspective shift waits for the next frame.
+ */
+function AnchorToScreen({ anchor }: { anchor: RefObject<HTMLDivElement | null> }) {
+  useFrame(() => anchorToScreen(anchor.current), -2);
+  return null;
+}
+
+// Offsets the canvas from whatever it's positioned against, so its top lines up with the top of the screen.
+function anchorToScreen(el: HTMLDivElement | null) {
+  const base = el?.offsetParent;
+  if (el && base) el.style.transform = `translate3d(0, ${-base.getBoundingClientRect().top}px, 0)`;
+}
+
 export default function SceneCanvas() {
+  const anchor = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => anchorToScreen(anchor.current), []);
+
   useEffect(() => {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => {
@@ -83,21 +103,27 @@ export default function SceneCanvas() {
     return () => query.removeEventListener('change', update);
   }, []);
 
+  // One screen tall (the large viewport, so a phone's
+  // address bar coming and going doesn't resize it), so it never adds to the page's height.
   return (
-    <Canvas
-      eventSource={document.body}
-      frameloop="demand"
-      shadows
-      flat
-      dpr={[1, 1.75]}
-      gl={{ antialias: true, alpha: true }}
-      // The large viewport's height, so the canvas doesn't resize as a phone's address bar comes and goes mid-scroll.
-      style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100lvh', pointerEvents: 'none', zIndex: 0 }}
-    >
-      <SunController />
-      <RedrawOnChange />
-      <SoftShadows size={42} samples={24} focus={0.35} />
-      <View.Port />
-    </Canvas>
+    <div ref={anchor} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100lvh', pointerEvents: 'none', zIndex: 0 }}>
+      <Canvas
+        eventSource={document.body}
+        frameloop="demand"
+        shadows
+        flat
+        dpr={[1, 1.75]}
+        gl={{ antialias: true, alpha: true }}
+        // Measured once per resize: AnchorToScreen keeps the canvas at the top of the screen whenever it draws.
+        resize={{ scroll: false }}
+        style={{ position: 'absolute', inset: 0 }}
+      >
+        <AnchorToScreen anchor={anchor} />
+        <SunController />
+        <RedrawOnChange />
+        <SoftShadows size={42} samples={24} focus={0.35} />
+        <View.Port />
+      </Canvas>
+    </div>
   );
 }
