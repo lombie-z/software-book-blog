@@ -4,17 +4,19 @@ import { useCallback, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { cn } from '@/lib/utils';
 import { NicheSketch } from './niche-sketch';
+import { useSceneAvailable } from './scene-context';
 
 // The 3D niches (and three.js with them) load in the browser after the page is up; until then, and without WebGL,
 // each niche box shows its CSS-shaded stand-in.
 const PlasterNiche = dynamic(() => import('./plaster-niche').then((m) => m.PlasterNiche), { ssr: false });
 
 /**
- * One niche box. The 3D room draws into it from the shared canvas; above that sits an SVG drawing of the same room
+ * One niche box. The 3D room draws into it on its own canvas; above that sits an SVG drawing of the same room
  * (same eye, light and sun) that fades out once the 3D has drawn, so the handoff is near invisible. Without WebGL the
  * drawing simply stays.
  */
 export function Niche({ id, aspect, slope = 0, cactus = false }: { id: string; aspect: string; slope?: number; cactus?: boolean }) {
+  const webgl = useSceneAvailable();
   const [ready, setReady] = useState(false);
   const [shown, setShown] = useState(false);
   const onReady = useCallback(() => setReady(true), []);
@@ -26,14 +28,14 @@ export function Niche({ id, aspect, slope = 0, cactus = false }: { id: string; a
   const clip = slope ? { clipPath: `polygon(0 ${slope * 100}%, 100% 0, 100% 100%, 0 100%)` } : undefined;
   return (
     <div data-niche={id} className={cn(aspect, 'relative w-full')}>
-      {/* Under the canvas: drei skips a view's first frame or two as it scrolls back on screen, and this matching
+      {/* Under the canvas: if it ever has nothing on it (a lost GPU context, a frame not drawn yet), this matching
           drawing shows through instead of empty plaster, so there's no pop. */}
       {handOver && (
         <div className='absolute inset-0' style={clip}>
           <NicheSketch slope={slope} />
         </div>
       )}
-      <PlasterNiche slope={slope} cactus={cactus} onReady={onReady} />
+      {webgl && <PlasterNiche slope={slope} cactus={cactus} onReady={onReady} />}
       {/* Above the canvas (z-0) until the room is in. The plaster base (the page colour) keeps the 3D from showing
           through while the drawing is still fading in. Symmetric easing so the change is spread evenly. */}
       <div
