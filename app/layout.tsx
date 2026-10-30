@@ -26,7 +26,7 @@ const caveat = Caveat({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  alternates: { canonical: '/' },
+  alternates: { canonical: '/', types: { 'application/rss+xml': [{ url: '/feed.xml', title: 'I. William R. L.' }] } },
   title: {
     default: 'I. William R. L.',
     template: '%s — I. William R. L.',

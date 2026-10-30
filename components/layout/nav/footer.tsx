@@ -19,6 +19,9 @@ export const Footer = () => {
           <Link href="/about" className="transition-colors hover:text-ink">
             About
           </Link>
+          <a href="/feed.xml" className="transition-colors hover:text-ink">
+            RSS
+          </a>
           {SOCIAL_LINKS.map((s) => (
             <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-ink">
               {s.label}
