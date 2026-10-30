@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { SoftShadows, View } from '@react-three/drei';
-import { eyeFor, SUN_DIRECTION } from './niche-params';
+import { eyeFor, SUN_DIRECTION, viewportSize } from './niche-params';
 import { sceneState } from './scene-state';
 
 function SunController() {
@@ -12,7 +12,8 @@ function SunController() {
   }, []);
 
   useFrame(() => {
-    Object.assign(sceneState.eye, eyeFor(window.innerWidth, window.innerHeight));
+    const { width, height } = viewportSize();
+    Object.assign(sceneState.eye, eyeFor(width, height));
   }, -1);
   return null;
 }
@@ -22,15 +23,36 @@ function SunController() {
  * (fonts loading, sections expanding), so those ask for a redraw. Animated scenes ask for their own frames while they're
  * on screen. Waking up counts too: coming back to the tab or the page, or the GPU restoring a lost context (e.g. after
  * sleep), where nothing else would ask for a frame. Two frames each time, because drei's View skips one as a box comes
- * back on screen.
+ * back on screen. Once the page starts moving, it also redraws every frame until it settles, since phones can send
+ * fewer scroll events than frames during a momentum fling.
  */
 function RedrawOnChange() {
   const invalidate = useThree((s) => s.invalidate);
   const canvas = useThree((s) => s.gl.domElement);
   useEffect(() => {
     const redraw = () => invalidate(2);
+    let lastY = window.scrollY;
+    let still = 0;
+    let following = false;
+    const follow = () => {
+      invalidate();
+      if (window.scrollY === lastY) still++;
+      else {
+        still = 0;
+        lastY = window.scrollY;
+      }
+      if (still < 8) requestAnimationFrame(follow);
+      else following = false;
+    };
+    const onScroll = () => {
+      redraw();
+      if (following) return;
+      following = true;
+      still = 0;
+      requestAnimationFrame(follow);
+    };
     const onVisible = () => document.visibilityState === 'visible' && redraw();
-    window.addEventListener('scroll', redraw, { passive: true });
+    window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', redraw);
     window.addEventListener('pageshow', redraw);
     document.addEventListener('visibilitychange', onVisible);
@@ -39,7 +61,7 @@ function RedrawOnChange() {
     layout.observe(document.body);
     document.fonts?.ready.then(redraw);
     return () => {
-      window.removeEventListener('scroll', redraw);
+      window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', redraw);
       window.removeEventListener('pageshow', redraw);
       document.removeEventListener('visibilitychange', onVisible);
@@ -69,7 +91,8 @@ export default function SceneCanvas() {
       flat
       dpr={[1, 1.75]}
       gl={{ antialias: true, alpha: true }}
-      style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}
+      // The large viewport's height, so the canvas doesn't resize as a phone's address bar comes and goes mid-scroll.
+      style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100lvh', pointerEvents: 'none', zIndex: 0 }}
     >
       <SunController />
       <RedrawOnChange />

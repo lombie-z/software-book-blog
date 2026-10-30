@@ -28,6 +28,29 @@ export const SUN_DIRECTION: [number, number, number] = (() => {
 /** Recess depth as a fraction of the opening's shorter side. */
 export const NICHE_DEPTH = 0.6;
 
+let probe: HTMLDivElement | null = null;
+let largeHeight = 0;
+
+/**
+ * Viewport size for the eye. The height is the large viewport (100lvh), which holds still while a phone's address bar
+ * slides in and out mid-scroll; window.innerHeight changes then, and the eye (so every niche's perspective) would jump.
+ * Falls back to innerHeight where lvh isn't supported.
+ */
+export function viewportSize() {
+  if (!probe) {
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100lvh;visibility:hidden;pointer-events:none';
+    document.body.appendChild(el);
+    const measure = () => {
+      largeHeight = el.offsetHeight;
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    probe = el;
+  }
+  return { width: window.innerWidth, height: Math.max(window.innerHeight, largeHeight) };
+}
+
 /**
  * Where the viewer's eye is, in viewport pixels (y down) plus its distance from the screen. Right of centre so the
  * left walls show; above the middle so niches below eye level show their floors, turning to ceilings as they scroll
