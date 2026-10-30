@@ -9,10 +9,13 @@ const plainText = (node: RichText): string => node.text ?? (node.children ?? [])
 
 const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-/** RSS 2.0 feed of the published posts: title, link and excerpt, newest first. */
+/** RSS 2.0 feed of the published posts in the sections picked in Tina (Global → RSS feed): title, link and excerpt, newest first. */
 export async function GET() {
+  const global = await client.queries.global({ relativePath: 'index.json' });
+  const sections = global.data.global.feed?.sections?.filter(Boolean) ?? ['thought', 'concept'];
+
   // Page through every post (postConnection is paginated).
-  type Node = { _sys: { breadcrumbs: string[] }; title: string; excerpt?: RichText | null; date?: string | null };
+  type Node = { _sys: { breadcrumbs: string[] }; title: string; category?: string | null; excerpt?: RichText | null; date?: string | null };
   const nodes: Node[] = [];
   let page = await client.queries.postConnection({ filter: { published: { eq: true } } });
   for (;;) {
@@ -22,7 +25,8 @@ export async function GET() {
   }
 
   const items = nodes
-    .filter((n) => n.date)
+    // A blank section counts as a thought, as on the home page.
+    .filter((n) => n.date && sections.includes(n.category || 'thought'))
     .sort((a, b) => Date.parse(b.date!) - Date.parse(a.date!))
     .map((n) => {
       const excerpt = n.excerpt ? plainText(n.excerpt).replace(/\s+/g, ' ').trim() : '';

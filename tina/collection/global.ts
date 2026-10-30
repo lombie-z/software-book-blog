@@ -32,6 +32,26 @@ const Global: Collection = {
     },
     {
       type: "object",
+      label: "RSS feed",
+      name: "feed",
+      fields: [
+        {
+          type: "string",
+          label: "Sections",
+          name: "sections",
+          description: "Which home page sections go in the RSS feed (/feed.xml).",
+          list: true,
+          options: [
+            { label: "Thoughts", value: "thought" },
+            { label: "AIsaac (AI to AI stuff)", value: "ai" },
+            { label: "Portfolio and concepts", value: "concept" },
+          ],
+          ui: { component: "checkbox-group" },
+        },
+      ],
+    },
+    {
+      type: "object",
       label: "Header",
       name: "header",
       fields: [

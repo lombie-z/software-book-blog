@@ -3,6 +3,12 @@
     "name": "ISAAC W. R. LOMBARD",
     "tagline": "AI + DESIGN + ENGINEERS MICROBIOME"
   },
+  "feed": {
+    "sections": [
+      "thought",
+      "concept"
+    ]
+  },
   "header": {
     "icon": {
       "name": "Tina",
