@@ -100,7 +100,8 @@ export function SilhouetteOutline({ target, exclude, depthAt, width = 12, rim = 
     [mask, color, rimColor]
   );
 
-  // After the scene's own animation (priority 0), before drei's View draws it (priority 1).
+  // After the scene's own animation (-0.5), before R3F draws the frame. Negative, because any positive priority turns
+  // off R3F's own rendering for the canvas.
   useFrame((state) => {
     const { gl, scene, camera } = state;
     const hidden: Object3D[] = [];
@@ -125,7 +126,7 @@ export function SilhouetteOutline({ target, exclude, depthAt, width = 12, rim = 
     material.uniforms.uTexel.value.set(1 / mask.width, 1 / mask.height);
     material.uniforms.uWidth.value = width * dpr;
     material.uniforms.uRim.value = rim * dpr;
-  }, 0.5);
+  }, -0.25);
 
   return (
     <mesh ref={quad} material={material} frustumCulled={false} renderOrder={-10}>

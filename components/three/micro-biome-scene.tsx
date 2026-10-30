@@ -1,10 +1,11 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useRef } from 'react';
-import { ContactShadows, OrthographicCamera, useGLTF, View } from '@react-three/drei';
+import { ContactShadows, OrthographicCamera, useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { type Group, type Mesh, type Object3D, type OrthographicCamera as OrthographicCameraImpl, Vector3 } from 'three';
 import { DRACO_PATH } from './cactus';
+import { SceneCanvas } from './scene-canvas';
 import { SilhouetteOutline } from './silhouette-outline';
 import { useStudioReflections } from './studio-environment';
 
@@ -130,7 +131,7 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
           break;
       }
     }
-  });
+  }, -0.5);
 
   return (
     <>
@@ -162,13 +163,13 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
 
 type MicroBiomeSceneProps = Parameters<typeof MicroBiomeScene>[0];
 
-/** The biome's drei View: lives in this module so three.js only loads with it (see blocks/micro-biome.tsx). */
+/** The biome's own canvas: lives in this module so three.js only loads with it (see blocks/micro-biome.tsx). */
 export function MicroBiomeView(props: MicroBiomeSceneProps) {
   return (
-    <View className="absolute inset-0">
+    <SceneCanvas>
       <Suspense fallback={null}>
         <MicroBiomeScene {...props} />
       </Suspense>
-    </View>
+    </SceneCanvas>
   );
 }

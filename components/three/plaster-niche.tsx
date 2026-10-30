@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode, Suspense, useMemo, useRef } from 'react';
-import { PerspectiveCamera, View } from '@react-three/drei';
+import { PerspectiveCamera } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import {
   BufferGeometry,
@@ -19,6 +19,7 @@ import {
 } from 'three';
 import { cn } from '@/lib/utils';
 import { Cactus } from './cactus';
+import { SceneCanvas } from './scene-canvas';
 import { GROUND_FACTOR, NICHE_DEPTH, PLASTER_HEX, SKY, SKY_RGB, SUN, SUN_RGB } from './niche-params';
 import { sceneState } from './scene-state';
 
@@ -50,15 +51,17 @@ interface PlasterNicheProps {
 export function PlasterNiche({ className, depth = NICHE_DEPTH, slope = 0, cactus, onReady, children }: PlasterNicheProps) {
   const ref = useRef<HTMLDivElement>(null);
   return (
-    <View ref={ref} className={cn('absolute inset-0', className)}>
-      {/* One boundary for the whole room, so it only appears once the cactus model is in too. */}
-      <Suspense fallback={null}>
-        <NicheScene trackRef={ref} depth={depth} slope={slope} onReady={onReady}>
-          {cactus && <Cactus position={[-0.5, 0, -0.16]} rotation-y={0.5} />}
-          {children}
-        </NicheScene>
-      </Suspense>
-    </View>
+    <div ref={ref} className={cn('absolute inset-0', className)}>
+      <SceneCanvas>
+        {/* One boundary for the whole room, so it only appears once the cactus model is in too. */}
+        <Suspense fallback={null}>
+          <NicheScene trackRef={ref} depth={depth} slope={slope} onReady={onReady}>
+            {cactus && <Cactus position={[-0.5, 0, -0.16]} rotation-y={0.5} />}
+            {children}
+          </NicheScene>
+        </Suspense>
+      </SceneCanvas>
+    </div>
   );
 }
 
@@ -90,7 +93,7 @@ function NicheScene({
   // Smaller shadow maps on phones; the niches are smaller there anyway.
   const shadowSize = useMemo(() => (window.innerWidth < 768 ? 1024 : 2048), []);
 
-  // Runs before drei's View render (priority 1): fit the room to the DOM box and aim an off-axis camera through it.
+  // Runs before R3F draws the frame: fit the room to the DOM box and aim an off-axis camera through it.
   useFrame(() => {
     const el = trackRef.current;
     const cam = camera.current;

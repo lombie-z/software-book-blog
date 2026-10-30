@@ -28,7 +28,7 @@ No test framework is configured.
 app/
   layout.tsx                          # Root layout: fonts (Instrument Sans + Newsreader), metadata
   page.tsx                            # Home page (server) — fetches page + published posts
-  home-client-page.tsx                # Home page (client) — useTina, mounts the shared WebGL canvas
+  home-client-page.tsx                # Home page (client) — useTina, tells the 3D boxes whether WebGL is available
   not-found.tsx                       # 404 page
   manifest.ts                         # PWA manifest
   posts/[slug]/
@@ -47,13 +47,13 @@ components/
     prose.tsx                         # Text block (heading + rich text) for plain pages like About; exports the shared PROSE styles
     mermaid.tsx                       # Mermaid diagram block
     video.tsx                         # Video embed block
-  three/                              # react-three-fiber (v9) pieces, all drawn on one shared canvas
-    scene-canvas.tsx                  # Fixed full-screen <Canvas> + drei <View.Port>; sun/eye controller
-    scene-state.ts                    # Shared per-frame state (sun direction, viewer eye)
-    scene-context.tsx                 # Whether WebGL is available (else fallbacks render)
+  three/                              # react-three-fiber (v9) pieces; each 3D box draws on its own canvas
+    scene-canvas.tsx                  # SceneCanvas: one on-demand <Canvas> per 3D box; eye/sun, redraw triggers, shared soft shadows
+    scene-state.ts                    # Shared state across the canvases (sun direction, viewer eye)
+    scene-context.tsx                 # Whether WebGL is available (else the drawn/still fallbacks stay)
     plaster-niche.tsx                 # One recessed niche sized from its DOM box, off-axis camera
     niche-params.ts                   # Shared eye/light/sun values for the 3D niches and their SVG stand-in
-    niche.tsx                         # Niche box: 3D room + SVG stand-in handoff (used by the hero)
+    niche.tsx                         # Niche box: its canvas + SVG stand-in handoff (used by the hero)
     niche-sketch.tsx                  # SVG drawing of a niche from the same projection + light (pre-3D / no-WebGL)
     cactus.tsx                        # Clay cactus glTF (public/models/cactus.glb)
     micro-biome-scene.tsx             # Biome glTF, procedural idle animation by node name, drag spring
@@ -140,7 +140,7 @@ There is no separate mobile tree; every page is a single responsive layout.
 
 ### 3D
 
-All WebGL draws on one fixed, pointer-transparent canvas (`components/three/scene-canvas.tsx`) using drei `<View>`, so each 3D element tracks a normal DOM box. Next 15's App Router runs React 19 internally, so react-three-fiber must stay on v9 / drei v10 (v8 crashes) even though package.json lists React 18; the peer warnings are expected.
+Each 3D element (the three hero niches, the micro-biome) draws on its own small canvas inside its DOM box (`SceneCanvas` in `components/three/scene-canvas.tsx`), so it scrolls natively with the page. Don't go back to one fixed canvas with drei `<View>`: on iPhones the page scrolls on its own thread and a fixed canvas trails it, so the 3D jumps. Canvases render on demand (scroll, resize, layout shifts, wake-ups); animated scenes call `invalidate()` while on screen, and no `useFrame` may use a positive priority (that turns off R3F's own rendering). drei's `SoftShadows` patches a global shader chunk, so only one canvas mounts it and all use `shadows='basic'`. Next 15's App Router runs React 19 internally, so react-three-fiber must stay on v9 / drei v10 (v8 crashes) even though package.json lists React 18; the peer warnings are expected.
 
 ### TinaCMS Collections
 

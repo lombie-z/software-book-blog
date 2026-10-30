@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { eyeFor, GROUND_FACTOR, NICHE_DEPTH, PLASTER_HEX, SKY, SKY_RGB, SUN, SUN_DIRECTION, SUN_RGB } from './niche-params';
+import { eyeFor, viewportSize, GROUND_FACTOR, NICHE_DEPTH, PLASTER_HEX, SKY, SKY_RGB, SUN, SUN_DIRECTION, SUN_RGB } from './niche-params';
 
 // An SVG drawing of a niche from the same eye, walls, light and sun as its 3D room (plaster-niche.tsx), so the two
 // crossfade without a visible change. Only the soft-shadow detail and the cactus arrive with the 3D.
@@ -37,7 +37,8 @@ function build(rect: DOMRect, slope: number): Geometry {
   const h = rect.height;
   const d = Math.min(w, h) * NICHE_DEPTH;
   const drop = h * slope;
-  const eye = eyeFor(window.innerWidth, window.innerHeight);
+  const { width, height } = viewportSize();
+  const eye = eyeFor(width, height);
   // Box-centred, y up, z out of the wall; the opening is at z = 0.
   const ex = eye.x - (rect.left + w / 2);
   const ey = -(eye.y - (rect.top + h / 2));

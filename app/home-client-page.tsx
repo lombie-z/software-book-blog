@@ -1,13 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
 import { useTina } from 'tinacms/dist/react';
 import { Blocks } from '@/components/blocks';
 import type { PostEdges } from '@/components/blocks/post-index';
 import { SceneAvailableContext } from '@/components/three/scene-context';
 import type { PageQuery } from '@/tina/__generated__/types';
 
-const SceneCanvas = dynamic(() => import('@/components/three/scene-canvas'), { ssr: false });
 
 function hasWebGL() {
   try {
@@ -35,7 +33,6 @@ export default function HomeClientPage({ pageProps, posts }: HomeClientPageProps
   return (
     <SceneAvailableContext.Provider value={webgl}>
       <Blocks {...data.page} posts={posts} />
-      {webgl && <SceneCanvas />}
     </SceneAvailableContext.Provider>
   );
 }
