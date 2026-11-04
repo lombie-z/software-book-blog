@@ -121,8 +121,8 @@ export function NicheSketch({ slope = 0, active = true, onShown }: { slope?: num
         const el = ref.current?.parentElement;
         if (!el) return;
         const rect = el.getBoundingClientRect();
-        // Only redraw while on screen (plus a margin, so it's current as it scrolls in).
-        if (rect.bottom < -200 || rect.top > window.innerHeight + 200) return;
+        // Only redraw while on screen (plus a margin, so it's current as it scrolls in), and not when hidden (touch devices show a still).
+        if (rect.width === 0 || rect.bottom < -200 || rect.top > window.innerHeight + 200) return;
         setGeometry(build(rect, slope));
       });
     };

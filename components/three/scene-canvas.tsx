@@ -6,6 +6,9 @@ import { SoftShadows } from '@react-three/drei';
 import { eyeFor, SUN_DIRECTION, viewportSize } from './niche-params';
 import { sceneState } from './scene-state';
 
+/** Where the self-hosted Draco decoder lives, for loading the glTF models. */
+export const DRACO_PATH = '/draco/';
+
 function SunController() {
   useEffect(() => {
     sceneState.sunDirection.set(...SUN_DIRECTION);

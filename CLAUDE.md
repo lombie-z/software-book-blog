@@ -53,7 +53,7 @@ components/
     scene-context.tsx                 # Whether WebGL is available (else the drawn/still fallbacks stay)
     plaster-niche.tsx                 # One recessed niche sized from its DOM box, off-axis camera
     niche-params.ts                   # Shared eye/light/sun values for the 3D niches and their SVG stand-in
-    niche.tsx                         # Niche box: its canvas + SVG stand-in handoff (used by the hero)
+    niche.tsx                         # Niche box: its canvas + SVG stand-in handoff (used by the hero); a baked still on touch devices
     niche-sketch.tsx                  # SVG drawing of a niche from the same projection + light (pre-3D / no-WebGL)
     cactus.tsx                        # Clay cactus glTF (public/models/cactus.glb)
     micro-biome-scene.tsx             # Biome glTF, procedural idle animation by node name, drag spring
@@ -71,9 +71,9 @@ components/
   error-boundary.tsx, icon.tsx, raw-renderer.tsx
   shared/theme.ts                     # Theme utilities
 
-art/                                  # Blender sources (cactus.blend, micro-biome.blend, robot.blend for the AI avatar); build-favicon.py (favicons from the signature's hat)
+art/                                  # Blender sources (cactus.blend, micro-biome.blend, robot.blend for the AI avatar); build-favicon.py (favicons from the signature's hat); bake-niches.py (the hero niche stills for touch devices)
 public/models/                        # Exported glTF (Draco); decoder self-hosted in public/draco/
-public/images/3d/                     # Blender stills used as fallbacks
+public/images/3d/                     # Blender stills used as fallbacks; niche-*.webp baked from the 3D rooms
 
 content/                              # CMS-managed content (TinaCMS edits these)
   posts/*.mdx                         # Blog posts (MDX)
@@ -106,7 +106,7 @@ biome.json                            # Biome linter/formatter config
 |------|-----------|
 | Change post rendering/layout | `app/posts/[slug]/client-page.tsx` |
 | Change home page layout | `content/pages/home.mdx` (block order), `components/blocks/*` |
-| Edit the niches / lighting | `components/three/plaster-niche.tsx`, `components/three/scene-canvas.tsx` |
+| Edit the niches / lighting | `components/three/plaster-niche.tsx`, `components/three/scene-canvas.tsx`, then re-run `art/bake-niches.py` for the touch stills |
 | Edit the 3D models | `art/*.blend` in Blender, re-export to `public/models/` (Draco) and re-render the still in `public/images/3d/` |
 | Add/change an MDX component | `components/mdx-components.tsx` + template in `tina/collection/post.tsx` |
 | Add a page block type | `tina/collection/page.ts` (schema) + `components/blocks/` (renderer) + `components/blocks/index.tsx` (registry) |
@@ -140,7 +140,7 @@ There is no separate mobile tree; every page is a single responsive layout.
 
 ### 3D
 
-Each 3D element (the three hero niches, the micro-biome) draws on its own small canvas inside its DOM box (`SceneCanvas` in `components/three/scene-canvas.tsx`), so it scrolls natively with the page. Don't go back to one fixed canvas with drei `<View>`: on iPhones the page scrolls on its own thread and a fixed canvas trails it, so the 3D jumps. Canvases render on demand (scroll, resize, layout shifts, wake-ups); animated scenes call `invalidate()` while on screen, and no `useFrame` may use a positive priority (that turns off R3F's own rendering). drei's `SoftShadows` patches a global shader chunk, so only one canvas mounts it and all use `shadows='basic'`. Next 15's App Router runs React 19 internally, so react-three-fiber must stay on v9 / drei v10 (v8 crashes) even though package.json lists React 18; the peer warnings are expected.
+Each 3D element (the three hero niches, the micro-biome) draws on its own small canvas inside its DOM box (`SceneCanvas` in `components/three/scene-canvas.tsx`), so it scrolls natively with the page. Don't go back to one fixed canvas with drei `<View>`: on iPhones the page scrolls on its own thread and a fixed canvas trails it, so the 3D jumps. Canvases render on demand (scroll, resize, layout shifts, wake-ups); animated scenes call `invalidate()` while on screen, and no `useFrame` may use a positive priority (that turns off R3F's own rendering). drei's `SoftShadows` patches a global shader chunk, so only one canvas mounts it and all use `shadows='basic'`. Touch devices (`pointer: coarse`) show baked stills of the hero niches instead (`art/bake-niches.py`): the rooms' perspective follows the scroll, which still jitters there even on per-box canvases. The micro-biome stays live everywhere. Next 15's App Router runs React 19 internally, so react-three-fiber must stay on v9 / drei v10 (v8 crashes) even though package.json lists React 18; the peer warnings are expected.
 
 ### TinaCMS Collections
 
