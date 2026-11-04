@@ -4,8 +4,7 @@ import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { ContactShadows, OrthographicCamera, useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { type Group, type Mesh, type Object3D, type OrthographicCamera as OrthographicCameraImpl, Vector3 } from 'three';
-import { DRACO_PATH } from './cactus';
-import { SceneCanvas } from './scene-canvas';
+import { DRACO_PATH, SceneCanvas } from './scene-canvas';
 import { SilhouetteOutline } from './silhouette-outline';
 import { useStudioReflections } from './studio-environment';
 

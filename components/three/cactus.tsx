@@ -4,11 +4,11 @@ import { useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
 import type { ThreeElements } from '@react-three/fiber';
 import type { Mesh } from 'three';
+import { DRACO_PATH } from './scene-canvas';
 import { useStudioReflections } from './studio-environment';
 
 const URL = '/models/cactus.glb';
 // Self-hosted decoder (copied from three/examples) so models never depend on a CDN.
-export const DRACO_PATH = '/draco/';
 
 /** Clay cactus from art/cactus.blend, sized for a niche floor where 1 unit = the niche's height. */
 export function Cactus(props: ThreeElements['group']) {
