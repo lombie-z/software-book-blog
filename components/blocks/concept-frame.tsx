@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { UserRound } from 'lucide-react';
+import { Lightbulb, UserRound } from 'lucide-react';
 import { SITE_URL, cn } from '@/lib/utils';
 
 type FrameProps = { type?: string | null; image?: string | null; title: string; date: string; siteUrl?: string | null; role?: string | null; sizes?: string };
@@ -19,6 +19,12 @@ function Media({ image, title, className, sizes }: { image?: string | null; titl
   );
 }
 
+/** The icon on a role badge: a person for my part in a site, a bulb for a concept that isn't a shipped product. */
+export function RoleIcon({ role, className }: { role: string; className?: string }) {
+  const Icon = role === 'Concept' ? Lightbulb : UserRound;
+  return <Icon className={className} aria-hidden='true' />;
+}
+
 const bare = (url: string) => url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
 
 // Browser window: the address bar shows the live site, or this site's host with the title as the page.
@@ -34,7 +40,7 @@ function SiteFrame({ image, title, siteUrl, role, sizes }: FrameProps) {
         {/* My part in someone else's site, tagged before the address. */}
         {role && (
           <span className='flex shrink-0 items-center gap-1 rounded-md bg-ink px-2 py-1 text-[0.65rem] font-medium text-plaster'>
-            <UserRound className='size-3' aria-hidden='true' />
+            <RoleIcon role={role} className='size-3' />
             {role}
           </span>
         )}

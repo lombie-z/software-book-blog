@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowUpRight, UserRound } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { tinaField, useTina } from 'tinacms/dist/react';
 import { TinaMarkdown } from 'tinacms/dist/rich-text';
 import { PROSE } from '@/components/blocks/prose';
@@ -10,7 +10,7 @@ import { PostQuery } from '@/tina/__generated__/types';
 import { components } from '@/components/mdx-components';
 import ErrorBoundary from '@/components/error-boundary';
 import { sectionId } from '@/components/blocks/post-index';
-import { ConceptFrame, LIFT } from '@/components/blocks/concept-frame';
+import { ConceptFrame, LIFT, RoleIcon } from '@/components/blocks/concept-frame';
 import { AVATARS, useFirstName } from '@/components/blocks/thought-phone';
 
 interface ClientPostProps {
@@ -193,7 +193,7 @@ export default function PostClientPage(props: ClientPostProps) {
               </a>
               {post.role && (
                 <span className='inline-flex items-center gap-1.5 rounded-full border border-rule px-3 py-2 text-xs text-muted-foreground'>
-                  <UserRound className='size-3.5' aria-hidden='true' />
+                  <RoleIcon role={post.role} className='size-3.5' />
                   {post.role}
                 </span>
               )}
