@@ -70,7 +70,7 @@ const Post: Collection = {
       type: 'string',
       label: 'Role',
       name: 'role',
-      description: 'Sites only: your part in it, tagged beside the address (e.g. Contributor). Leave blank for your own work.',
+      description: 'Sites only: your part in it, tagged beside the address (e.g. Contributor), or Concept for a concept site. Leave blank for your own work.',
     },
     {
       type: 'image',
