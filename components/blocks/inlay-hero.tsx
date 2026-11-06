@@ -19,7 +19,7 @@ const NICHES = [
 const GROOVE_WIDTH = 6.5;
 // How each line carries on under its text, heading across beneath the letters. In pixels, from the end of the run beside
 // the text. The loop crosses itself and ends in a small flick, like the signature's pen.
-const LOOP = 'M0 0C0 44 12.8 70 38.8 66C66.8 62 70.8 24 46.8 20C24.8 16 18.8 54 36.8 80C46.8 94 60.8 98 66.8 88';
+const LOOP = 'M0 0C0 44 12.8 70 38.8 66C66.8 62 70.8 24 46.8 20C31 17.5 20 31 22.5 46C24.5 58 30 70 36.8 80C46.8 94 60.8 98 66.8 88';
 const FLICK = 'M0 0C3 44 0 70 -16 80C-26 86 -38 80 -42 66';
 // The hand-drawn run wavers instead of ruling straight: x in pixels, y as a percentage of the text's height.
 const WAVER = 'M-2.5 0.5C5 30 -8 62 0 100';
