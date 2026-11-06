@@ -56,7 +56,8 @@ const INK_WIDTH = 10.2;
 // Etched: a wider groove, so its walls have room to catch the light.
 const GROOVE_WIDTH = 17.3;
 const WALL = 4.16;
-const SOFTEN = 1.73;
+// 0.7px at the hero's 260px width, matching the carved side lines.
+const SOFTEN = 2.67;
 
 interface SignatureProps {
   className?: string;
@@ -84,7 +85,7 @@ export function Signature({ className, animate = true, variant = 'ink', depth = 
             <feOffset in="SourceAlpha" dx={WALL * depth} dy={WALL * depth} result="down" />
             <feGaussianBlur in="down" stdDeviation={SOFTEN * depth} result="downSoft" />
             <feComposite in="SourceAlpha" in2="downSoft" operator="out" result="upperWall" />
-            <feFlood floodColor="#3b322b" floodOpacity="0.75" />
+            <feFlood floodColor="#3b322b" floodOpacity="0.7" />
             <feComposite in2="upperWall" operator="in" result="shade" />
             {/* Bottom-right inner wall faces the sun. */}
             <feOffset in="SourceAlpha" dx={-WALL * depth} dy={-WALL * depth} result="up" />
