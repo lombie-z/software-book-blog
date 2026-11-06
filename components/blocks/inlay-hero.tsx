@@ -19,17 +19,22 @@ const NICHES = [
 const GROOVE_WIDTH = 6.5;
 // How each line carries on under its text, heading across beneath the letters. In pixels, from the end of the run beside
 // the text. The loop crosses itself and ends in a small flick, like the signature's pen.
-const LOOP = 'M0 0C0 44 12.8 70 38.8 66C66.8 62 70.8 24 46.8 20C31 17.5 20 31 22.5 46C24.5 58 30 70 36.8 80C46.8 94 60.8 98 66.8 88';
-const FLICK = 'M0 0C3 44 0 70 -16 80C-26 86 -38 80 -42 66';
-// The hand-drawn run wavers instead of ruling straight: x in pixels, y as a percentage of the text's height.
-const WAVER = 'M-2.5 0.5C5 30 -8 62 0 100';
+const ENDINGS = {
+  loop: 'M0 0C-2.6 44 12.8 70 38.8 66C66.8 62 70.8 24 46.8 20C24.8 16 18.8 54 36.8 80C46.8 94 60.8 98 66.8 88',
+  flick: 'M0 0C3 44 0 70 -16 80C-26 86 -38 80 -42 66',
+};
+// The run beside the text wavers like a pen rather than ruling straight: x in pixels, y as a percentage of the text's height.
+const RUNS = {
+  loop: 'M2.5 0.5C-5 30 8 62 0 100',
+  flick: 'M-2.5 0.5C5 30 -8 62 0 100',
+};
 
 /**
  * One line carved like the etched signature, lit from the top left, beside the text and on under it. Wider and softer
  * than the signature's numbers, which read thin and tight on a long straight line. The run beside the text is as tall
  * as the text, and the filter treats the whole line as one shape.
  */
-function CarvedLine({ line }: { line: 'loop' | 'hand-drawn' }) {
+function CarvedLine({ line }: { line: keyof typeof ENDINGS }) {
   const filterId = `groove-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const x = GROOVE_WIDTH / 2;
   return (
@@ -54,24 +59,20 @@ function CarvedLine({ line }: { line: 'loop' | 'hand-drawn' }) {
         </filter>
       </defs>
       <g fill='none' stroke='var(--plaster-shade)' strokeWidth={GROOVE_WIDTH} strokeLinecap='round' strokeLinejoin='round' filter={`url(#${filterId})`}>
-        {line === 'loop' ? (
-          <line x1={x} y1={x} x2={x} y2='100%' />
-        ) : (
-          // Stretches to the text's height; the stroke keeps its width.
-          <svg x={x} width={GROOVE_WIDTH} height='100%' viewBox={`0 0 ${GROOVE_WIDTH} 100`} preserveAspectRatio='none' overflow='visible'>
-            <path d={WAVER} vectorEffect='non-scaling-stroke' />
-          </svg>
-        )}
+        {/* The run stretches to the text's height while the stroke keeps its width. */}
+        <svg x={x} width={GROOVE_WIDTH} height='100%' viewBox={`0 0 ${GROOVE_WIDTH} 100`} preserveAspectRatio='none' overflow='visible'>
+          <path d={RUNS[line]} vectorEffect='non-scaling-stroke' />
+        </svg>
         {/* A nested svg anchors the ending to the end of the run, however tall the text is. */}
         <svg x={x} y='100%' overflow='visible'>
-          <path d={line === 'loop' ? LOOP : FLICK} />
+          <path d={ENDINGS[line]} />
         </svg>
       </g>
     </svg>
   );
 }
 
-function SideText({ text, className, line, y }: { text?: string | null; className?: string; line: 'loop' | 'hand-drawn'; y: MotionValue<number> }) {
+function SideText({ text, className, line, y }: { text?: string | null; className?: string; line: keyof typeof ENDINGS; y: MotionValue<number> }) {
   if (!text) return null;
   return (
     // Its own layer, so drifting doesn't redraw the carved line's filter.
@@ -100,7 +101,7 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
       <Signature variant='etched' className='relative z-10 mb-[calc(min(560px,78vw)*-0.05)] ml-[-3%] w-[min(260px,56vw)] text-ink' />
 
       <SideText text={site?.name} y={leftY} line='loop' className='-left-24 top-32 flex-row-reverse' />
-      <SideText text={site?.tagline} y={rightY} line='hand-drawn' className='-right-24 top-[44%]' />
+      <SideText text={site?.tagline} y={rightY} line='flick' className='-right-24 top-[44%]' />
 
       <div className='flex flex-col gap-10 md:gap-14'>
         {NICHES.map((niche) => (
