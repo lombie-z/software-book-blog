@@ -39,7 +39,7 @@ function SiteFrame({ image, title, siteUrl, role, sizes }: FrameProps) {
         </span>
         {/* My part in someone else's site, tagged before the address. */}
         {role && (
-          <span className={cn('flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[0.65rem] font-medium text-plaster', role === 'Concept' ? 'bg-terracotta' : 'bg-ink')}>
+          <span className={cn('flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[0.65rem] font-medium text-plaster', role === 'Concept' ? 'bg-concept' : 'bg-ink')}>
             <RoleIcon role={role} className='size-3' />
             {role}
           </span>
