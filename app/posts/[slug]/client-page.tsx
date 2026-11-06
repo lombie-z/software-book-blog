@@ -193,7 +193,7 @@ export default function PostClientPage(props: ClientPostProps) {
                 />
               </a>
               {post.role && (
-                <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs', post.role === 'Concept' ? 'border-terracotta text-terracotta' : 'border-rule text-muted-foreground')}>
+                <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs', post.role === 'Concept' ? 'border-concept text-concept' : 'border-rule text-muted-foreground')}>
                   <RoleIcon role={post.role} className='size-3.5' />
                   {post.role}
                 </span>

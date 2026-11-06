@@ -11,7 +11,7 @@
   --font-script: var(--font-caveat), cursive;
   --color-plaster: var(--plaster);
   --color-plaster-shade: var(--plaster-shade);
-  --color-terracotta: var(--terracotta);
+  --color-concept: var(--concept);
   --color-ink: var(--ink);
   --color-rule: var(--rule);
   --radius-sm: calc(var(--radius) - 4px);
@@ -57,7 +57,8 @@
   --plaster-shade: oklch(0.915 0.011 78);
   --ink: oklch(0.24 0.012 60);
   --rule: oklch(0.86 0.012 78);
-  --terracotta: oklch(0.55 0.12 45);
+  /* The purple of the micro-biome's lettering (#8a4fd1). */
+  --concept: oklch(0.56 0.193 301.3);
   --radius: 0.25rem;
   --background: var(--plaster);
   --foreground: var(--ink);
