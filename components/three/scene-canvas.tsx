@@ -26,9 +26,10 @@ function SunController() {
  * shift the perspective, and so can layout shifts (fonts loading, sections expanding). Waking up counts too: coming
  * back to the tab or the page, or the GPU restoring a lost context (e.g. after sleep). Once the page starts moving it
  * redraws every frame until it settles, since phones can send fewer scroll events than frames during a fling.
- * Animated scenes ask for their own frames while they're on screen.
+ * Animated scenes ask for their own frames while they're on screen. A scene whose view doesn't depend on the scroll
+ * position opts out with `followScroll={false}`.
  */
-function RedrawOnChange() {
+function RedrawOnChange({ followScroll }: { followScroll: boolean }) {
   const invalidate = useThree((s) => s.invalidate);
   const canvas = useThree((s) => s.gl.domElement);
   useEffect(() => {
@@ -63,7 +64,7 @@ function RedrawOnChange() {
       { rootMargin: '50% 0px' }
     );
     visibility.observe(canvas);
-    window.addEventListener('scroll', onScroll, { passive: true });
+    if (followScroll) window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', redraw);
     window.addEventListener('pageshow', redraw);
     document.addEventListener('visibilitychange', onVisible);
@@ -80,7 +81,7 @@ function RedrawOnChange() {
       canvas.removeEventListener('webglcontextrestored', redraw);
       layout.disconnect();
     };
-  }, [invalidate, canvas]);
+  }, [invalidate, canvas, followScroll]);
   return null;
 }
 
@@ -107,7 +108,7 @@ function SharedSoftShadows() {
  * with its box, so scrolling moves it with the box on every platform. A single fixed canvas drawing into every box
  * trails the page on phones, which scroll on their own thread while JavaScript catches up a frame or more later.
  */
-export function SceneCanvas({ children }: { children: ReactNode }) {
+export function SceneCanvas({ children, followScroll = true }: { children: ReactNode; followScroll?: boolean }) {
   return (
     <div className='pointer-events-none absolute inset-0'>
       <Canvas
@@ -120,7 +121,7 @@ export function SceneCanvas({ children }: { children: ReactNode }) {
         resize={{ scroll: false }}
       >
         <SunController />
-        <RedrawOnChange />
+        <RedrawOnChange followScroll={followScroll} />
         <SharedSoftShadows />
         {children}
       </Canvas>

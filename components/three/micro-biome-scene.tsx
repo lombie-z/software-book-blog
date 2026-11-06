@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { ContactShadows, OrthographicCamera, useGLTF } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { type Group, type Mesh, type Object3D, type OrthographicCamera as OrthographicCameraImpl, Vector3 } from 'three';
 import { DRACO_PATH, SceneCanvas } from './scene-canvas';
 import { SilhouetteOutline } from './silhouette-outline';
@@ -17,6 +17,9 @@ const FRAME = 3.7;
 const OUTLINE_DEPTH = new Vector3(0, 0.62, 0);
 const MAX_YAW = Math.PI / 3;
 const MAX_PITCH = Math.PI / 14;
+// The idle animation is slow, so it doesn't need every frame of a 120Hz screen; dragging still gets them all.
+// Timers land between screen refreshes, so wait a little under the full gap and let the next refresh round it up.
+const IDLE_FRAME_MS = 25;
 
 export interface DragState {
   /** Target yaw/pitch from the pointer, in radians; 0 when released. */
@@ -47,6 +50,35 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
   const pivot = useRef<Group>(null);
   const camera = useRef<OrthographicCameraImpl>(null);
   const rotation = useRef({ yaw: 0, pitch: 0, vYaw: 0, vPitch: 0 });
+  const onScreen = useRef(false);
+  const idleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const gl = useThree((s) => s.gl);
+  const invalidate = useThree((s) => s.invalidate);
+
+  // The mask and the contact shadows each render the scene too, and every render would redraw the shadow map. Once a
+  // frame is enough; the useFrame below asks for it.
+  useEffect(() => {
+    gl.shadowMap.autoUpdate = false;
+    return () => {
+      gl.shadowMap.autoUpdate = true;
+    };
+  }, [gl]);
+
+  // This camera ignores the scroll position, so the canvas doesn't redraw on scroll; this restarts the animation when
+  // the stage comes back on screen.
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => {
+      onScreen.current = entry.isIntersecting;
+      if (entry.isIntersecting) invalidate();
+    });
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      clearTimeout(idleTimer.current);
+    };
+  }, [trackRef, invalidate]);
 
   const animated = useMemo(() => {
     const list: Animated[] = [];
@@ -91,10 +123,12 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
     r.pitch += r.vPitch * dt;
 
     // The canvas draws on demand, so keep the frames coming while the stage is on screen and anything is moving.
-    const rect = el?.getBoundingClientRect();
-    const onScreen = !!rect && rect.bottom > 0 && rect.top < window.innerHeight;
     const settling = Math.abs(r.vYaw) + Math.abs(r.vPitch) + Math.abs(tYaw - r.yaw) + Math.abs(tPitch - r.pitch) > 1e-4;
-    if (onScreen && (animate || d?.active || settling)) state.invalidate();
+    clearTimeout(idleTimer.current);
+    if (onScreen.current) {
+      if (d?.active || settling) state.invalidate();
+      else if (animate) idleTimer.current = setTimeout(state.invalidate, IDLE_FRAME_MS);
+    }
 
     if (pivot.current) {
       const t = state.clock.elapsedTime;
@@ -132,6 +166,11 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
     }
   }, -0.5);
 
+  // After the silhouette mask (-0.25), which hides the lettering and so can't draw the shadow map; before the rest.
+  useFrame(({ gl }) => {
+    gl.shadowMap.needsUpdate = true;
+  }, -0.1);
+
   return (
     <>
       <OrthographicCamera ref={camera} makeDefault position={CAMERA_POSITION.toArray()} near={0.1} far={40} onUpdate={(c) => c.lookAt(TARGET)} />
@@ -165,7 +204,7 @@ type MicroBiomeSceneProps = Parameters<typeof MicroBiomeScene>[0];
 /** The biome's own canvas: lives in this module so three.js only loads with it (see blocks/micro-biome.tsx). */
 export function MicroBiomeView(props: MicroBiomeSceneProps) {
   return (
-    <SceneCanvas>
+    <SceneCanvas followScroll={false}>
       <Suspense fallback={null}>
         <MicroBiomeScene {...props} />
       </Suspense>
