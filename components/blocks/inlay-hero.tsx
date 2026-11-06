@@ -28,6 +28,13 @@ const RUNS = {
   loop: 'M2.5 0.5C-5 30 8 62 0 100',
   flick: 'M-2.5 0.5C5 30 -8 62 0 100',
 };
+// Above the run, in pixels from its top. The hero's layout is fixed from the md breakpoint up, where these lines show: the
+// left line rises towards the end of the signature's tail, along the tail's own direction, and the right one hooks
+// inward, so at the top of the page they imply one line. The gap at the tail leaves the left line free to drift.
+const LEADS = {
+  loop: 'M2.5 1.8C5 -32 14 -66 34 -68C42 -68.8 48 -63.5 54.85 -58.8',
+  flick: 'M-2.5 3.2C-4 -14 -12 -26 -28 -28',
+};
 
 /**
  * One line carved like the etched signature, lit from the top left, beside the text and on under it. Wider and softer
@@ -41,13 +48,13 @@ function CarvedLine({ line }: { line: keyof typeof ENDINGS }) {
     <svg className='shrink-0 self-stretch overflow-visible' width={GROOVE_WIDTH}>
       <defs>
         <filter id={filterId} x='-15%' y='-2%' width='130%' height='104%' colorInterpolationFilters='sRGB'>
-          <feOffset in='SourceAlpha' dx={2} dy={2} result='down' />
-          <feGaussianBlur in='down' stdDeviation={1.25} result='downSoft' />
+          <feOffset in='SourceAlpha' dx={1.4} dy={1.4} result='down' />
+          <feGaussianBlur in='down' stdDeviation={0.7} result='downSoft' />
           <feComposite in='SourceAlpha' in2='downSoft' operator='out' result='upperWall' />
-          <feFlood floodColor='#3b322b' floodOpacity='0.36' />
+          <feFlood floodColor='#3b322b' floodOpacity='0.7' />
           <feComposite in2='upperWall' operator='in' result='shade' />
-          <feOffset in='SourceAlpha' dx={-1.5} dy={-1.5} result='up' />
-          <feGaussianBlur in='up' stdDeviation={0.75} result='upSoft' />
+          <feOffset in='SourceAlpha' dx={-1.1} dy={-1.1} result='up' />
+          <feGaussianBlur in='up' stdDeviation={0.7} result='upSoft' />
           <feComposite in='SourceAlpha' in2='upSoft' operator='out' result='lowerWall' />
           <feFlood floodColor='#ffffff' floodOpacity='0.9' />
           <feComposite in2='lowerWall' operator='in' result='light' />
@@ -59,6 +66,9 @@ function CarvedLine({ line }: { line: keyof typeof ENDINGS }) {
         </filter>
       </defs>
       <g fill='none' stroke='var(--plaster-shade)' strokeWidth={GROOVE_WIDTH} strokeLinecap='round' strokeLinejoin='round' filter={`url(#${filterId})`}>
+        <svg x={x} overflow='visible'>
+          <path d={LEADS[line]} />
+        </svg>
         {/* The run stretches to the text's height while the stroke keeps its width. */}
         <svg x={x} width={GROOVE_WIDTH} height='100%' viewBox={`0 0 ${GROOVE_WIDTH} 100`} preserveAspectRatio='none' overflow='visible'>
           <path d={RUNS[line]} vectorEffect='non-scaling-stroke' />
@@ -100,7 +110,7 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
       <h1 className='sr-only'>{site?.name}</h1>
       <Signature variant='etched' className='relative z-10 mb-[calc(min(560px,78vw)*-0.05)] ml-[-3%] w-[min(260px,56vw)] text-ink' />
 
-      <SideText text={site?.name} y={leftY} line='loop' className='-left-24 top-32 flex-row-reverse' />
+      <SideText text={site?.name} y={leftY} line='loop' className='-left-24 top-[280px] flex-row-reverse' />
       <SideText text={site?.tagline} y={rightY} line='flick' className='-right-24 top-[44%]' />
 
       <div className='flex flex-col gap-10 md:gap-14'>
