@@ -11,6 +11,7 @@ import { components } from '@/components/mdx-components';
 import ErrorBoundary from '@/components/error-boundary';
 import { sectionId } from '@/components/blocks/post-index';
 import { ConceptFrame, LIFT, RoleIcon } from '@/components/blocks/concept-frame';
+import { cn } from '@/lib/utils';
 import { AVATARS, useFirstName } from '@/components/blocks/thought-phone';
 
 interface ClientPostProps {
@@ -192,7 +193,7 @@ export default function PostClientPage(props: ClientPostProps) {
                 />
               </a>
               {post.role && (
-                <span className='inline-flex items-center gap-1.5 rounded-full border border-rule px-3 py-2 text-xs text-muted-foreground'>
+                <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs', post.role === 'Concept' ? 'border-terracotta text-terracotta' : 'border-rule text-muted-foreground')}>
                   <RoleIcon role={post.role} className='size-3.5' />
                   {post.role}
                 </span>
