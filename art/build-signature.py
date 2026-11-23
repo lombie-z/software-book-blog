@@ -1,7 +1,10 @@
-"""Build components/ui/signature.tsx from the traced sketch, in the stroke order and rhythm of a pen take.
+"""Build components/ui/signature.tsx from the traced sketch, in the stroke order of a pen take.
 
 Shapes: centre lines skeletonised from the paper sketch (art/signature/sketch-clean.png, see trace-sketch.py).
-Order and rhythm: a take drawn at /dev/signature (art/signature/take-*.json).
+Order: a take drawn at /dev/signature (art/signature/take-*.json).
+Pace: worked out from the shape itself, the way a hand moves: slow through tight turns, quick along the open runs,
+never changing speed in an instant. (The take's own timing can't be laid over the sketch: the two shapes differ, so
+its slow corners land on the sketch's straights.)
 
 Each pen stroke is a list of waypoints (ends, loop sides, peaks) in the order the take was written, joined by the
 shortest route along the sketch's ink, so retraces (up to a peak and back down the same line) come out naturally
@@ -17,6 +20,7 @@ import sys
 import numpy as np
 from PIL import Image
 from scipy.interpolate import splev, splprep
+from scipy.ndimage import gaussian_filter1d
 from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import dijkstra
 from scipy.spatial import cKDTree
@@ -27,7 +31,14 @@ OUT = os.path.join(HERE, '..', 'components', 'ui', 'signature.tsx')
 SKETCH = os.path.join(HERE, 'signature', 'sketch-clean.png')
 TRACE = os.path.join(HERE, 'signature', 'trace.json')  # from trace-sketch.py; only its ink thickness is used here
 TOTAL_SECONDS = 3.2
-SEGMENTS_PER_SECOND = 18  # pieces each stroke is cut into so the replay keeps the hand's speed changes
+# Pace. Speed is proportional to (radius of the curve) ^ POWER. A real hand sits near 1/3 (the two-thirds power law);
+# higher exaggerates it, so the open runs fly and the turns hold back.
+POWER = 0.46
+STRAIGHT_RADIUS = 520  # px; anything gentler than this counts as straight, which caps the top speed
+MOMENTUM_MS = 32  # the pen can't change speed in an instant: its speed is smoothed over about this long
+ATTACK = (0.09, 0.25)  # each stroke starts from near rest: (seconds to get up to speed, starting fraction of speed)
+RELEASE = (0.07, 0.55)  # and eases off before the pen lifts, less so: (seconds, final fraction of speed)
+PEN_LIFT = (0.07, 5200)  # between strokes: seconds to lift and land, plus the gap crossed at this many px a second
 SMOOTHING = 2.4   # px of wobble the spline may smooth away; higher = smoother, softer
 CUSP_DEGREES = 100  # direction changes sharper than this (the peaks, retraces) stay sharp
 # The "hat" (overline and flag, the last two strokes) sits closer to the letters than in the sketch: (dx, dy) px.
@@ -166,68 +177,104 @@ def to_path(p):
     return out
 
 
-# Route each stroke through its waypoints, smooth it, and give it the take's timing (by fraction of length).
+def pace(path):
+    """Speed at each sample of a stroke, from how tightly it turns there (unscaled)."""
+    k = 3
+    d = path[k:] - path[:-k]
+    heading = np.unwrap(np.arctan2(d[:, 1], d[:, 0]))
+    spacing = np.linalg.norm(np.diff(path, axis=0), axis=1).mean()
+    turn = np.abs(np.diff(heading)) / spacing  # radians per px, between samples i and i + k + 1
+    curvature = np.interp(np.arange(len(path)), np.arange(len(turn)) + (k + 1) / 2, turn)
+    curvature = gaussian_filter1d(curvature, 2, mode='nearest')
+    return (curvature + 1 / STRAIGHT_RADIUS) ** -POWER
+
+
+def ease(x):
+    x = np.clip(x, 0, 1)
+    return x * x * (3 - 2 * x)
+
+
+# Route each stroke through its waypoints and smooth it.
 cleaned = []
-for spec, pen in zip(STROKES, take['strokes']):
+for spec in STROKES:
     path = [px[int(pixel_tree.query(spec[0])[1])]]
     for a, b in zip(spec[:-1], spec[1:]):
         path += route(a, b)[1:]
     path = resample(smooth(resample(np.array(path))))
     if len(cleaned) in HAT_STROKES:
         path = path + np.array(HAT_OFFSET)
-    pen = np.array(pen, float)
-    pen_len = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(pen[:, :2], axis=0), axis=1))])
-    our_len = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))])
-    t = np.interp(our_len / max(our_len[-1], 1e-6), pen_len / max(pen_len[-1], 1e-6), pen[:, 2])
-    cleaned.append(np.column_stack([path, t]))
+    cleaned.append(path)
 
-t_first, t_last = cleaned[0][0, 2], cleaned[-1][-1, 2]
-speed = TOTAL_SECONDS / ((t_last - t_first) / 1000)
-pieces = []  # (path, start s, duration s)
-for p in cleaned:
-    ts = (p[:, 2] - t_first) / 1000 * speed
-    n = max(1, round((ts[-1] - ts[0]) * SEGMENTS_PER_SECOND))
-    bounds = np.linspace(ts[0], ts[-1], n + 1)
-    for a, b in zip(bounds[:-1], bounds[1:]):
-        sel = np.where((ts >= a - 1e-9) & (ts <= b + 1e-9))[0]
-        if len(sel) < 2:
-            continue
-        lo, hi = sel[0], min(sel[-1] + 1, len(p) - 1)  # overlap one sample so pieces join seamlessly
-        pieces.append((to_path(p[lo : hi + 1, :2]), round(float(ts[lo]), 3), round(float(max(ts[hi] - ts[lo], 0.01)), 3)))
+# Time each stroke by its shape, then scale the lot (pen lifts aside) to TOTAL_SECONDS.
+speeds = [pace(p) for p in cleaned]
+unscaled = []  # time at each sample, before scaling
+for p, v in zip(cleaned, speeds):
+    seg = np.linalg.norm(np.diff(p, axis=0), axis=1)
+    unscaled.append(np.concatenate([[0], np.cumsum(seg / ((v[:-1] + v[1:]) / 2))]))
+lifts = [PEN_LIFT[0] + np.linalg.norm(b[0] - a[-1]) / PEN_LIFT[1] for a, b in zip(cleaned[:-1], cleaned[1:])]
+scale = (TOTAL_SECONDS - sum(lifts)) / sum(u[-1] for u in unscaled)
 
-all_xy = np.vstack([p[:, :2] for p in cleaned])
+strokes = []  # (path, start s, duration s, linear() easing)
+timed = []  # per stroke: (seconds, x, y) every millisecond, for the debug image
+start = 0.0
+for i, (p, v, u) in enumerate(zip(cleaned, speeds, unscaled)):
+    duration = u[-1] * scale
+    t = np.linspace(0, duration, max(2, int(duration * 1000)))
+    speed = np.interp(t, u * scale, v)
+    speed *= ATTACK[1] + (1 - ATTACK[1]) * ease(t / ATTACK[0])
+    speed *= RELEASE[1] + (1 - RELEASE[1]) * ease((duration - t) / RELEASE[0])
+    speed = gaussian_filter1d(speed, MOMENTUM_MS / (t[1] * 1000), mode='nearest')
+    done = np.concatenate([[0], np.cumsum((speed[:-1] + speed[1:]) / 2)])
+    done /= done[-1]  # fraction of the stroke written at each millisecond
+    length = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(p, axis=0), axis=1))])
+    timed.append(np.column_stack([start + t, *(np.interp(done * length[-1], length, p[:, k]) for k in (0, 1))]))
+    # As a CSS linear() easing: the fewest stops that keep the pen within about a pixel of where it should be.
+    stops = rdp(np.column_stack([t / duration, done]), min(0.002, 1.0 / length[-1]))
+    assert np.all(np.diff(stops, axis=0) >= 0), 'the pen only moves forward, in time and along the stroke'
+    easing = ', '.join(['0'] + [f'{y:.4f}'.lstrip('0') + f' {x * 100:.2f}%' for x, y in stops[1:-1]] + ['1'])
+    strokes.append((to_path(p), round(start, 3), round(duration, 3), f'linear({easing})'))
+    print(f'stroke {i}: {length[-1]:5.0f}px in {duration:.2f}s from {start:.2f}s, {len(stops)} stops')
+    start += duration + (lifts[i] if i < len(lifts) else 0)
+
+all_xy = np.vstack(cleaned)
 pad = 14
 x0, y0 = all_xy.min(0) - pad
 x1, y1 = all_xy.max(0) + pad
 stroke_width = round(width * 1.2, 1)  # trace 'width' is the sketch's ink thickness; a touch heavier reads better small
 
-rows = '\n'.join(f"  ['{d}', {s}, {dur}]," for d, s, dur in pieces)
+rows = '\n'.join(f"  ['{d}', {s}, {dur}, '{pace_css}']," for d, s, dur, pace_css in strokes)
+groove = stroke_width * 1.7
 src = f"""'use client';
 import {{ useId }} from 'react';
 import {{ cn }} from '@/lib/utils';
 
-// Generated by art/build-signature.py from {os.path.basename(take_path)} (stroke order and rhythm) and the traced
-// sketch (shapes). Each stroke is cut into short pieces so the replay keeps the hand's speed changes:
-// [path, start (s), duration (s)].
-const PIECES: [string, number, number][] = [
+// Generated by art/build-signature.py from the traced sketch (shapes) and {os.path.basename(take_path)}
+// (stroke order). One path per pen stroke: [path, start (s), duration (s), pace]. The pace is how far along the
+// stroke the pen is at each moment, worked out from the shape: slow through the turns, quick along the open runs.
+const STROKES: [string, number, number, string][] = [
 {rows}
 ];
 
 const INK_WIDTH = {stroke_width};
 // Etched: a wider groove, so its walls have room to catch the light.
-const GROOVE_WIDTH = {round(stroke_width * 1.7, 1)};
-const WALL = {round(stroke_width * 1.7 * 0.24, 2)};
-const SOFTEN = {round(stroke_width * 1.7 * 0.1, 2)};
+const GROOVE_WIDTH = {round(groove, 1)};
+const WALL = {round(groove * 0.24, 2)};
+// 0.7px at the hero's 260px width, matching the carved side lines.
+const SOFTEN = {round(0.7 * round(x1 - x0) / 260, 2)};
+// Seconds after first paint before the pen touches down.
+const WRITE_DELAY = 0.3;
 
 interface SignatureProps {{
   className?: string;
-  /** Write the signature out as it was drawn (~{TOTAL_SECONDS}s), from first paint. */
+  /** Write the signature out stroke by stroke (~{TOTAL_SECONDS}s), from first paint. */
   animate?: boolean;
   /** 'ink' draws a pen line; 'etched' carves it into the plaster, lit from the top left like the niches. */
   variant?: 'ink' | 'etched';
+  /** Etched only: scales the groove and its walls. Small signatures need a relatively deeper cut to read as carved. */
+  depth?: number;
 }}
 
-export function Signature({{ className, animate = true, variant = 'ink' }}: SignatureProps) {{
+export function Signature({{ className, animate = true, variant = 'ink', depth = 1 }}: SignatureProps) {{
   const filterId = `etch-${{useId().replace(/[^a-zA-Z0-9]/g, '')}}`;
   const etched = variant === 'etched';
   // Pure CSS: the strokes start hidden and write from first paint, before any JavaScript runs, so there's no
@@ -240,14 +287,14 @@ export function Signature({{ className, animate = true, variant = 'ink' }}: Sign
         <defs>
           <filter id={{filterId}} x="-5%" y="-5%" width="110%" height="110%" colorInterpolationFilters="sRGB">
             {{/* Top-left inner wall in shadow: the groove minus itself shifted down-right. */}}
-            <feOffset in="SourceAlpha" dx={{WALL}} dy={{WALL}} result="down" />
-            <feGaussianBlur in="down" stdDeviation={{SOFTEN}} result="downSoft" />
+            <feOffset in="SourceAlpha" dx={{WALL * depth}} dy={{WALL * depth}} result="down" />
+            <feGaussianBlur in="down" stdDeviation={{SOFTEN * depth}} result="downSoft" />
             <feComposite in="SourceAlpha" in2="downSoft" operator="out" result="upperWall" />
-            <feFlood floodColor="#3b322b" floodOpacity="0.75" />
+            <feFlood floodColor="#3b322b" floodOpacity="0.7" />
             <feComposite in2="upperWall" operator="in" result="shade" />
             {{/* Bottom-right inner wall faces the sun. */}}
-            <feOffset in="SourceAlpha" dx={{-WALL}} dy={{-WALL}} result="up" />
-            <feGaussianBlur in="up" stdDeviation={{SOFTEN}} result="upSoft" />
+            <feOffset in="SourceAlpha" dx={{-WALL * depth}} dy={{-WALL * depth}} result="up" />
+            <feGaussianBlur in="up" stdDeviation={{SOFTEN * depth}} result="upSoft" />
             <feComposite in="SourceAlpha" in2="upSoft" operator="out" result="lowerWall" />
             <feFlood floodColor="#ffffff" floodOpacity="0.9" />
             <feComposite in2="lowerWall" operator="in" result="light" />
@@ -262,18 +309,23 @@ export function Signature({{ className, animate = true, variant = 'ink' }}: Sign
       <g
         fill="none"
         stroke={{etched ? 'var(--plaster-shade)' : 'currentColor'}}
-        strokeWidth={{etched ? GROOVE_WIDTH : INK_WIDTH}}
+        strokeWidth={{etched ? GROOVE_WIDTH * depth : INK_WIDTH}}
         strokeLinecap="round"
         strokeLinejoin="round"
         filter={{etched ? `url(#${{filterId}})` : undefined}}
       >
-        {{PIECES.map(([d, delay, duration]) => (
+        {{STROKES.map(([d, start, duration, pace]) => (
           <path
             key={{d}}
             d={{d}}
             pathLength={{1}}
             className={{writing ? 'signature-stroke' : undefined}}
-            style={{writing ? {{ animationDelay: `${{delay + 0.3}}s`, animationDuration: `${{duration}}s` }} : undefined}}
+            style={{
+              writing
+                ? // Browsers without linear() easing drop the pace and keep the stylesheet's plain ease.
+                  {{ animationDelay: `${{start + WRITE_DELAY}}s`, animationDuration: `${{duration}}s`, animationTimingFunction: pace }}
+                : undefined
+            }}
           />
         ))}}
       </g>
@@ -282,15 +334,18 @@ export function Signature({{ className, animate = true, variant = 'ink' }}: Sign
 }}
 """
 open(OUT, 'w').write(src)
-print(f'{len(cleaned)} strokes -> {len(pieces)} pieces, viewBox {x0:.0f} {y0:.0f} {x1 - x0:.0f} {y1 - y0:.0f}')
+print(f'{len(strokes)} strokes, viewBox {x0:.0f} {y0:.0f} {x1 - x0:.0f} {y1 - y0:.0f}')
 
 if debug_path:
+    # The ink in grey, with the pen's position every 60th of a second: wide gaps are fast, bunched dots are slow.
     from PIL import ImageDraw
     W, H = int(x1 - x0) + 20, int(y1 - y0) + 20
     img = Image.new('RGB', (W, H), 'white')
     d = ImageDraw.Draw(img)
-    for q in px:
-        d.point((q[0] - x0 + 10, q[1] - y0 + 10), fill=(190, 190, 190))
     for p in cleaned:
-        d.line([(x - x0 + 10, y - y0 + 10) for x, y in p[:, :2]], fill=(30, 30, 30), width=4)
+        d.line([(x - x0 + 10, y - y0 + 10) for x, y in p], fill=(205, 205, 205), width=4)
+    for pen in timed:
+        frames = np.arange(pen[0, 0], pen[-1, 0], 1 / 60)
+        for x, y in zip(np.interp(frames, pen[:, 0], pen[:, 1]), np.interp(frames, pen[:, 0], pen[:, 2])):
+            d.ellipse((x - x0 + 7, y - y0 + 7, x - x0 + 13, y - y0 + 13), fill=(200, 40, 40))
     img.save(debug_path)
