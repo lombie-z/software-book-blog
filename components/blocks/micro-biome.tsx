@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { ArrowUpRight } from 'lucide-react';
 import { tinaField } from 'tinacms/dist/react';
 import type { DragState } from '@/components/three/micro-biome-scene';
+import { useBusy } from '@/components/three/scene-busy';
 import { useSceneAvailable } from '@/components/three/scene-context';
 import type { PageBlocksMicroBiome } from '@/tina/__generated__/types';
 import { cn } from '@/lib/utils';
@@ -30,6 +31,8 @@ export function MicroBiome({ data }: { data: PageBlocksMicroBiome }) {
   const stage = useRef<HTMLDivElement>(null);
   const live = useLiveScene();
   const [near, setNear] = useState(false);
+  const [booted, setBooted] = useState(false);
+  const busy = useBusy();
   const [ready, setReady] = useState(false);
   const drag = useRef<DragState>({ yaw: 0, pitch: 0, active: false });
   const start = useRef({ x: 0, y: 0 });
@@ -41,6 +44,11 @@ export function MicroBiome({ data }: { data: PageBlocksMicroBiome }) {
     io.observe(stage.current);
     return () => io.disconnect();
   }, [live]);
+
+  // Boot once it's near and nothing else is: its shaders compiling would make the hero's niches stutter as they fade in.
+  useEffect(() => {
+    if (live && near && !busy) setBooted(true);
+  }, [live, near, busy]);
 
   const onReady = useCallback(() => setReady(true), []);
 
@@ -76,7 +84,7 @@ export function MicroBiome({ data }: { data: PageBlocksMicroBiome }) {
           className={cn('absolute inset-0 h-full w-full object-contain transition-opacity duration-500', ready && 'opacity-0')}
           draggable={false}
         />
-        {live && near && <MicroBiomeView trackRef={stage} drag={drag} onReady={onReady} animate />}
+        {live && booted && <MicroBiomeView trackRef={stage} drag={drag} onReady={onReady} animate />}
       </div>
       {data.caption && (
         <p data-tina-field={tinaField(data, 'caption')} className="mt-4 text-center text-xs uppercase tracking-[0.18em] text-muted-foreground">

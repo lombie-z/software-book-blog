@@ -1,9 +1,11 @@
 'use client';
 
-import { useId, useRef } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
 import { useLayout } from '@/components/layout/layout-context';
-import { Niche } from '@/components/three/niche';
+import { HAND_OVER_MS, Niche } from '@/components/three/niche';
+import { holdBusy } from '@/components/three/scene-busy';
+import { useSceneAvailable } from '@/components/three/scene-context';
 import { Signature } from '@/components/ui/signature';
 import type { PageBlocksInlayHero } from '@/tina/__generated__/types';
 import { cn } from '@/lib/utils';
@@ -95,6 +97,42 @@ function SideText({ text, className, line, y }: { text?: string | null; classNam
   );
 }
 
+// A niche that never boots (a model that fails to load, say) stops holding the others back after this long.
+const GIVE_UP_MS = 12000;
+
+/**
+ * The niches hand over from drawing to 3D together, once all three have booted, and the page counts as busy until
+ * the fade is done, so the micro-biome doesn't start compiling its own shaders under it.
+ */
+function useHandOver() {
+  const available = useSceneAvailable();
+  const [ready, setReady] = useState<ReadonlySet<string>>(() => new Set());
+  const [gaveUp, setGaveUp] = useState(false);
+  const release = useRef<() => void>(undefined);
+  const onReady = useCallback((id: string) => setReady((was) => (was.has(id) ? was : new Set(was).add(id))), []);
+  const go = ready.size === NICHES.length || gaveUp;
+
+  useEffect(() => {
+    // Touch devices show stills (see Niche), so nothing boots there.
+    if (!available || window.matchMedia('(pointer: coarse)').matches) return;
+    const done = holdBusy(GIVE_UP_MS + HAND_OVER_MS);
+    release.current = done;
+    const timer = setTimeout(() => setGaveUp(true), GIVE_UP_MS);
+    return () => {
+      clearTimeout(timer);
+      done();
+    };
+  }, [available]);
+
+  useEffect(() => {
+    if (!go) return;
+    const timer = setTimeout(() => release.current?.(), HAND_OVER_MS);
+    return () => clearTimeout(timer);
+  }, [go]);
+
+  return { handOver: (id: string) => go && ready.has(id), onReady };
+}
+
 export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
   const { globalSettings } = useLayout();
   const site = globalSettings?.site;
@@ -104,6 +142,7 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
   const drift = useReducedMotion() ? 0 : 1;
   const leftY = useTransform(scrollYProgress, [0, 1], [0, 260 * drift]);
   const rightY = useTransform(scrollYProgress, [0, 1], [0, -180 * drift]);
+  const { handOver, onReady } = useHandOver();
 
   return (
     <section ref={ref} className='relative mx-auto w-full max-w-[min(560px,78vw)] pt-10 md:pt-16' aria-label='Intro'>
@@ -115,7 +154,15 @@ export function InlayHero({ data }: { data: PageBlocksInlayHero }) {
 
       <div className='flex flex-col gap-10 md:gap-14'>
         {NICHES.map((niche) => (
-          <Niche key={niche.id} id={niche.id} aspect={niche.aspect} slope={niche.slope} cactus={niche.id === 'bottom' && !!data.showCactus} />
+          <Niche
+            key={niche.id}
+            id={niche.id}
+            aspect={niche.aspect}
+            slope={niche.slope}
+            cactus={niche.id === 'bottom' && !!data.showCactus}
+            handOver={handOver(niche.id)}
+            onReady={onReady}
+          />
         ))}
       </div>
       {/* The vertical side texts need gutters; on phones they sit under the niches instead. */}

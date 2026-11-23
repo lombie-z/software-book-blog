@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { cn } from '@/lib/utils';
 import { NicheSketch } from './niche-sketch';
@@ -8,6 +8,9 @@ import { useSceneAvailable } from './scene-context';
 
 // The 3D niches (and three.js with them) load in the browser after the page is up; until then, and without WebGL,
 // each niche box shows its CSS-shaded stand-in.
+/** How long the drawing takes to fade out over the 3D room. */
+export const HAND_OVER_MS = 1600;
+
 const PlasterNiche = dynamic(() => import('./plaster-niche').then((m) => m.PlasterNiche), { ssr: false });
 
 /**
@@ -15,17 +18,29 @@ const PlasterNiche = dynamic(() => import('./plaster-niche').then((m) => m.Plast
  * (same eye, light and sun) that fades out once the 3D has drawn, so the handoff is near invisible. Without WebGL the
  * drawing simply stays. Touch devices get a still baked from the same room instead (art/bake-niches.py): they scroll on
  * their own thread, so a room whose perspective follows the scroll always lags and jitters there.
+ *
+ * The hero decides when to hand over (`handOver`), so every niche fades together once all of them have booted: a
+ * room still compiling its shaders would make the others' fades stutter.
  */
-export function Niche({ id, aspect, slope = 0, cactus = false }: { id: string; aspect: string; slope?: number; cactus?: boolean }) {
+export function Niche({
+  id,
+  aspect,
+  slope = 0,
+  cactus = false,
+  handOver,
+  onReady,
+}: { id: string; aspect: string; slope?: number; cactus?: boolean; handOver: boolean; onReady: (id: string) => void }) {
   // CSS picks the still from the first paint. This keeps three.js from loading on touch devices; it's only true in the
   // browser, after hydration, so reading matchMedia here is safe.
   const live = useSceneAvailable() && !window.matchMedia('(pointer: coarse)').matches;
-  const [ready, setReady] = useState(false);
+  const [drawn, setDrawn] = useState(false);
   const [shown, setShown] = useState(false);
-  const onReady = useCallback(() => setReady(true), []);
+  const onDrawn = useCallback(() => setDrawn(true), []);
   const onShown = useCallback(() => setShown(true), []);
-  // Hand over only when the 3D has drawn and the drawing has fully faded in, whichever is later.
-  const handOver = ready && shown;
+  // Ready to hand over when the 3D has drawn and the drawing has fully faded in, whichever is later.
+  useEffect(() => {
+    if (drawn && shown) onReady(id);
+  }, [drawn, shown, onReady, id]);
   // The sloped ceiling is cut on the drawing layers only (the 3D cuts its own). Clipping the niche box itself would
   // make it a stacking context and trap the stand-in's z-index beneath the canvas, so the 3D would pop in over it.
   const clip = slope ? { clipPath: `polygon(0 ${slope * 100}%, 100% 0, 100% 100%, 0 100%)` } : undefined;
@@ -39,13 +54,13 @@ export function Niche({ id, aspect, slope = 0, cactus = false }: { id: string; a
           <NicheSketch slope={slope} />
         </div>
       )}
-      {live && <PlasterNiche slope={slope} cactus={cactus} onReady={onReady} />}
+      {live && <PlasterNiche slope={slope} cactus={cactus} onReady={onDrawn} />}
       {/* Above the canvas (z-0) until the room is in. The plaster base (the page colour) keeps the 3D from showing
           through while the drawing is still fading in. Symmetric easing so the change is spread evenly. */}
       <div
-        style={clip}
+        style={{ ...clip, transitionDuration: `${HAND_OVER_MS}ms` }}
         className={cn(
-          'pointer-events-none absolute inset-0 z-[1] bg-plaster pointer-coarse:hidden transition-opacity duration-[1600ms] [transition-timing-function:cubic-bezier(0.45,0,0.55,1)]',
+          'pointer-events-none absolute inset-0 z-[1] bg-plaster pointer-coarse:hidden transition-opacity [transition-timing-function:cubic-bezier(0.45,0,0.55,1)]',
           handOver && 'opacity-0'
         )}
       >
