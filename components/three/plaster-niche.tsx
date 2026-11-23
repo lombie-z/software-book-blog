@@ -19,7 +19,7 @@ import {
 } from 'three';
 import { cn } from '@/lib/utils';
 import { Cactus } from './cactus';
-import { SceneCanvas } from './scene-canvas';
+import { CompileFirst, SceneCanvas } from './scene-canvas';
 import { GROUND_FACTOR, NICHE_DEPTH, PLASTER_HEX, SKY, SKY_RGB, SUN, SUN_RGB } from './niche-params';
 import { sceneState } from './scene-state';
 
@@ -59,6 +59,7 @@ export function PlasterNiche({ className, depth = NICHE_DEPTH, slope = 0, cactus
             {cactus && <Cactus position={[-0.5, 0, -0.16]} rotation-y={0.5} />}
             {children}
           </NicheScene>
+          <CompileFirst />
         </Suspense>
       </SceneCanvas>
     </div>

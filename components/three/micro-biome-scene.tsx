@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { ContactShadows, OrthographicCamera, useGLTF } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import { type Group, type Mesh, type Object3D, type OrthographicCamera as OrthographicCameraImpl, Vector3 } from 'three';
-import { DRACO_PATH, SceneCanvas } from './scene-canvas';
+import { CompileFirst, DRACO_PATH, SceneCanvas } from './scene-canvas';
 import { SilhouetteOutline } from './silhouette-outline';
 import { useStudioReflections } from './studio-environment';
 
@@ -51,6 +51,7 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
   const camera = useRef<OrthographicCameraImpl>(null);
   const rotation = useRef({ yaw: 0, pitch: 0, vYaw: 0, vPitch: 0 });
   const onScreen = useRef(false);
+  const reported = useRef(false);
   const idleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const gl = useThree((s) => s.gl);
   const invalidate = useThree((s) => s.invalidate);
@@ -99,9 +100,13 @@ export function MicroBiomeScene({ trackRef, drag, onReady, animate }: { trackRef
   }, [scene]);
 
   useStudioReflections(scene, 0.8);
-  useEffect(onReady, [onReady]);
 
   useFrame((state, delta) => {
+    if (!reported.current) {
+      reported.current = true;
+      // The canvas waits for its shaders before drawing, so the still stays up until this first frame is on screen.
+      requestAnimationFrame(onReady);
+    }
     const el = trackRef.current;
     const cam = camera.current;
     if (el && cam) {
@@ -207,6 +212,7 @@ export function MicroBiomeView(props: MicroBiomeSceneProps) {
     <SceneCanvas followScroll={false}>
       <Suspense fallback={null}>
         <MicroBiomeScene {...props} />
+        <CompileFirst />
       </Suspense>
     </SceneCanvas>
   );
