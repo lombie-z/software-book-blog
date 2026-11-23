@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { SoftShadows } from '@react-three/drei';
 import { eyeFor, SUN_DIRECTION, viewportSize } from './niche-params';
@@ -103,27 +103,65 @@ function SharedSoftShadows() {
   return owner ? <SoftShadows size={42} samples={24} focus={0.35} /> : null;
 }
 
+const CompiledContext = createContext<() => void>(() => {});
+
+/**
+ * Goes last inside a scene's Suspense boundary. The canvas holds off drawing until every material in the scene has
+ * compiled in the background (KHR_parallel_shader_compile). Drawing straight away makes three.js wait on each shader
+ * in turn, which froze the page for a second or two whenever the browser's shader cache was cold. Without the
+ * extension three.js waits a moment and compiles as before.
+ */
+export function CompileFirst() {
+  const get = useThree((s) => s.get);
+  const frameloop = useThree((s) => s.frameloop);
+  const invalidate = useThree((s) => s.invalidate);
+  const compiled = useContext(CompiledContext);
+  useEffect(() => {
+    let gone = false;
+    const { gl, scene, camera } = get();
+    gl.compileAsync(scene, camera).then(() => {
+      if (!gone) compiled();
+    });
+    return () => {
+      gone = true;
+    };
+  }, [get, compiled]);
+  // Draw the first frame once the canvas is let go.
+  useEffect(() => {
+    if (frameloop !== 'never') invalidate();
+  }, [frameloop, invalidate]);
+  return null;
+}
+
 /**
  * A WebGL canvas that fills its box. Each 3D element (a niche, the micro-biome) gets its own, sitting in the page
  * with its box, so scrolling moves it with the box on every platform. A single fixed canvas drawing into every box
  * trails the page on phones, which scroll on their own thread while JavaScript catches up a frame or more later.
+ * It draws nothing until the scene's <CompileFirst /> reports its shaders ready.
  */
 export function SceneCanvas({ children, followScroll = true }: { children: ReactNode; followScroll?: boolean }) {
+  const [compiled, setCompiled] = useState(false);
+  const markCompiled = useCallback(() => setCompiled(true), []);
   return (
     <div className='pointer-events-none absolute inset-0'>
       <Canvas
-        frameloop='demand'
+        frameloop={compiled ? 'demand' : 'never'}
         shadows='basic'
         flat
         dpr={[1, 1.75]}
         gl={{ antialias: true, alpha: true }}
         // Its size never changes on scroll, so don't re-measure on every scroll.
         resize={{ scroll: false }}
+        onCreated={({ gl }) => {
+          // three.js reads back every shader's log to report errors, and each read stalls the page while the GPU is
+          // busy compiling. Development keeps the checks.
+          if (process.env.NODE_ENV === 'production') gl.debug.checkShaderErrors = false;
+        }}
       >
         <SunController />
         <RedrawOnChange followScroll={followScroll} />
         <SharedSoftShadows />
-        {children}
+        <CompiledContext.Provider value={markCompiled}>{children}</CompiledContext.Provider>
       </Canvas>
     </div>
   );
